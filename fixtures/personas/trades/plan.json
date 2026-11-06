@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "fit": {"score": "strong", "summary": "Licensed journeyman with motor control and three-phase service work in food plants."},
+  "experience": [
+    {"role": "brightline.journeyman", "bullets": [
+      {"atom": "brightline.journeyman.service", "text": "Troubleshoot motor controls and 480V three-phase equipment on service calls at food plants and warehouses"},
+      "brightline.journeyman.buildouts",
+      "brightline.journeyman.retrofit"
+    ]},
+    {"role": "brightline.apprentice", "bullets": ["brightline.apprentice.hours"]}
+  ],
+  "skills": ["skill.electrical"],
+  "credentials": ["cred.journeyman", "cred.osha30"],
+  "education": ["edu.jatc"],
+  "cover_letter": {
+    "hook": "Keeping 9 packaging lines running around the clock is the kind of work I want to do full time.",
+    "body": "At Brightline Electric I troubleshoot motor controls and 480V three-phase service calls at food plants and warehouses. I have wired 14 commercial tenant build-outs with no failed inspections, and I led a 3-person crew on a 40,000 sq ft LED retrofit that finished 2 weeks early.\n\nI hold a Journeyman Electrician License and finished 8,000 hours of supervised field work as an apprentice.",
+    "close": "I would like to hear how your maintenance team splits planned work and breakdowns.",
+    "cites": ["brightline.journeyman.service", "brightline.journeyman.buildouts", "brightline.journeyman.retrofit", "brightline.apprentice.hours", "cred.journeyman"]
+  },
+  "gaps": ["PLC troubleshooting is listed as a plus; Maria has not claimed it."]
+}

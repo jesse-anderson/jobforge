@@ -1,0 +1,64 @@
+# John Smith's work history. Two employers, so employer binding (D-40) is
+# exercised from the start.
+
+[[role]]
+id = "northwind"
+employer = "Northwind Distribution"
+title = "Warehouse Supervisor"
+location = "Springfield, IL"
+start = "2020-04"
+end = "present"
+
+[[bullet]]
+id = "northwind.accuracy"
+role = "northwind"
+text = "Raised order pick accuracy from 97.2% to 99.6% by introducing scan-to-confirm on every pick"
+basis = "records"
+defense = "Monthly accuracy report from the warehouse system, Q1 2021 against Q1 2023."
+
+[[bullet.phrasing]]
+use = "cover"
+text = "I brought our pick accuracy from 97.2% to 99.6% by making every pick scan-to-confirm."
+
+[[bullet]]
+id = "northwind.team"
+role = "northwind"
+text = "Lead a team of 14 associates across two shifts, covering receiving, picking, and shipping"
+basis = "records"
+defense = "Headcount on the shift roster."
+
+[[bullet]]
+id = "northwind.overtime"
+role = "northwind"
+text = "Cut weekly overtime 25% by rebuilding the shift schedule around inbound truck times"
+basis = "estimate"
+defense = "Overtime hours on payroll summaries, before and after the new schedule; I rounded."
+
+[[bullet]]
+id = "northwind.safety"
+role = "northwind"
+text = "Ran 2 years without a recordable injury after starting weekly 10-minute safety huddles"
+basis = "records"
+defense = "OSHA 300 log."
+
+[[role]]
+id = "lakeside"
+employer = "Lakeside Grocery Co-op"
+title = "Shift Lead"
+location = "Springfield, IL"
+start = "2016-06"
+end = "2020-03"
+
+[[bullet]]
+id = "lakeside.shrink"
+role = "lakeside"
+text = "Reduced produce shrink 18% by moving to twice-daily rotation checks"
+basis = "records"
+defense = "Store shrink reports, 2018 against 2019."
+
+[[bullet]]
+id = "lakeside.training"
+role = "lakeside"
+text = "Trained 30 new cashiers and stockers on opening and closing procedures"
+basis = "estimate"
+defense = "Roughly 8 a year over four years; I counted from memory with my manager."

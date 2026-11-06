@@ -1,0 +1,12 @@
+# Career-changer persona (D-09 #10). Fictional. Retail management moving
+# into project coordination: every fact keeps its employer while the wording
+# moves to the new industry.
+
+[person]
+name = "Dana Brooks"
+email = "dana.brooks@example.com"
+phone = "555-0193"
+location = "Tacoma, WA"
+
+[claims]
+never_claim = ["PMP", "Primavera P6"]

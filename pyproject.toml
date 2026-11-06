@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jobforge"
+dynamic = ["version"]
+description = "Tailored resumes and cover letters from your real work history, run locally, with every fact checked."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "LicenseRef-PolyForm-Noncommercial-1.0.0"
+authors = [{ name = "Jesse Anderson" }, { name = "Mike Wilson" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
+]
+# The runtime is stdlib only (D-13). Nothing goes in `dependencies`.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "coverage>=7"]
+
+[project.scripts]
+jobforge = "jobforge.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "jobforge.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+jobforge = ["agent/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+markers = [
+    "critical: D-30 critical path; must stay at 100% coverage",
+]
+
+[tool.coverage.run]
+source = ["jobforge"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true

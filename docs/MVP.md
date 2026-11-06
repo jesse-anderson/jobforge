@@ -237,6 +237,22 @@ Mapped onto the SOW, the MVP is roughly phases 0.1 to 0.4 plus the
    commit, since passing this gate makes the repo public (D-44). If it
    finds anything, the public repo gets a squashed fresh history.
 
+### Build status (2026-11-06)
+
+| Gate item | State |
+|---|---|
+| 1. Acceptance script, John Smith + trades, entry level, career changer | **Automated and passing** (`tests/test_personas.py`), from `prepare` to read-back. The agent half (setup interview, plan writing) is still a manual run. |
+| 2. Critical paths at 100% | Overall 99% line and branch coverage, every module 97% or higher. A separate critical-only number is not computed yet (tests are marked `critical`). |
+| 3. Planted-violation suite | **Passing** (`tests/test_factcheck.py`, plus one planted violation, one never-claim, and one employer swap per persona). |
+| 4. `.docx` reads back clean | **Passing.** `apply` itself reads every document back and refuses to finish if text is lost or a hidden character appears. |
+| 5. T-PII, T-STD, T-XPLAT | T-STD passing. T-PII written; skips until a maintainer supplies the denylist. T-XPLAT waits on CI, which needs the GitHub remote. |
+| 6. A real non-maintainer, README only | Not started. |
+| 7. VM checklist once per OS | Draft in `docs/VM_CHECKLIST.md`; not run. |
+
+Also still needed before the public flip: the `LICENSE` file (official
+PolyForm Noncommercial 1.0.0 text), and the D-17/D-18 employer names out of
+DECISIONS.md and SOW.md.
+
 ---
 
 ## 6. Questions, answered 2026-11-06 (D-47)

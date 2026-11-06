@@ -1,0 +1,64 @@
+[[role]]
+id = "brightline.journeyman"
+employer = "Brightline Electric"
+title = "Journeyman Electrician"
+location = "Rockford, IL"
+start = "2021-07"
+end = "present"
+
+[[bullet]]
+id = "brightline.journeyman.buildouts"
+role = "brightline.journeyman"
+text = "Wired 14 commercial tenant build-outs to code with no failed inspections"
+basis = "records"
+defense = "Inspection sign-off sheets for each job."
+
+[[bullet]]
+id = "brightline.journeyman.retrofit"
+role = "brightline.journeyman"
+text = "Led a 3-person crew on a 40,000 sq ft warehouse lighting retrofit to LED, finished 2 weeks early"
+basis = "records"
+defense = "Job schedule and the GC's closeout email."
+
+[[bullet]]
+id = "brightline.journeyman.service"
+role = "brightline.journeyman"
+text = "Troubleshoot motor controls and 480V three-phase service calls at food plants and warehouses"
+basis = "records"
+
+[[role]]
+id = "brightline.apprentice"
+employer = "Brightline Electric"
+title = "Electrical Apprentice"
+location = "Rockford, IL"
+start = "2017-06"
+end = "2021-06"
+
+[[bullet]]
+id = "brightline.apprentice.hours"
+role = "brightline.apprentice"
+text = "Completed 8,000 hours of supervised field work across residential and commercial jobs"
+basis = "records"
+defense = "Apprenticeship hour logs."
+
+[[skill]]
+id = "skill.electrical"
+label = "Electrical"
+items = ["Conduit bending", "Motor controls", "480V three-phase", "NEC 2023"]
+
+[[credential]]
+id = "cred.journeyman"
+name = "Journeyman Electrician License"
+issuer = "City of Rockford"
+date = "2021"
+
+[[credential]]
+id = "cred.osha30"
+name = "OSHA 30-Hour Construction"
+date = "2019"
+
+[[education]]
+id = "edu.jatc"
+school = "Prairie Valley JATC"
+credential = "Inside Wireman Apprenticeship"
+date = "2021"

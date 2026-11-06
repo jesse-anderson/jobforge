@@ -39,6 +39,20 @@ them as if a stranger will read them, because one will.
 Put the same rule in the `CLAUDE.md` and `AGENTS.md` that live in each repo,
 so every agent session reads it.
 
+## Tests
+
+Every change ships with tests, written in the same change. No exceptions for
+"small" fixes: most of the private repo's bugs were small.
+
+- Run: `python -m pytest` (works without installing; pytest finds `src/`).
+- Coverage: `python -m coverage run -m pytest && python -m coverage report`.
+  CI fails under 95%. Code on a D-30 critical path is held to 100%; mark its
+  tests `@pytest.mark.critical`.
+- Tests never touch the network. Stub the fetch (see `tests/test_intake.py`).
+- A bug fix starts with a test that fails without the fix.
+- New fact-check rules get a planted-violation test and a clean-passes test.
+- Persona fixtures in `fixtures/personas/` are fictional, always.
+
 ## Branches and merging
 
 - `main` is always green on Windows and Linux CI.

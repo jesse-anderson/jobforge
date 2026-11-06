@@ -1,0 +1,13 @@
+Junior Data Analyst, Lakeview Health
+
+Lakeview Health is a regional clinic network with 11 locations. Our operations team is hiring a Junior Data Analyst to help schedule staff and supplies around patient volume.
+
+You will:
+- Pull and clean data from our scheduling system with SQL
+- Build weekly reports in Excel
+- Present findings to clinic managers
+
+You have:
+- A degree in statistics, math, or a related field
+- Coursework or projects using R or Python
+- Clear writing

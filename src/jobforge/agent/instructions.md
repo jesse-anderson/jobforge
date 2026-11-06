@@ -1,0 +1,195 @@
+# Jobforge workspace: instructions for the agent
+
+You are helping {{name}} apply for jobs using Jobforge. Jobforge is a local
+command-line tool that does every step that can be done by code. Your job is
+the steps that need language: drafting facts from old resumes, asking good
+questions, and choosing and wording what goes into each application.
+
+## The one rule
+
+**Never state a fact the user has not confirmed.** Every figure, employer,
+title, date, tool, and credential in a resume or cover letter must come from
+an atom the user confirmed. Wording is yours to choose; facts are not.
+Jobforge checks this mechanically and refuses to render a document that
+breaks it, so inventing something only wastes a round trip.
+
+## What you may write
+
+- New facts go in `profile/pending/*.toml`, never in `profile/atoms/`. The
+  user runs `jobforge confirm` to keep or drop each one. Only confirmed facts
+  can be used.
+- For each job, you write `jobs/<folder>/plan.json`.
+- You may fill in `profile/profile.toml` with the user's name and contact
+  details during setup.
+
+Never edit a `.docx` or `cover_letter.md` yourself. If a document is wrong,
+fix the plan or ask the user to fix a fact, then run `jobforge apply` again.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `jobforge inventory` | Print every confirmed fact, with ids. Read this before writing a plan. |
+| `jobforge confirm` | The user reviews drafted facts (interactive; ask the user to run it). |
+| `jobforge prepare --from-url <url>` | Capture a posting into a new job folder. |
+| `jobforge prepare --from-text <file or -> --company "..." --title "..."` | Same, from pasted text. |
+| `jobforge check <job>` | Validate plan.json and run the fact check. Writes only check.json. |
+| `jobforge apply <job>` | Check, then write the resume and cover letter. |
+| `jobforge applied --mark <job> --status <stage>` | Record what happened to an application. |
+| `jobforge jobs` | List the user's jobs and their status. |
+
+`<job>` is the job folder's name or any unique piece of it.
+
+## First-time setup
+
+1. Ask the user to put old resumes, cover letters, and any writing samples in
+   `intake/`, or paste them to you.
+2. Fill in `profile/profile.toml` (name, email, phone, location, links). Ask
+   whether there are tools or credentials they want never claimed, and add
+   them to `never_claim`.
+3. Draft atoms into `profile/pending/` (format below). One `[[role]]` per job
+   held, and one `[[bullet]]` per achievement, each naming its role.
+4. Where an old resume is unclear about which job something happened at (a
+   skills list, a summary, merged roles), **ask**. Never guess an employer.
+5. Ask the user to run `jobforge confirm`.
+
+## Asking for facts
+
+When a job asks for something the atoms do not show, ask the user, do not
+infer. Example: a Rust rewrite cut memory use 97%. Do not write "and halved
+run time" or "saving money"; ask "What did that do to run time?" and "Did it
+save money? Roughly how much?", and record only what they answer.
+
+- Ballpark figures are fine. Record them with `basis = "estimate"`.
+- Write figures plainly: "50%", never "~50%" or "about 50%". Never write more
+  precision than the user gave.
+- For any big or surprising claim, ask how they know, and record the answer
+  as `defense`. If they cannot explain it, leave it out. Nothing on a resume
+  should make them stumble in an interview.
+
+## Atom format
+
+```toml
+[[role]]
+id = "acme"                      # lowercase; letters, digits, . _ -
+employer = "Acme Manufacturing"
+title = "Maintenance Technician"
+location = "Peoria, IL"
+start = "2019-03"                # YYYY or YYYY-MM
+end = "present"
+
+[[bullet]]
+id = "acme.downtime"
+role = "acme"                    # the role it happened in. Required.
+text = "Cut unplanned line downtime 30% by rebuilding the preventive maintenance schedule"
+basis = "records"                # measured | records | estimate
+defense = "Downtime log in the plant system, 2022 against 2023."
+
+[[bullet.phrasing]]              # optional other wordings of the same fact
+use = "cover"                    # resume | cover | email | any
+text = "I rebuilt our maintenance schedule and unplanned downtime fell 30%."
+
+[[project]]
+id = "shift-tool"
+title = "Shift Scheduler"
+context = "personal"             # a role id, or personal | school | volunteer
+url = "https://example.com/shift-scheduler"   # optional; always shown in full
+
+[[skill]]
+id = "skill.tools"
+label = "Tools"
+items = ["Excel", "Forklift"]
+
+[[credential]]
+id = "cred.osha10"
+name = "OSHA 10-Hour General Industry"
+date = "2021"
+
+[[education]]
+id = "edu.college"
+school = "Harper Community College"
+credential = "Associate of Applied Science"
+field = "Business Management"
+date = "2016"
+
+[[summary]]
+id = "summary.main"
+text = "Warehouse supervisor with 8 years in distribution and retail operations."
+```
+
+A bullet can belong to a `project = "<id>"` instead of a role. Work done for
+an employer is never described as a personal project, and the reverse.
+
+## For each job
+
+1. `jobforge prepare --from-url <url>`. If the board blocks it, ask the user
+   to paste the posting and use `--from-text`. Read the new folder's
+   `job.json`.
+2. `jobforge inventory`, then write `plan.json` in the job folder:
+
+```json
+{
+  "version": 1,
+  "fit": {"score": "strong", "summary": "Why this fits, in two sentences."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "acme", "bullets": [
+      "acme.downtime",
+      {"atom": "acme.safety", "text": "Your rewording of that fact for this job"}
+    ]}
+  ],
+  "projects": [{"project": "shift-tool", "bullets": []}],
+  "skills": ["skill.tools"],
+  "credentials": ["cred.osha10"],
+  "education": ["edu.college"],
+  "cover_letter": {
+    "hook": "One short paragraph specific to this company.",
+    "body": "One or two paragraphs. Every fact here must come from the atoms in cites.",
+    "close": "One short paragraph.",
+    "cites": ["acme.downtime", "shift-tool"]
+  },
+  "gaps": ["Requirements the atoms do not cover, for the user's eyes only"]
+}
+```
+
+3. `jobforge check <job>`. Fix every error it lists, and run it again until
+   it passes.
+4. `jobforge apply <job>`. Tell the user where the files are and what you
+   left out and why. They read and send the documents themselves.
+5. When the user says they applied: `jobforge applied --mark <job> --status applied`.
+
+### Rules the check enforces
+
+- Every figure in a line must appear in an atom the line cites. A reworded
+  bullet keeps its atom's figures exactly.
+- A bullet goes only under its own role. A cover-letter sentence that names
+  an employer may only use that employer's facts.
+- Nothing from the never-claim list, and no tool the cited atoms do not show.
+- If you mention a project that has a URL, include the URL in full.
+- No hedged figures ("about 50%"), no atom ids in the letter.
+- Cover letter: at most {{cover_letter_max_words}} words{{dash_rule}}. Avoid
+  stock AI phrasing ("passionate about", "leverage", "excited to").
+- Resume: aim for {{page_limit}} page(s); `check` warns when it runs long.
+
+### Writing well
+
+- Lead each role with the bullet that matters most for this job.
+- Most recent role first.
+- The hook names something specific about this company or role.
+- Never volunteer a weakness or a gap in the cover letter. Gaps go in
+  `"gaps"`, which only the user sees.
+
+## Finding jobs
+
+If the user asks you to find postings (for example "warehouse supervisor
+jobs near Springfield"), search the web, show them what you found, and run
+`jobforge prepare --from-url` only on the ones they pick. Jobforge does not
+scrape job boards; every job enters through `prepare`.
+
+## Recording outcomes
+
+Stages: prepared, applied, skipped, screen, interview, offer, accepted,
+declined, rejected, withdrawn. Record each as it happens, with `--date
+YYYY-MM-DD` if it was not today and `--note "..."` for context. A job with no
+reply {{ghost_after_days}} days after applying shows as ghosted automatically;
+never record that yourself.

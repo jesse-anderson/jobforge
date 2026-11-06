@@ -4,20 +4,107 @@ Turn your real work history into a resume and cover letter tailored to one
 job posting, on your own computer, for free, without the tool ever stating a
 fact you did not give it.
 
-**Status: in development, not yet usable.** Nothing is published on PyPI yet.
+**Status: pre-release.** It works end to end, but it is not on PyPI yet.
 
-- Source-available under PolyForm Noncommercial 1.0.0: free for personal
-  use and for nonprofits, schools, and public institutions. Not for
-  commercial use.
-- Runs locally. Your AI coding agent (Claude Code first) does the writing;
-  Jobforge does everything else, and checks every number, employer, and tool
-  in the output against what you confirmed.
-- Produces `.docx` files built for applicant tracking systems.
+- **Free and local.** Nothing runs on a server. Your AI coding agent (Claude
+  Code first; Codex, Gemini CLI and others also work) does the writing, and
+  Jobforge does everything else.
+- **No invented facts.** Every number, employer, tool, and credential in your
+  documents is checked against facts you confirmed. If your agent invents
+  one, Jobforge refuses to write the document.
+- **Built for applicant tracking systems.** It writes `.docx` files with no
+  tables, columns, or hidden characters, then reads them back to prove what a
+  parser will see.
+
+Source-available under PolyForm Noncommercial 1.0.0: free for personal use
+and for nonprofits, schools, and public institutions. Not for commercial use.
+
+## What you need
+
+- Windows or Linux (macOS is untested).
+- Python 3.11 or newer. Check with `python --version`.
+- An AI coding agent that runs in a terminal, such as Claude Code.
+
+## Set up (once)
+
+```
+pip install jobforge            # or: git clone, then `pip install .`
+jobforge init ~/jobsearch
+```
+
+That makes a folder with everything Jobforge needs:
+
+```
+jobsearch/
+  CLAUDE.md, AGENTS.md   instructions for your agent (generated)
+  profile/profile.toml   your name and contact details
+  profile/atoms/         your confirmed facts
+  profile/pending/       facts your agent drafted, waiting for you
+  intake/                put your old resume here
+  jobs/                  one folder per job you apply to
+```
+
+1. Copy your old resume (and any cover letters) into `intake/`.
+2. Open your agent in the `jobsearch` folder and say **"set me up"**. It reads
+   your resume, fills in your profile, and drafts your facts into
+   `profile/pending/`. Where your resume is unclear, it asks.
+3. Run **`jobforge confirm`**. For each drafted fact, you choose keep, drop,
+   or skip. Only facts you keep are ever used.
+
+## Apply to a job
+
+Tell your agent: **"apply to this job: <link>"** (or paste the posting). It
+will:
+
+1. `jobforge prepare --from-url <link>` to save the posting,
+2. write a plan for which facts to use and how to word them,
+3. `jobforge check <job>` until the plan passes,
+4. `jobforge apply <job>`, which writes `Your_Name_Resume.docx` and
+   `Your_Name_Cover_Letter.docx` into the job's folder.
+
+Read both documents, then upload the `.docx` files yourself. `cover_letter.md`
+is a working copy for review; never send it.
+
+When you have applied: `jobforge applied --mark <job> --status applied`.
+Record later news the same way (`screen`, `interview`, `offer`, `rejected`,
+...). `jobforge jobs` lists everything; a job with no reply after 30 days shows
+as **ghosted**.
+
+## Commands
+
+| Command | Does |
+|---|---|
+| `jobforge init <folder>` | Make a workspace (`--refresh` regenerates the agent files) |
+| `jobforge confirm` | Review drafted facts: keep, drop, or skip |
+| `jobforge inventory` | List your confirmed facts |
+| `jobforge prepare --from-url <url>` | Save a posting (or `--from-text <file>` with `--company` and `--title`) |
+| `jobforge check <job>` | Check a plan without writing documents |
+| `jobforge apply <job>` | Check, then write the resume and cover letter |
+| `jobforge applied --mark <job> --status <stage>` | Record what happened |
+| `jobforge jobs` | List your jobs and their status (`search` works too) |
+
+`<job>` is the job folder's name or any unique piece of it.
+
+## Optional extras
+
+Not needed to use Jobforge. Planned for later releases:
+
+- **PDF output** (via Tectonic). Upload the `.docx` meanwhile; it is the
+  format applicant tracking systems read most reliably.
+- **A progress page** showing applications over time, callback rate, and
+  outcomes.
 
 ## For maintainers
 
+```
+pip install -e ".[dev]"
+python -m pytest                 # also works uninstalled: pytest finds src/
+python -m coverage run -m pytest && python -m coverage report
+```
+
 - `docs/COMPONENTS.md`: what each part is called and where it lives
-- `docs/MVP.md`: what the first usable release does (proposed)
+- `docs/MVP.md`: what the first public release does, and build status
 - `docs/DECISIONS.md`: every scope decision; the governing record
 - `docs/SOW.md`: phases to 1.0
 - `docs/MAINTAINING.md`: how work is assigned and merged
+- `docs/VM_CHECKLIST.md`: the clean-machine check before every release

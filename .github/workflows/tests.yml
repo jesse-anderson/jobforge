@@ -1,0 +1,43 @@
+# Tests only (D-15). Never scrapes, never runs on a schedule, never touches
+# the network from a test. On a private repo, Windows minutes bill at 2x, so
+# this runs on pushes to main and on pull requests, and cancels superseded runs.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: PII denylist (maintainer secret; T-PII skips without it)
+        if: ${{ env.PII_DENYLIST != '' }}
+        shell: bash
+        env:
+          PII_DENYLIST: ${{ secrets.PII_DENYLIST }}
+        run: printf '%s\n' "$PII_DENYLIST" > "$RUNNER_TEMP/pii_denylist.txt"
+      - name: Test with coverage
+        shell: bash
+        env:
+          JOBFORGE_PII_DENYLIST: ${{ runner.temp }}/pii_denylist.txt
+        run: |
+          python -m coverage run -m pytest -q
+          python -m coverage report --fail-under=95

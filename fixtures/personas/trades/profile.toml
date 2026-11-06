@@ -1,0 +1,11 @@
+# Trades persona (D-09 #1). Fictional. Two roles at one employer
+# (apprentice, then journeyman), carried by licenses and hours.
+
+[person]
+name = "Maria Garcia"
+email = "maria.garcia@example.com"
+phone = "555-0142"
+location = "Rockford, IL"
+
+[claims]
+never_claim = ["Master Electrician License", "PLC programming"]

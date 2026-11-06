@@ -1,0 +1,46 @@
+[[summary]]
+id = "summary.main"
+text = "Warehouse supervisor with 9 years in distribution and grocery operations, focused on accuracy, safety, and schedules that fit the work."
+
+[[project]]
+id = "shift-scheduler"
+title = "Shift Scheduler"
+context = "personal"
+url = "https://example.com/shift-scheduler"
+text = "A free spreadsheet template for building fair rotating shift schedules"
+
+[[bullet]]
+id = "shift-scheduler.users"
+project = "shift-scheduler"
+text = "Built a shift scheduling spreadsheet in Google Sheets now used by 40 small businesses"
+basis = "measured"
+defense = "Download count on the template page."
+
+[[skill]]
+id = "skill.warehouse"
+label = "Warehouse"
+items = ["Manhattan WMS", "RF scanners", "Cycle counting", "Forklift"]
+
+[[skill]]
+id = "skill.office"
+label = "Office"
+items = ["Excel", "Google Sheets"]
+
+[[credential]]
+id = "cred.osha10"
+name = "OSHA 10-Hour General Industry"
+issuer = "OSHA Training Institute"
+date = "2021"
+
+[[credential]]
+id = "cred.forklift"
+name = "Forklift Operator Certification"
+date = "2020"
+
+[[education]]
+id = "edu.harper"
+school = "Harper Community College"
+credential = "Associate of Applied Science"
+field = "Business Management"
+location = "Palatine, IL"
+date = "2016"

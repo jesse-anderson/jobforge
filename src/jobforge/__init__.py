@@ -1,0 +1,3 @@
+"""Jobforge: tailored resumes and cover letters from facts you confirmed."""
+
+__version__ = "0.1.0.dev0"

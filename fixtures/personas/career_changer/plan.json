@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "fit": {"score": "moderate", "summary": "Years of coordinating contractors, vendors, and schedules in retail, plus a CAPM; no construction employer yet."},
+  "experience": [
+    {"role": "maple", "bullets": [
+      {"atom": "maple.remodel", "text": "Coordinated 4 contractors on an 8-week remodel of an occupied site, delivering $15K under a $120K budget"},
+      {"atom": "maple.vendors", "text": "Scheduled deliveries from 35 vendors on a shared order calendar, cutting stockouts 30%"},
+      "maple.staff"
+    ]},
+    {"role": "corner", "bullets": [
+      {"atom": "corner.events", "text": "Coordinated 60 events a year, scheduling speakers, rooms, and staff"}
+    ]}
+  ],
+  "skills": ["skill.tools"],
+  "credentials": ["cred.capm"],
+  "education": ["edu.cc"],
+  "cover_letter": {
+    "hook": "Keeping subcontractors, deliveries, and site schedules lined up is the part of my current job I am best at, and I want to do it full time at Harbor Construction Group.",
+    "body": "At Maple Street Market I ran an 8-week remodel while the store stayed open, coordinating 4 contractors and finishing $15K under a $120K budget. I schedule deliveries from 35 vendors on a shared calendar, which cut stockouts 30%.\n\nI earned my CAPM in 2025 to put a framework under what I had been doing by hand.",
+    "close": "I would like to talk about how your coordinators split work across active jobs.",
+    "cites": ["maple.remodel", "maple.vendors", "cred.capm"]
+  },
+  "gaps": ["No construction employer yet; PMP is preferred and Dana holds the CAPM instead."]
+}
