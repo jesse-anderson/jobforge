@@ -1,0 +1,245 @@
+"""The fact check: nothing in a deliverable that the user did not confirm.
+
+Mechanical, never model-judged (D-32). For every line the agent authored or
+selected:
+
+- Every figure (number, percentage, money, multiple, year) must appear in an
+  atom the line cites. Wording around it is free.
+- No hedged figures, and no more precision than the atom states (D-37).
+- A bullet's text names no employer but its own; a cover-letter sentence that
+  names an employer carries only figures and tools from that employer's atoms
+  (D-40). Personal, school, and volunteer work belongs to no employer.
+- Nothing on the never-claim list; no known tool or credential the cited atoms
+  do not mention.
+- A cited or named project with a live URL shows the full URL (D-42); a host
+  or one path segment is not enough (FINDINGS F22).
+- Voice rules apply to text the user authors, never to text quoted from the
+  posting (FINDINGS F21).
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+
+from .atoms import Atom, Inventory
+from .facts import find_hedges, number_tokens, split_sentences, term_in, word_count
+from .plan import Line, ResolvedPlan
+from .profile import Profile, display_url
+
+
+@dataclass
+class Report:
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return not self.errors
+
+    def extend(self, other: "Report") -> None:
+        self.errors.extend(other.errors)
+        self.warnings.extend(other.warnings)
+
+
+def _pool_text(atoms: list[Atom], inv: Inventory, *, with_owner_role: bool = True) -> str:
+    """All text the cited atoms state, plus the role each belongs to (a bullet
+    may mention its own employer, title, and dates)."""
+    texts: list[str] = []
+    seen: set[str] = set()
+    for atom in atoms:
+        chain = [atom]
+        if with_owner_role:
+            role = inv.owner_role(atom)
+            if role:
+                chain.append(role)
+        if atom.kind == "bullet" and atom.get("project"):
+            proj = inv.get(atom.get("project"))
+            if proj:
+                chain.append(proj)
+        for a in chain:
+            if a.id not in seen:
+                seen.add(a.id)
+                texts.extend(a.texts())
+    return "\n".join(texts)
+
+
+def vocabulary(inv: Inventory, profile: Profile) -> list[str]:
+    """Tool, skill, and credential terms the check can recognize: every skill
+    item, every credential name, and the never-claim list."""
+    terms: set[str] = set()
+    for skill in inv.of_kind("skill"):
+        for item in skill.get("items") or []:
+            terms.add(item.strip())
+    for cred in inv.of_kind("credential"):
+        terms.add(cred.get("name").strip())
+    terms.update(t for t in profile.never_claim)
+    return sorted((t for t in terms if t), key=len, reverse=True)
+
+
+def _profile_text(profile: Profile) -> str:
+    return " ".join([profile.name, profile.email, profile.phone, profile.location,
+                     *profile.links])
+
+
+def check_figures(text: str, pool: str, where: str, rep: Report, extra_pool: str = "") -> None:
+    have = set(number_tokens(pool + "\n" + extra_pool))
+    for tok in number_tokens(text):
+        if tok not in have:
+            rep.errors.append(
+                f"{where}: the figure {tok} is not in the facts this line cites. "
+                f"Use a figure the atom states, or add the fact (with `jobforge "
+                f"confirm`) before using it.")
+    for hedge in find_hedges(text):
+        rep.errors.append(f"{where}: hedged figure {hedge!r}. State figures plainly "
+                          f"('50%', not 'about 50%') (D-37).")
+
+
+def check_terms(text: str, pool: str, vocab: list[str], profile: Profile, where: str,
+                rep: Report) -> None:
+    for term in profile.never_claim:
+        if term_in(term, text):
+            rep.errors.append(f"{where}: claims {term!r}, which your profile says "
+                              f"never to claim.")
+    never = {t.lower() for t in profile.never_claim}
+    for term in vocab:
+        if term.lower() in never:
+            continue
+        if term_in(term, text) and not term_in(term, pool):
+            rep.errors.append(f"{where}: mentions {term!r}, but none of the atoms this "
+                              f"line cites do. Cite the atom where you used it.")
+
+
+def check_employers(text: str, line_atoms: list[Atom], inv: Inventory, where: str,
+                    rep: Report) -> None:
+    """A resume line may only name the employer its facts belong to."""
+    own = {inv.employer_of(a) for a in line_atoms} - {None}
+    for employer in inv.employers():
+        if employer not in own and term_in(employer, text):
+            owners = ", ".join(sorted(own)) or "no employer (personal, school, or volunteer work)"
+            rep.errors.append(f"{where}: names {employer!r}, but this fact belongs to "
+                              f"{owners} (D-40).")
+
+
+def check_voice(text: str, profile: Profile, where: str, rep: Report) -> None:
+    if profile.ban_dashes:
+        for ch, name in (("—", "em dash"), ("–", "en dash")):
+            if ch in text:
+                rep.errors.append(f"{where}: contains an {name} ({ch}). Use a comma, "
+                                  f"colon, or period.")
+    lower = text.lower()
+    words = set(re.findall(r"[a-z][a-z'-]*", lower))
+    hits = sorted(w for w in profile.banned_words if w in words)
+    if hits:
+        rep.errors.append(f"{where}: uses banned word(s) {hits}.")
+    phrase_hits = [p for p in profile.banned_phrases if p in lower]
+    if phrase_hits:
+        rep.errors.append(f"{where}: uses banned phrase(s) {phrase_hits}.")
+
+
+def check_atom_ids(text: str, inv: Inventory, where: str, rep: Report) -> None:
+    leaked = sorted(a for a in inv.atoms if "." in a and re.search(
+        r"(?<![\w.])" + re.escape(a) + r"(?![\w])", text))
+    if leaked:
+        rep.errors.append(f"{where}: contains atom id(s) {leaked}. Ids are internal; "
+                          f"cite atoms in `cites`, not in the prose.")
+
+
+def url_key(url: str) -> str:
+    """Comparable form of a URL: no scheme, no www., no trailing slash."""
+    return display_url(url).lower()
+
+
+def live_url(atom: Atom) -> str | None:
+    if atom.get("url_status") == "dead":
+        return None
+    return atom.get("url") or None
+
+
+def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
+               rep: Report) -> None:
+    pool = _pool_text(line.cites, inv)
+    check_figures(line.text, pool, line.where, rep)
+    check_terms(line.text, pool, vocab, profile, line.where, rep)
+    check_employers(line.text, line.cites, inv, line.where, rep)
+    check_atom_ids(line.text, inv, line.where, rep)
+    # Voice rules are for text the agent wrote. An atom rendered as the user
+    # wrote it is their own wording and is not second-guessed.
+    if line.owner is None or line.text != (line.owner.get("text") or "").strip():
+        check_voice(line.text, profile, line.where, rep)
+
+
+def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: list[str],
+                 rep: Report, job: dict | None = None) -> None:
+    letter = plan.letter
+    if letter is None:
+        return
+    text = letter.text()
+    where = "cover_letter"
+    cites = letter.cites
+    # Figures about the employer, quoted from its own posting, are ground truth
+    # too ("your 40 locations"). They are not claims about the user.
+    posting = ""
+    if job:
+        posting = " ".join(str(job.get(k, "")) for k in
+                           ("company", "title", "location", "description"))
+    pool = "\n".join([_pool_text(cites, inv), _profile_text(profile), posting])
+
+    check_voice(text, profile, where, rep)
+    check_atom_ids(text, inv, where, rep)
+    for term in profile.never_claim:
+        if term_in(term, text):
+            rep.errors.append(f"{where}: claims {term!r}, which your profile says "
+                              f"never to claim.")
+
+    n = word_count(text)
+    if n > profile.cover_letter_max_words:
+        rep.errors.append(f"{where}: {n} words; the limit is "
+                          f"{profile.cover_letter_max_words} (profile setting "
+                          f"cover_letter_max_words). Cut it down.")
+
+    employers = inv.employers()
+    for i, sentence in enumerate(split_sentences(text), 1):
+        sw = f"{where} sentence {i}"
+        named = [e for e in employers if term_in(e, sentence)]
+        if len(named) == 1:
+            # Only that employer's facts (and the profile) may appear here.
+            bound = [a for a in cites if inv.employer_of(a) == named[0]]
+            bound += employers[named[0]]
+            scoped = _pool_text(bound, inv) + "\n" + _profile_text(profile)
+            check_figures(sentence, scoped, f"{sw} (names {named[0]!r})", rep)
+            check_terms(sentence, scoped, vocab, profile, f"{sw} (names {named[0]!r})", rep)
+        else:
+            if len(named) > 1:
+                rep.warnings.append(f"{sw}: names {len(named)} employers "
+                                    f"({', '.join(named)}); check each figure is "
+                                    f"credited to the right one.")
+            check_figures(sentence, pool, sw, rep)
+            check_terms(sentence, pool, vocab, profile, sw, rep)
+
+    # Projects: cited, or named by title, with a live URL -> full URL in text.
+    mentioned = {a.id: a for a in cites if a.kind == "project"}
+    for a in cites:
+        if a.kind == "bullet" and a.get("project"):
+            proj = inv.get(a.get("project"))
+            if proj:
+                mentioned[proj.id] = proj
+    for proj in inv.of_kind("project"):
+        if term_in(proj.get("title"), text):
+            mentioned[proj.id] = proj
+    text_l = text.lower()
+    for proj in mentioned.values():
+        url = live_url(proj)
+        if url and url_key(url) not in text_l:
+            rep.errors.append(
+                f"{where}: mentions project {proj.get('title')!r} but not its URL. "
+                f"Include {display_url(url)} so a reader can check it (D-42).")
+
+
+def check_plan(plan: ResolvedPlan, inv: Inventory, profile: Profile,
+               job: dict | None = None) -> Report:
+    rep = Report()
+    vocab = vocabulary(inv, profile)
+    for line in plan.resume_lines():
+        check_line(line, inv, profile, vocab, rep)
+    check_letter(plan, inv, profile, vocab, rep, job)
+    return rep

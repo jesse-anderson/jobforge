@@ -1,0 +1,64 @@
+[[role]]
+id = "maple"
+employer = "Maple Street Market"
+title = "Store Manager"
+location = "Tacoma, WA"
+start = "2018-03"
+end = "present"
+
+[[bullet]]
+id = "maple.remodel"
+role = "maple"
+text = "Ran an 8-week store remodel while staying open, coordinating 4 contractors and finishing $15K under the $120K budget"
+basis = "records"
+defense = "Remodel budget sheet and contractor invoices."
+
+[[bullet.phrasing]]
+use = "resume"
+industry = "construction"
+text = "Coordinated 4 contractors on an 8-week remodel of an occupied site, delivering $15K under a $120K budget"
+
+[[bullet]]
+id = "maple.staff"
+role = "maple"
+text = "Manage 22 staff and weekly schedules across 7 departments"
+basis = "records"
+
+[[bullet]]
+id = "maple.vendors"
+role = "maple"
+text = "Track deliveries from 35 vendors and cut stockouts 30% with a shared order calendar"
+basis = "estimate"
+defense = "Stockout counts from weekly reports, rounded."
+
+[[role]]
+id = "corner"
+employer = "Corner Books"
+title = "Assistant Manager"
+location = "Olympia, WA"
+start = "2014-05"
+end = "2018-02"
+
+[[bullet]]
+id = "corner.events"
+role = "corner"
+text = "Planned and ran 60 author events a year, booking speakers, rooms, and staff"
+basis = "estimate"
+defense = "Event calendar; 5 a month."
+
+[[credential]]
+id = "cred.capm"
+name = "Certified Associate in Project Management (CAPM)"
+issuer = "Project Management Institute"
+date = "2025"
+
+[[skill]]
+id = "skill.tools"
+label = "Tools"
+items = ["Excel", "Smartsheet", "Google Calendar"]
+
+[[education]]
+id = "edu.cc"
+school = "Puget Sound Community College"
+credential = "Associate of Arts"
+date = "2014"

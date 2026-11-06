@@ -1,0 +1,12 @@
+# Entry-level persona (D-09 #11). Fictional. No employer at all: a thin
+# inventory of school and volunteer work. The tool must not pad it.
+
+[person]
+name = "Alex Chen"
+email = "alex.chen@example.com"
+phone = "555-0177"
+location = "Madison, WI"
+links = ["https://example.com/alexchen"]
+
+[claims]
+never_claim = ["Tableau", "Python"]

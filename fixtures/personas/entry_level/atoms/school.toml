@@ -1,0 +1,52 @@
+[[education]]
+id = "edu.state"
+school = "Lakeshore State University"
+credential = "Bachelor of Science"
+field = "Statistics"
+location = "Madison, WI"
+date = "2026-05"
+details = "GPA 3.6 | Courses: Regression, Survey Sampling, Data Visualization"
+
+[[project]]
+id = "proj.bikes"
+title = "Campus Bike Share Study"
+context = "school"
+url = "https://example.com/alexchen/bike-share"
+text = "Capstone project"
+
+[[bullet]]
+id = "proj.bikes.model"
+project = "proj.bikes"
+text = "Modeled 2 years of bike share trips in R to find the 5 stations that ran empty most often"
+basis = "measured"
+defense = "The capstone report and the R scripts."
+
+[[bullet]]
+id = "proj.bikes.result"
+project = "proj.bikes"
+text = "Recommended moving 12 bikes each morning; the campus pilot cut empty-station reports by half"
+basis = "records"
+facts = ["50%"]
+defense = "Transportation office pilot summary."
+
+[[project]]
+id = "proj.pantry"
+title = "Food Pantry Inventory Sheet"
+context = "volunteer"
+text = "Volunteer project"
+
+[[bullet]]
+id = "proj.pantry.sheet"
+project = "proj.pantry"
+text = "Built an Excel inventory sheet that a volunteer food pantry uses for 300 weekly visits"
+basis = "estimate"
+defense = "Pantry coordinator's visit count."
+
+[[skill]]
+id = "skill.analysis"
+label = "Analysis"
+items = ["R", "Excel", "SQL"]
+
+[[summary]]
+id = "summary.main"
+text = "Statistics graduate who likes turning messy operational data into one clear recommendation."

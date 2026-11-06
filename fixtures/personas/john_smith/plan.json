@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "fit": {"score": "strong", "summary": "Supervises the same three functions, owns accuracy and scheduling, and has the WMS and forklift background the posting asks for."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "northwind", "bullets": [
+      "northwind.accuracy",
+      {"atom": "northwind.team", "text": "Lead 14 associates across two shifts in receiving, picking, and shipping"},
+      "northwind.overtime",
+      "northwind.safety"
+    ]},
+    {"role": "lakeside", "bullets": ["lakeside.shrink", "lakeside.training"]}
+  ],
+  "projects": [{"project": "shift-scheduler", "bullets": ["shift-scheduler.users"]}],
+  "skills": ["skill.warehouse", "skill.office"],
+  "credentials": ["cred.forklift", "cred.osha10"],
+  "education": ["edu.harper"],
+  "cover_letter": {
+    "hook": "Prairie Freight is hiring a second-shift supervisor to own accuracy and on-time dispatch, which is the job I do now at Northwind Distribution.",
+    "body": "At Northwind Distribution I lead 14 associates across receiving, picking, and shipping. I brought our pick accuracy from 97.2% to 99.6% by making every pick scan-to-confirm, and I cut weekly overtime 25% by building the schedule around inbound truck times.\n\nSafety is part of the routine for me. My team has gone 2 years without a recordable injury since we started weekly safety huddles. I also built a shift scheduling template that 40 small businesses use (example.com/shift-scheduler).",
+    "close": "I would like to talk about how your Springfield second shift runs today and where it needs to go.",
+    "cites": ["northwind.team", "northwind.accuracy", "northwind.overtime", "northwind.safety", "shift-scheduler", "shift-scheduler.users"]
+  },
+  "gaps": ["SAP is listed as a plus; John has not used it."]
+}
