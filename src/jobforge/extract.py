@@ -132,6 +132,8 @@ _SITE_WORDS = re.compile(
     r"careers?|jobs?|job board|hiring|linkedin|indeed|glassdoor|ziprecruiter|"
     r"workday|greenhouse|lever|smartrecruiters|breezy", re.IGNORECASE)
 _DOMAIN_RE = re.compile(r"^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:/.*)?$", re.IGNORECASE)
+# Workday's hiringOrganization is often a legal entity: "2100 Acme USA".
+_ENTITY_CODE_RE = re.compile(r"^\d{3,}\s")
 
 
 def looks_like_domain(name: str) -> bool:
@@ -251,6 +253,12 @@ def from_url(url: str, *, company: str | None = None, title: str | None = None,
         found_title = strip_title_suffix(unescape("".join(parser.title_parts)))
     if not found_company:
         found_company = parser.meta.get("og:site_name", "")
+    if not company and _ENTITY_CODE_RE.match(found_company.strip()):
+        raise JobforgeError(
+            f"The company came out as {found_company.strip()!r}, which looks like an "
+            f"internal entity code, not the name people know. It would end up in "
+            f"your letter as \"Dear {found_company.strip()} Hiring Team\". Pass "
+            f"--company \"Company name\".")
 
     job = _finish(
         company=company or found_company,

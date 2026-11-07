@@ -216,3 +216,26 @@ def test_google_careers_posting_asks_for_the_company():
     assert job.source == "page-text"
     assert "storage performance" in job.description
     assert any("No structured posting data" in w for w in warnings)
+
+
+def test_workday_entity_code_is_not_taken_as_the_company():
+    """Workday's JSON-LD names an internal legal entity ("2100 NVIDIA USA"),
+    which would go out as "Dear 4100 Fernwood Industries USA Hiring Team"."""
+    url = ("https://fernwood.wd5.myworkdayjobs.com/en-US/External/job/US-OH-Dayton/"
+           "Senior-Process-Engineer---Molding_JR0000001")
+    with pytest.raises(JobforgeError, match="entity code") as exc:
+        from_url(url, fetch=fake_fetch("workday_posting.html"))
+    assert "Pass --company" in exc.value.render()
+    job, warnings = from_url(url, company="Fernwood Industries",
+                             fetch=fake_fetch("workday_posting.html"))
+    assert job.company == "Fernwood Industries"
+    assert job.title == "Senior Process Engineer – Molding"
+    assert job.location == "US, OH, Dayton, United States of America"
+    assert job.source == "json-ld" and warnings == []
+    assert "30 presses" in job.description
+
+
+def test_a_company_you_name_that_starts_with_digits_is_kept():
+    job, _ = from_url("https://x.example.com/1", company="99 Cents Only Stores",
+                      fetch=fake_fetch("workday_posting.html"))
+    assert job.company == "99 Cents Only Stores"
