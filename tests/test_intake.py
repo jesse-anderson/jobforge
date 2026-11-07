@@ -1,6 +1,7 @@
 """D-30 item 2: job intake from a URL (saved HTML, fetch stubbed) and from
 pasted text, including the private repo's failures F23 and F27."""
 import json
+import re
 import urllib.error
 
 import pytest
@@ -179,3 +180,39 @@ def test_slug_is_bounded_and_never_empty():
 def test_folder_name_format():
     job, _ = from_text(LONG, company="A&B", title="C/D")
     assert folder_name(job, TODAY) == "a_b__c_d__2026-11-20"
+
+
+# Issue #4: one posting from each common board, saved with the real page's
+# structure (2026-11) and fictional text. Each either gives correct fields or
+# stops and asks for what it could not read. Never a domain or an entity code
+# as the company (F23), never a %PLACEHOLDER% in the description (F27).
+BOARDS = [
+    # fixture, url, company, title, location, source, a phrase from the posting
+    ("lever_posting.html", "https://jobs.lever.co/harborpoint/00000000-0000-4000-8000-000000000002",
+     "Harbor Point Logistics", "Warehouse Operations Lead", "Memphis, Tennessee", "json-ld",
+     "400,000 sq ft cross-dock"),
+    ("ashby_posting.html", "https://jobs.ashbyhq.com/northbeam/00000000-0000-4000-8000-000000000001",
+     "Northbeam Energy", "Controls Engineer", "Denver, CO, USA", "json-ld", "Modbus and DNP3"),
+]
+
+
+@pytest.mark.parametrize("fixture,url,company,title,location,source,phrase", BOARDS,
+                         ids=[b[0].split(".")[0] for b in BOARDS])
+def test_board_posting_fields(fixture, url, company, title, location, source, phrase):
+    job, warnings = from_url(url, fetch=fake_fetch(fixture))
+    assert (job.company, job.title, job.location, job.source) == (company, title, location, source)
+    assert phrase in job.description
+    assert not looks_like_domain(job.company)
+    assert not re.search(r"%[A-Z][A-Z0-9_]{2,}%", job.description)
+    assert bool(warnings) is (source == "page-text")
+
+
+def test_google_careers_posting_asks_for_the_company():
+    url = "https://www.google.com/about/careers/applications/jobs/results/123-technical-support-engineer"
+    with pytest.raises(JobforgeError, match="Pass --company"):
+        from_url(url, fetch=fake_fetch("google_careers_job.html"))
+    job, warnings = from_url(url, company="Google", fetch=fake_fetch("google_careers_job.html"))
+    assert job.title == "Technical Support Engineer, Cloud Storage"
+    assert job.source == "page-text"
+    assert "storage performance" in job.description
+    assert any("No structured posting data" in w for w in warnings)
