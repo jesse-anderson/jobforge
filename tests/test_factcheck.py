@@ -265,6 +265,136 @@ def test_atom_id_leak_in_a_bullet(ws, john_plan):
     expect(check(ws, john_plan), "contains atom id(s) ['northwind.safety']")
 
 
+# --- Role titles (#89) -------------------------------------------------------
+# A title is a claim like an employer (D-40): a line may name only a title its
+# own role holds, as written or as one of the role's title_aliases.
+
+def bullet(plan, role_index, atom, text):
+    plan["experience"][role_index]["bullets"][0] = {"atom": atom, "text": text}
+
+
+def test_role_own_title_passes(ws, john_plan):
+    bullet(john_plan, 0, "northwind.accuracy",
+           "As Warehouse Supervisor, raised order pick accuracy from 97.2% to 99.6%")
+    assert check(ws, john_plan).ok
+
+
+def test_another_roles_title_fails(ws, john_plan):
+    bullet(john_plan, 1, "lakeside.shrink",
+           "As Warehouse Supervisor, reduced produce shrink 18% with rotation checks")
+    expect(check(ws, john_plan), "mentions 'Warehouse Supervisor'")
+
+
+def test_invented_title_in_a_bullet_fails(ws, john_plan):
+    bullet(john_plan, 0, "northwind.accuracy",
+           "As Operations Manager, raised order pick accuracy from 97.2% to 99.6%")
+    expect(check(ws, john_plan), "names the title 'Operations Manager'")
+
+
+def test_inflated_title_fails(ws, john_plan):
+    bullet(john_plan, 0, "northwind.accuracy",
+           "As Senior Warehouse Supervisor, raised pick accuracy from 97.2% to 99.6%")
+    expect(check(ws, john_plan), "names the title 'Senior Warehouse Supervisor'")
+
+
+def test_invented_title_in_the_summary_fails(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind"],
+                            "text": "Operations Manager with 9 years in distribution."}
+    expect(check(ws, john_plan), "names the title 'Operations Manager'")
+
+
+def test_another_roles_title_in_the_summary_fails(ws, john_plan):
+    # The summary atom itself says "Warehouse supervisor", so use Lakeside's.
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind"],
+                            "text": "Shift Lead with 9 years in distribution."}
+    expect(check(ws, john_plan), "mentions 'Shift Lead'")
+
+
+def test_invented_title_in_the_letter_fails(ws, john_plan):
+    letter_body(john_plan, "As Distribution Center Manager I lead 14 associates.")
+    expect(check(ws, john_plan), "names the title 'Distribution Center Manager'")
+
+
+def test_letter_may_name_the_postings_title(ws, john_plan):
+    letter_body(john_plan, "I would like to be your next Operations Supervisor.")
+    assert check(ws, john_plan).ok
+
+
+# #119 review: a title that belongs to someone else is not a claim.
+@pytest.mark.parametrize("text", [
+    "I would welcome a call with your Hiring Manager.",
+    "I have worked closely with Plant Managers and a Regional Director.",
+    "I work with a Plant Manager and the Regional Director every week.",
+    "I report to your Regional Director or the Operations Manager.",
+    "I report to the Operations Manager on the second shift.",
+    "I would report to Regional Director Lee.",
+    "Your Operations Manager would get a steady second shift.",
+    "Hiring Manager, thank you for reading.",
+])
+def test_letter_may_name_other_peoples_titles(ws, john_plan, text):
+    letter_body(john_plan, text)
+    rep = check(ws, john_plan)
+    assert rep.ok, rep.errors
+
+
+@pytest.mark.parametrize("text,title", [
+    ("I was the Operations Manager on the second shift.", "Operations Manager"),
+    ("I was promoted to Operations Manager last spring.", "Operations Manager"),
+    ("I rose to the Regional Director role.", "Regional Director"),
+    ("The Operations Manager role is mine today.", "Operations Manager"),
+    ("I was Store Manager and then Regional Director.", "Regional Director"),
+    ("I was Store Manager and a Regional Director.", "Regional Director"),
+    ("Operations Manager and Regional Director, both mine.", "Regional Director"),
+])
+def test_a_title_the_user_holds_is_still_a_claim(ws, john_plan, text, title):
+    letter_body(john_plan, text)
+    expect(check(ws, john_plan), f"names the title {title!r}")
+
+
+def test_letter_title_bound_to_the_employer_it_names(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("lakeside")
+    letter_body(john_plan, "At Lakeside Grocery Co-op I was the Warehouse Supervisor.")
+    expect(check(ws, john_plan), "(names 'Lakeside Grocery Co-op'): mentions "
+                                 "'Warehouse Supervisor'")
+
+
+def with_title_aliases(ws, role_id, names):
+    path = ws.atoms_dir / "work.toml"
+    text = path.read_text(encoding="utf-8")
+    quoted = ", ".join(f'"{n}"' for n in names)
+    text = text.replace(f'[[role]]\nid = "{role_id}"\n',
+                        f'[[role]]\nid = "{role_id}"\ntitle_aliases = [{quoted}]\n')
+    path.write_text(text, encoding="utf-8")
+
+
+def test_title_alias_passes_under_its_own_role(ws, john_plan):
+    # Jesse on #89: an official title can undersell the work ("Software
+    # Engineer" doing data engineering). The user confirms the other names.
+    with_title_aliases(ws, "northwind", ["Inventory Control Lead"])
+    bullet(john_plan, 0, "northwind.accuracy",
+           "As Inventory Control Lead, raised order pick accuracy from 97.2% to 99.6%")
+    assert check(ws, john_plan).ok
+
+
+def test_title_alias_fails_under_another_role(ws, john_plan):
+    with_title_aliases(ws, "northwind", ["Inventory Control Lead"])
+    bullet(john_plan, 1, "lakeside.shrink",
+           "As Inventory Control Lead, reduced produce shrink 18% with rotation checks")
+    expect(check(ws, john_plan), "mentions 'Inventory Control Lead'")
+
+
+@pytest.mark.parametrize("text", [
+    "Trained 6 Forklift Operators on the new scan-to-confirm picks",  # plural, not a title
+    "Worked with the warehouse supervisor on rotation checks",       # lowercase prose
+    "As Manager on duty, ran rotation checks twice a day",          # one word: a known limit
+])
+def test_title_like_words_that_claim_no_title_pass(ws, john_plan, text):
+    add_atoms(ws, f'[[bullet]]\nid = "lakeside.extra"\nrole = "lakeside"\n'
+                  f'text = "{text}"\nbasis = "records"\n')
+    john_plan["experience"][1]["bullets"].append("lakeside.extra")
+    assert check(ws, john_plan).ok
+
+
 # --- Cover letter -----------------------------------------------------------
 
 def test_letter_invented_figure(ws, john_plan):

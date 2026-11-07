@@ -110,6 +110,9 @@ All of it is code. None of it depends on the agent behaving.
   digits, and every employer, credential, and tool the inventory knows,
   appears in a confirmed atom the plan cites (D-32). What this leaves out is
   under "Known limits of the fact check" below.
+- A job title written as one ("Operations Manager", "Senior Warehouse
+  Supervisor") is the title of a role the line cites, or one of the
+  `title_aliases` the user confirmed for that role (#89).
 - A bullet renders only under its own role. A sentence in the cover letter
   that names an employer carries only facts from that employer's atoms or the
   profile (D-40). The sentences after it in the same paragraph that name no
@@ -141,8 +144,9 @@ deliverable still matter.
 
 - **Figures written in words** ("thirty-five percent", "a team of forty",
   "tripled") are not read as figures (#84).
-- **Job titles are not checked.** A line can carry another role's title or
-  an invented one (#89).
+- **Titles in lowercase or one word.** "Worked as a manager", or a one-word
+  title such as "Server" or "Cashier", is not read as a title, and the
+  letter may use a title the posting states (#89).
 - **Unknown names.** An employer, credential, or tool that appears nowhere in
   the inventory or the never-claim list cannot be told apart from an ordinary
   word, so it is not caught. Only names Jobforge already knows are checked.

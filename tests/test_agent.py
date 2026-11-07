@@ -161,6 +161,13 @@ def test_instructions_send_the_user_to_their_own_terminal_for_confirm():
     assert "! jobforge confirm" not in text
 
 
+def test_instructions_say_title_aliases_come_from_the_user():
+    """Issue #89: a title is a claim; the agent asks, it does not fill in."""
+    text = " ".join(source_text().split())
+    assert "never fill in `title_aliases` yourself" in text
+    assert "title_aliases = [" in source_text()
+
+
 def test_instructions_list_every_fit_score():
     """Issue #2 run: the agent wrote "medium", because the example only
     showed "strong"."""

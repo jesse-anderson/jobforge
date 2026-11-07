@@ -159,3 +159,11 @@ def test_inventory_markdown_lists_a_roles_aliases(ws):
     add_atoms(ws, '[[role]]\nid = "kt"\nemployer = "Kestrel Testing Laboratories"\n'
                   'aliases = ["KT", "Kestrel Labs"]\ntitle = "Engineer"\nstart = "2020"\n')
     assert "Also called: KT, Kestrel Labs" in render_markdown(load_inventory(ws))
+
+
+def test_inventory_markdown_lists_a_roles_title_aliases(ws):
+    # Issue #89: the agent sees which other titles the user confirmed.
+    add_atoms(ws, '[[role]]\nid = "kt"\nemployer = "Kestrel Testing Laboratories"\n'
+                  'title = "Software Engineer"\ntitle_aliases = ["Data Engineer"]\n'
+                  'start = "2020"\n')
+    assert "Also titled: Data Engineer" in render_markdown(load_inventory(ws))

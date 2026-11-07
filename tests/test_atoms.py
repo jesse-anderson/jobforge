@@ -88,6 +88,12 @@ def test_john_smith_has_what_the_sow_requires(ws):
      "'aliases' has an empty name"),
     ('[[bullet]]\nid = "x.a"\nrole = "northwind"\ntext = "t"\nbasis = "records"\naliases = ["N"]\n',
      "unknown field 'aliases'"),
+    ('[[role]]\nid = "r"\nemployer = "E"\ntitle = "T"\nstart = "2020"\ntitle_aliases = "Data Engineer"\n',
+     "'title_aliases' must be a list"),
+    ('[[role]]\nid = "r"\nemployer = "E"\ntitle = "T"\nstart = "2020"\ntitle_aliases = [""]\n',
+     "'title_aliases' has an empty name"),
+    ('[[bullet]]\nid = "x.a"\nrole = "northwind"\ntext = "t"\nbasis = "records"\ntitle_aliases = ["N"]\n',
+     "unknown field 'title_aliases'"),
 ])
 def test_schema_violations(ws, toml, needle):
     details = errors_for(ws, toml)
@@ -196,3 +202,13 @@ def test_employer_names_gather_aliases_from_every_role(ws):
     assert inv.employer_names()["Northwind Distribution"] == [
         "Northwind Distribution", "Northwind", "NWD"]
     assert "NWD" in inv.get("nw2").texts()
+
+
+def test_role_titles_gather_titles_and_title_aliases_once(ws):
+    # Issue #89: two roles may share a title; each title counts once.
+    add_atoms(ws, '[[role]]\nid = "nw2"\nemployer = "Northwind Distribution"\n'
+                  'title = "Shift Lead"\nstart = "2018"\nend = "2019"\n'
+                  'title_aliases = ["Receiving Lead", "Shift Lead"]\n')
+    inv = load_inventory(ws)
+    assert sorted(inv.role_titles()) == ["Receiving Lead", "Shift Lead", "Warehouse Supervisor"]
+    assert "Receiving Lead" in inv.get("nw2").texts()

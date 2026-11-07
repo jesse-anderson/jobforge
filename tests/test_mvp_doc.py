@@ -15,7 +15,7 @@ def _section(text: str, heading: str) -> str:
 def test_mvp_lists_the_known_limits_of_the_fact_check():
     mvp = (REPO / "docs" / "MVP.md").read_text(encoding="utf-8")
     limits = _section(mvp, "### Known limits of the fact check")
-    for limit, issue in [("written in words", "#84"), ("titles are not checked", "#89"),
+    for limit, issue in [("written in words", "#84"), ("Titles in lowercase or one word", "#89"),
                          ("Unknown names", ""), ("alias", "#22"), ("synonym", ""),
                          ("Pronouns", "#90"), ("posting's figures", "#83"),
                          ("hedges", "#91")]:
@@ -42,3 +42,9 @@ def test_mvp_no_longer_promises_every_title_and_tool():
                         "### What the fact check enforces in the MVP")
     assert "employer, title, credential, and tool" not in enforced
     assert "the inventory knows" in enforced and "Known limits" in enforced
+
+
+def test_mvp_says_titles_are_checked():
+    enforced = _section((REPO / "docs" / "MVP.md").read_text(encoding="utf-8"),
+                        "### What the fact check enforces in the MVP")
+    assert "title_aliases" in enforced and "#89" in enforced
