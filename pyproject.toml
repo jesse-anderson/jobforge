@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,7 @@ description = "Tailored resumes and cover letters from your real work history, r
 readme = "README.md"
 requires-python = ">=3.11"
 license = "LicenseRef-PolyForm-Noncommercial-1.0.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Jesse Anderson" }, { name = "Mike Wilson" }]
 classifiers = [
     "Programming Language :: Python :: 3",
