@@ -218,3 +218,12 @@ def test_instructions_say_every_bullet_needs_a_basis_from_the_user(tmp_path):
         # And the drafting rules say whose answer it is.
         assert ('The basis is the user\'s answer to "how do you know?". Ask for it on '
                 'every bullet; never pick one yourself.') in flat
+        # #118: the example offers only values confirm accepts, and says
+        # which one fits a plain fact with no figure.
+        from jobforge.atoms import BASIS
+        rule = flat.split("The basis is the user's answer", 1)[1].split("\n- ", 1)[0]
+        rule = rule.split(" - ", 1)[0]
+        named = set(re.findall(r"`([a-z]+)`", rule))
+        assert named == set(BASIS), named
+        assert "from memory" not in flat
+        assert 'is usually `records`, but ask' in rule
