@@ -23,9 +23,32 @@ from jobforge.facts import (Token, find_hedges, number_tokens, split_sentences, 
     ("version v2", []),
     ("no numbers here", []),
     ("50.0%", [Token("percent", "50")]),
+    # Issue #1: units that used to fall back to a plain number.
+    ("cut costs 30 per cent", [Token("percent", "30")]),
+    ("cut costs 30percent", [Token("percent", "30")]),
+    ("cut costs 14％", [Token("percent", "14")]),
+    ("１４ orders", [Token("number", "14")]),
+    ("saved €14", [Token("money", "14", "€")]),
+    ("saved £2,000", [Token("money", "2000", "£")]),
+    ("saved €1.5M", [Token("money", "1500000", "€")]),
+    ("saved 12,000 dollars", [Token("money", "12000")]),
+    ("saved 12,000 USD", [Token("money", "12000")]),
+    ("saved 14 thousand dollars", [Token("money", "14000")]),
+    ("saved 14 thousand", [Token("number", "14000")]),
+    ("saved 300 euros", [Token("money", "300", "€")]),
+    ("saved 300 GBP", [Token("money", "300", "£")]),
 ])
 def test_number_tokens(text, expected):
     assert number_tokens(text) == expected
+
+
+def test_currencies_do_not_match_each_other():
+    assert number_tokens("$14") != number_tokens("€14")
+    assert number_tokens("€14") != number_tokens("£14")
+
+
+def test_dollar_spellings_match():
+    assert number_tokens("$12,000") == number_tokens("12,000 dollars") == number_tokens("$12k")
 
 
 def test_precision_is_kept():
@@ -35,6 +58,7 @@ def test_precision_is_kept():
 
 def test_token_display():
     assert [str(t) for t in number_tokens("$5 7% 3x 9")] == ["$5", "7%", "3x", "9"]
+    assert [str(t) for t in number_tokens("€5 £6")] == ["€5", "£6"]
 
 
 @pytest.mark.parametrize("text", ["about 50%", "~50%", "~ $5", "approximately 20 people",
