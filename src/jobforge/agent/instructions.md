@@ -136,6 +136,13 @@ an employer is never described as a personal project, and the reverse.
 1. `jobforge prepare --from-url <url>`. If the board blocks it, ask the user
    to paste the posting and use `--from-text`. Read the new folder's
    `job.json`.
+
+   If `prepare` warns "No structured posting data", the description is the
+   whole page: it may hold menus, a login prompt, or other jobs. If it holds
+   anything besides this one posting, stop and ask the user for the
+   posting's direct link (not a search or list page), or to paste the
+   posting itself. Capture it again with `--force`. Never use a figure or
+   detail from text that is not this posting.
 2. `jobforge inventory`, then write `plan.json` in the job folder:
 
 ```json
