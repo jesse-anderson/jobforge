@@ -52,7 +52,7 @@ def test_badges_sit_under_the_title_and_each_links_somewhere():
 @pytest.mark.parametrize("needle", [
     "actions/workflows/tests.yml/badge.svg",     # tests
     f"img.shields.io/endpoint?url={BADGE_URL}",  # coverage, from Pages
-    "python-3.11%2B", "](LICENSE)", "Windows%20%7C%20Linux", "dependencies-none",
+    "python-3.11%2B", "](https://github.com/jesse-anderson/jobforge/blob/main/LICENSE)", "Windows%20%7C%20Linux", "dependencies-none",
 ])
 def test_each_badge_is_there(needle):
     assert any(needle in line for line in badges()), needle

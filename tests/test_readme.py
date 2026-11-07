@@ -40,3 +40,20 @@ def test_checklist_installs_and_uninstalls_like_the_readme():
     for step in ("pipx install jobforge", "pipx install .", "pipx uninstall jobforge",
                  "pip install jobforge", "pip uninstall jobforge", "python3 --version"):
         assert step in CHECKLIST, step
+
+
+def test_readme_links_are_absolute_so_they_work_on_pypi():
+    # PyPI renders the README as the project page and cannot follow a
+    # relative link such as (LICENSE) or (#what-you-need) (#54).
+    import re
+    relative = [link for link in re.findall(r"\]\(([^)\s]+)\)", README)
+                if not link.startswith(("https://", "http://", "mailto:"))]
+    assert relative == []
+
+
+def test_pypi_sidebar_links_to_the_repo():
+    import tomllib
+    urls = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))["project"]["urls"]
+    base = "https://github.com/jesse-anderson/jobforge"
+    assert urls["Homepage"] == base and urls["Source"] == base
+    assert urls["Issues"] == base + "/issues"
