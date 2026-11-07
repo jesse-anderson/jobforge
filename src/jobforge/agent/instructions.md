@@ -136,6 +136,13 @@ an employer is never described as a personal project, and the reverse.
 1. `jobforge prepare --from-url <url>`. If the board blocks it, ask the user
    to paste the posting and use `--from-text`. Read the new folder's
    `job.json`.
+
+   If `prepare` warns "No structured posting data", the description is the
+   whole page: it may hold menus, a login prompt, or other jobs. If it holds
+   anything besides this one posting, stop and ask the user for the
+   posting's direct link (not a search or list page), or to paste the
+   posting itself. Capture it again with `--force`. Never use a figure or
+   detail from text that is not this posting.
 2. `jobforge inventory`, then write `plan.json` in the job folder:
 
 ```json
@@ -178,6 +185,10 @@ an employer is never described as a personal project, and the reverse.
 - A bullet goes only under its own role. A cover-letter sentence that names
   an employer may only use that employer's facts.
 - Nothing from the never-claim list, and no tool the cited atoms do not show.
+  The check only knows the tools and credentials named somewhere in the
+  user's facts, so it cannot catch one it has never seen. Before `check`,
+  reread every line: each tool, license, certification, and acronym must
+  appear in an atom that line cites.
 - If you mention a project that has a URL, include the URL in full.
 - No hedged figures ("about 50%"), no atom ids in the letter.
 - Cover letter: at most {{cover_letter_max_words}} words{{dash_rule}}. Avoid
