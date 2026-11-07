@@ -24,10 +24,11 @@ import io
 import json
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .errors import JobforgeError
 from .extract import Job
-from .ledger import RECORDABLE, Event, append_event, job_folders
+from .ledger import RECORDABLE, Event, append_event, job_folders, read_events
 from .prepare import folder_name, read_job, slug
 from .workspace import Workspace
 
@@ -55,11 +56,12 @@ class ImportRow:
     line: int
     company: str
     title: str
-    action: str = "new"       # "new" | "duplicate" | "error"
+    action: str = "new"       # "new" | "duplicate" | "finish" | "error"
     message: str = ""
     folder: str = ""
     events: list[Event] = field(default_factory=list)
     job: dict = field(default_factory=dict)
+    missing: list[Event] = field(default_factory=list)  # "finish": events to add
 
 
 @dataclass
@@ -146,10 +148,22 @@ def plan_import(ws: Workspace, text: str, *,
 
     by_url: dict[str, str] = {}
     by_key: dict[tuple, str] = {}
-    taken: set[str] = set()
+    imported: dict[str, Path] = {}  # "jobs/<name>" -> folder, for jobs an import made
+    # A folder holding anything is taken. One an interrupted import left with
+    # nothing in it (or only an empty job.json) may be used again (#78).
+    taken = ({p.name for p in ws.jobs_dir.iterdir() if p.is_dir() and not _leftover(p)}
+             if ws.jobs_dir.is_dir() else set())
     for folder in job_folders(ws):
-        job = read_job(folder)
-        taken.add(folder.name)
+        if _leftover(folder):
+            continue
+        try:
+            job = read_job(folder)
+        except JobforgeError as exc:  # e.g. emptied by an interrupted write
+            plan.warnings.append(f"jobs/{folder.name}/job.json cannot be read, so it is "
+                                 f"not checked for duplicates ({exc.message})")
+            continue
+        if job.get("imported"):
+            imported[f"jobs/{folder.name}"] = folder
         if job.get("url"):
             by_url[job["url"]] = f"jobs/{folder.name}"
         by_key[(slug(job.get("company", "")), slug(job.get("title", "")),
@@ -175,7 +189,13 @@ def plan_import(ws: Workspace, text: str, *,
         key = (slug(cell["company"]), slug(cell["title"]), slug(cell["location"]))
         earlier = (cell["url"] and by_url.get(cell["url"])) or by_key.get(key)
         if earlier:
-            row.action, row.message = "duplicate", f"already recorded: {earlier}"
+            missing = _unfinished(imported.get(earlier), row.events)
+            if missing:
+                row.action, row.folder, row.missing = "finish", imported[earlier].name, missing
+                row.message = f"finishes {earlier}: adds " + ", ".join(
+                    f"{e.stage} {e.date.isoformat()}" for e in missing)
+            else:
+                row.action, row.message = "duplicate", f"already recorded: {earlier}"
             continue
         here = f"line {row.line} of this file"
         if cell["url"]:
@@ -195,6 +215,30 @@ def plan_import(ws: Workspace, text: str, *,
     return plan
 
 
+def _leftover(folder: Path) -> bool:
+    """A job folder an interrupted write left holding nothing: empty, or with
+    only a job.json that has no text in it. Nothing in it can be lost."""
+    names = [p.name for p in folder.iterdir()]
+    return names == [] or (names == ["job.json"]
+                           and not (folder / "job.json").read_bytes().strip())
+
+
+def _unfinished(folder: Path | None, events: list[Event]) -> list[Event]:
+    """The events an interrupted import never wrote to `folder`: its ledger
+    holds the first part of this row's events and nothing else (#78). A
+    ledger the user has added to since, or cannot be read, is left alone."""
+    if folder is None:
+        return []
+    try:
+        have = read_events(folder)
+    except JobforgeError:
+        return []
+    want = sorted(events, key=lambda e: e.date)
+    if len(have) < len(want) and want[:len(have)] == have:
+        return want[len(have):]
+    return []
+
+
 def write_import(ws: Workspace, plan: ImportPlan) -> list[str]:
     """Write every new row. All or nothing: with any error row, nothing is
     written, the way `apply` refuses a half-checked plan."""
@@ -206,10 +250,14 @@ def write_import(ws: Workspace, plan: ImportPlan) -> list[str]:
             [f"line {r.line}: {r.message}" for r in errors])
     written = []
     for row in plan.rows:
+        if row.action == "finish":  # an earlier import was cut short (#78)
+            for ev in row.missing:
+                append_event(ws.jobs_dir / row.folder, ev.stage, ev.date, ev.note)
+            written.append(row.folder)
         if row.action != "new":
             continue
         folder = ws.jobs_dir / row.folder
-        folder.mkdir(parents=True)
+        folder.mkdir(parents=True, exist_ok=True)  # empty if it exists (see plan)
         (folder / "job.json").write_text(
             json.dumps(row.job, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         for ev in row.events:
@@ -236,6 +284,7 @@ def format_preview(plan: ImportPlan) -> str:
         else:
             lines.append(f"{'':<10} {r.message}")
     lines += [f"warning: {w}" for w in plan.warnings]
+    finish = f", {plan.count('finish')} to finish" if plan.count("finish") else ""
     lines.append(f"{plan.count('new')} new, {plan.count('duplicate')} duplicate, "
-                 f"{plan.count('error')} error")
+                 f"{plan.count('error')} error{finish}")
     return "\n".join(lines)
