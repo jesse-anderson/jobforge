@@ -26,8 +26,8 @@ from jobforge.facts import (Token, find_hedges, number_tokens, split_sentences, 
     # Issue #1: units that used to fall back to a plain number.
     ("cut costs 30 per cent", [Token("percent", "30")]),
     ("cut costs 30percent", [Token("percent", "30")]),
-    ("cut costs 14％", [Token("percent", "14")]),
-    ("１４ orders", [Token("number", "14")]),
+    ("cut costs 14\uff05", [Token("percent", "14")]),
+    ("\uff11\uff14 orders", [Token("number", "14")]),
     ("saved €14", [Token("money", "14", "€")]),
     ("saved £2,000", [Token("money", "2000", "£")]),
     ("saved €1.5M", [Token("money", "1500000", "€")]),
@@ -85,6 +85,11 @@ def test_not_hedges(text):
     ("C", "C++ only", False),
     ("Google Sheets", "in google sheets", True),
     ("", "anything", False),
+    # Issue #1: Cyrillic and Greek look-alikes match the Latin term.
+    ("SAP", "used S\u0410P daily", True),                 # one Cyrillic A
+    ("SAP", "used \u0405\u0410\u0420 daily", True),       # all Cyrillic
+    ("Excel", "in \u0395xcel", True),                     # Greek capital epsilon
+    ("Lakeside Grocery Co-op", "at Lakeside Gr\u043ecery Co-op", True),
 ])
 def test_term_in(term, text, hit):
     assert term_in(term, text) is hit

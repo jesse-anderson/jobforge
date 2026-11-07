@@ -5,7 +5,7 @@ import zipfile
 import pytest
 
 from jobforge.docx import BULLET_PREFIX, Block, Run, extract_text, write_docx
-from jobforge.scan import clean, find_hidden
+from jobforge.scan import clean, find_hidden, find_mixed_script
 
 pytestmark = pytest.mark.critical
 
@@ -62,6 +62,24 @@ def test_hidden_characters_are_found(ch, name):
     found = find_hidden(f"Manage{ch}ment")
     assert len(found) == 1 and found[0].name.startswith(name)
     assert "U+" in str(found[0])
+
+
+@pytest.mark.parametrize("text,words", [
+    ("used S\u0410P daily", ["S\u0410P"]),               # Latin + Cyrillic
+    ("in \u0395xcel and Gr\u043ecery", ["\u0395xcel", "Gr\u043ecery"]),
+    ("staff from \u041a\u0438\u0457\u0432", []),         # all Cyrillic is a real word
+    ("\u03bc-law codec", []),                            # all Greek, then Latin
+    ("plain café text", []),
+])
+def test_mixed_script_words(text, words):
+    # Issue #1: a word mixing Latin with Cyrillic or Greek looks right and
+    # matches nothing.
+    assert [m.word for m in find_mixed_script(text)] == words
+
+
+def test_mixed_script_names_the_odd_letters():
+    (m,) = find_mixed_script("S\u0410P")
+    assert "Cyrillic" in str(m) and "U+0410" in str(m)
 
 
 def test_ordinary_text_is_clean():
