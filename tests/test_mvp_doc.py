@@ -29,6 +29,12 @@ def test_mvp_says_the_letter_quotes_the_posting_only_about_the_employer():
     assert "only in a sentence about the employer" in enforced and "#83" in enforced
 
 
+def test_mvp_says_a_sentence_carries_the_employer_before_it():
+    enforced = _section((REPO / "docs" / "MVP.md").read_text(encoding="utf-8"),
+                        "### What the fact check enforces in the MVP")
+    assert "in the same paragraph that name no employer" in enforced
+
+
 def test_mvp_no_longer_promises_every_title_and_tool():
     enforced = _section((REPO / "docs" / "MVP.md").read_text(encoding="utf-8"),
                         "### What the fact check enforces in the MVP")

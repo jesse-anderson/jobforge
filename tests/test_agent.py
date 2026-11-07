@@ -162,6 +162,13 @@ def test_instructions_explain_posting_figures():
     assert 'with no "I", "my", or "we" in it' in text and "two sentences" in text
 
 
+def test_instructions_say_a_sentence_carries_the_employer_before_it():
+    """#83 item 3: the agent knows why "There I also..." is refused and how
+    to write it instead."""
+    text = " ".join(source_text().split())
+    assert "is read as the same employer's" in text and "in general terms" in text
+
+
 def test_instructions_say_units_are_never_converted():
     # Issue #10: the check catches a swapped unit; the agent is told first.
     assert "units included: never convert" in source_text()
