@@ -62,6 +62,9 @@ def read_events(folder: Path) -> list[Event]:
         data = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     except tomllib.TOMLDecodeError as exc:
         raise JobforgeError(f"{folder.name}/{LEDGER_NAME} is not valid TOML: {exc}") from exc
+    except UnicodeDecodeError:
+        raise JobforgeError(f"{folder.name}/{LEDGER_NAME} is not UTF-8 text. Open it "
+                            f"in a text editor and save it as UTF-8.") from None
     events = []
     for n, raw in enumerate(data.get("event", []), 1):
         date, stage = raw.get("date"), raw.get("stage")

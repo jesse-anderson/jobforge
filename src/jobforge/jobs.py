@@ -10,8 +10,11 @@ import datetime as _dt
 import json
 from dataclasses import dataclass
 
+from .errors import JobforgeError
 from .ledger import current_status, job_folders, read_events
 from .workspace import Workspace
+
+UNREADABLE = "unreadable"
 
 
 @dataclass
@@ -22,6 +25,7 @@ class JobRow:
     status: str
     last_date: str
     url: str
+    problem: str = ""  # why the ledger could not be read, if it could not
 
 
 def list_jobs(ws: Workspace, *, today: _dt.date | None = None, ghost_after_days: int = 30,
@@ -34,14 +38,20 @@ def list_jobs(ws: Workspace, *, today: _dt.date | None = None, ghost_after_days:
             job = json.loads((folder / "job.json").read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):  # bad JSON or not UTF-8 (#28): skip it
             continue
-        events = read_events(folder)
+        # A broken ledger keeps the job in the list, marked, so one bad
+        # hand edit never hides the rest (#28).
+        try:
+            events, problem = read_events(folder), ""
+        except JobforgeError as exc:
+            events, problem = [], str(exc)
         row = JobRow(
             folder=folder.name,
             company=str(job.get("company", "")),
             title=str(job.get("title", "")),
-            status=current_status(events, today, ghost_after_days),
+            status=UNREADABLE if problem else current_status(events, today, ghost_after_days),
             last_date=events[-1].date.isoformat() if events else "",
             url=str(job.get("url", "")),
+            problem=problem,
         )
         if status and row.status != status:
             continue
