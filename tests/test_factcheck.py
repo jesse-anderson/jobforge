@@ -265,6 +265,42 @@ def test_letter_two_employers_in_one_sentence_warns(ws, john_plan):
     assert any("names 2 employers" in w for w in rep.warnings)
 
 
+# Issue #93: letter errors numbered sentences across hook, body, and close
+# together ("cover_letter sentence 2"). They name the part and quote the start.
+def test_letter_error_names_the_part_and_quotes_the_sentence(ws, john_plan):
+    letter_body(john_plan, "I lead a team of 14. I cut overtime 40% at my current job.")
+    rep = check(ws, john_plan)
+    expect(rep, 'cover_letter body, "I cut overtime 40% at my...": '
+                "the figure 40% is not in the facts")
+    assert not any("sentence" in e for e in rep.errors), rep.errors
+
+
+@pytest.mark.parametrize("part", ["hook", "close"])
+def test_letter_error_in_hook_or_close_names_that_part(ws, john_plan, part):
+    john_plan["cover_letter"][part] = "I saved $1M."
+    expect(check(ws, john_plan), f'cover_letter {part}, "I saved $1M.": the figure')
+
+
+def test_letter_error_counts_sentences_within_its_own_paragraph(ws, john_plan):
+    # A paragraph that ends without a stop is still its own sentence.
+    letter_body(john_plan, "Hello there\n\nI saved $1M.")
+    expect(check(ws, john_plan), 'cover_letter body, "I saved $1M.": the figure')
+
+
+def test_letter_employer_error_quotes_the_sentence(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At Northwind Distribution I reduced shrink 18% with rotation checks.")
+    expect(check(ws, john_plan), 'cover_letter body, "At Northwind Distribution I reduced '
+                                 "shrink...\" (names 'Northwind Distribution')")
+
+
+def test_letter_two_employers_warning_quotes_the_sentence(ws, john_plan):
+    letter_body(john_plan, "I worked at Lakeside Grocery Co-op and then Northwind Distribution.")
+    rep = check(ws, john_plan)
+    assert any(w.startswith('cover_letter body, "I worked at Lakeside Grocery Co-op...": '
+                            "names 2 employers") for w in rep.warnings), rep.warnings
+
+
 def test_meters_written_short_match_the_atom(ws, john_plan):
     # Issue #10: "12 m" for an atom's "12 meters" is the same figure.
     add_atoms(ws, '[[bullet]]\nid = "northwind.conveyor"\nrole = "northwind"\n'
