@@ -142,3 +142,64 @@ def test_python_dash_m_entry_point(tmp_path):
     proc = subprocess.run([sys.executable, "-m", "jobforge", "--version"],
                           capture_output=True, text=True, env=env, cwd=tmp_path)
     assert proc.returncode == 0 and __version__ in proc.stdout
+
+
+# --- import (issue #8) -------------------------------------------------------
+
+SAMPLE_CSV = REPO / "fixtures" / "import" / "sample_tracker.csv"
+
+
+def test_import_previews_by_default(run, ws):
+    code, out, _ = run("import", str(SAMPLE_CSV))
+    assert code == 0
+    assert "NEW" in out and "6 new, 0 duplicate, 0 error" in out
+    assert "run again with --write" in out
+    assert not any(ws.jobs_dir.iterdir())
+
+
+def test_import_write_then_jobs_lists_them(run):
+    code, out, _ = run("import", str(SAMPLE_CSV), "--write")
+    assert code == 0 and "Imported 6 job(s)" in out
+    code, out, _ = run("jobs", "--status", "rejected")
+    assert code == 0 and "Prairie Freight Co." in out
+    code, out, _ = run("import", str(SAMPLE_CSV), "--write")
+    assert code == 0 and "Imported 0 job(s)" in out and "0 new, 6 duplicate" in out
+
+
+def test_import_with_bad_rows(run, ws, tmp_path):
+    bad = tmp_path / "bad.csv"
+    bad.write_text("company,title,applied\nCedar Mill Foods,Clerk,9/1/2026\n", encoding="utf-8")
+    code, out, _ = run("import", str(bad))
+    assert code == 1 and "ERROR" in out and "Fix the rows marked ERROR" in out
+    code, _, err = run("import", str(bad), "--write")
+    assert code == 1 and "Nothing imported" in err
+    assert not any(ws.jobs_dir.iterdir())
+
+
+def test_import_reads_a_windows_1252_export(run, tmp_path):
+    csv_file = tmp_path / "excel.csv"
+    csv_file.write_bytes("company,title,applied\nCafé Rouge,Clerk,2026-09-10\n"
+                         .encode("cp1252"))
+    code, out, err = run("import", str(csv_file))
+    assert code == 0 and "Café Rouge" in out
+    assert "not UTF-8; read it as Windows-1252" in err
+
+
+def test_import_reads_excel_utf8_bom(run, tmp_path):
+    csv_file = tmp_path / "excel.csv"
+    csv_file.write_bytes("company,title,applied\nCafé Rouge,Clerk,2026-09-10\n"
+                         .encode("utf-8-sig"))
+    code, out, err = run("import", str(csv_file))
+    assert code == 0 and "Café Rouge" in out and err == ""
+
+
+def test_import_refuses_undecodable_bytes(run, tmp_path):
+    csv_file = tmp_path / "binary.csv"
+    csv_file.write_bytes(b"company,title,applied\n\x81\x8d,Clerk,2026-09-10\n")
+    code, _, err = run("import", str(csv_file))
+    assert code == 1 and "CSV UTF-8" in err
+
+
+def test_import_missing_file(run):
+    code, _, err = run("import", "nope.csv")
+    assert code == 1 and "does not exist" in err
