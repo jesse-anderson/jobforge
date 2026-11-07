@@ -136,3 +136,8 @@ def test_page_text_capture_tells_the_agent_to_recapture():
     text = source_text()
     assert f'warns "{quoted}"' in text
     assert "direct link" in text and "--force" in text
+
+
+def test_instructions_say_the_check_misses_unknown_tools():
+    # #12: the check cannot know every tool; the agent rereads its lines.
+    assert "cannot catch one it has never seen" in source_text()
