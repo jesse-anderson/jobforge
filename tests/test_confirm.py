@@ -93,6 +93,31 @@ def test_bullet_with_no_role_at_all_is_refused(ws):
     assert out.refused == ["x.a"]
 
 
+# Issue #83 item 5: D-36 says every fact records how the user knows it, and
+# prep sheets are built from those notes (D-38). A new bullet is not kept
+# without one.
+@pytest.mark.parametrize("defense", ["", 'defense = ""\n', 'defense = "   "\n'])
+def test_bullet_without_a_defense_note_is_refused(ws, defense):
+    add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\n'
+                  f'text = "Cut dock wait 3 hours"\nbasis = "records"\n{defense}',
+              "d.toml", pending=True)
+    said = []
+    out = run_confirm(ws, ask=script(), say=said.append)
+    assert out.refused == ["northwind.new"]
+    shown = "\n".join(said)
+    assert "no defense note" in shown and 'defense = "' in shown
+    assert "Keep or add the role" not in shown  # that advice is for a missing role
+    assert load_inventory(ws).get("northwind.new") is None
+
+
+def test_bullet_with_a_defense_note_is_kept(ws):
+    add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\n'
+                  'text = "Cut dock wait 3 hours"\nbasis = "records"\n'
+                  'defense = "Dock log, March against May."\n', "d.toml", pending=True)
+    out = run_confirm(ws, ask=script("k"), say=quiet)
+    assert out.kept == ["northwind.new"]
+
+
 def test_malformed_pending_file_is_reported(ws):
     add_atoms(ws, '[[bullet]]\nid = "x.a"\ntext = "t"\nbasis = "records"\n', "d.toml", pending=True)
     with pytest.raises(JobforgeError, match="malformed") as exc:

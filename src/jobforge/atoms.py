@@ -311,6 +311,14 @@ def check_references(atoms: dict[str, Atom], rel_of, errors: list[str],
 
 
 def _warnings(inv: Inventory, rel_of) -> None:
+    # D-36: confirm keeps no new bullet without a defense note (#83 item 5).
+    # Bullets confirmed before that still load; this names them once.
+    bare = [a.id for a in inv.of_kind("bullet") if not (a.get("defense") or "").strip()]
+    if bare:
+        inv.warnings.append(
+            f"{len(bare)} bullet(s) have no defense note (D-36): {', '.join(bare)}. "
+            f"Add defense = \"...\" to each, saying how you know it; interview prep "
+            f"is built from these notes.")
     seen: dict[tuple, Atom] = {}
     for atom in inv.atoms.values():
         for text in [atom.get("text") or ""] + [p.get("text", "") for p in atom.phrasings]:

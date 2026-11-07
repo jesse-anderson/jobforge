@@ -48,7 +48,8 @@ def test_confirmed_atoms_with_bom(ws):
 
 def test_pending_atoms_with_bom_are_confirmed_without_one(ws):
     path = add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\n'
-                         'text = "Did 3 audits"\nbasis = "records"\n', "d.toml", pending=True)
+                         'text = "Did 3 audits"\nbasis = "records"\n'
+                         'defense = "Audit sign-off sheets."\n', "d.toml", pending=True)
     add_bom(path)
     answers = iter(["k"])
     run_confirm(ws, ask=lambda prompt: next(answers), say=lambda *_: None)

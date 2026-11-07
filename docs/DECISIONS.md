@@ -511,6 +511,12 @@ from the notes.
 `measured`, `records`, or `estimate`. The defense note is the user's own
 explanation of how they know, taken from the D-35 defensibility answers.
 
+> **Enforced for bullets (2026-11-07, #83 item 5).** Every bullet needs a
+> `basis` (the atom schema refuses one without it), and `jobforge confirm`
+> will not keep a new bullet without a `defense` note. Bullets confirmed
+> before this still load; `check` names them in one warning. Projects and
+> summaries may carry both and are not required to.
+
 **D-37. Precision is checked, and numbers are stated plainly.** An
 estimate is written as a clean round figure: "50%", "cut in half". Never
 "~50%", "about 50%", or "roughly 50%" in a deliverable, since hedging
