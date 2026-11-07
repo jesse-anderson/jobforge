@@ -158,9 +158,11 @@ def _run(args) -> int:
         return 0
 
     if cmd == "applied":
-        from .ledger import append_event, parse_date, resolve_job
+        from .ledger import parse_date, record_event, resolve_job
         folder = resolve_job(ws, args.mark)
-        ev = append_event(folder, args.status, parse_date(args.date), args.note)
+        ev, warnings = record_event(folder, args.status, parse_date(args.date), args.note)
+        for w in warnings:
+            print(f"warning: {w}", file=sys.stderr)
         print(f"{folder.name}: {ev.stage} on {ev.date.isoformat()}")
         return 0
 

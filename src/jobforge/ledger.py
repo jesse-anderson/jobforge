@@ -76,6 +76,24 @@ def read_events(folder: Path) -> list[Event]:
     return sorted(events, key=lambda e: e.date)
 
 
+def record_event(folder: Path, stage: str, date: _dt.date | None = None, note: str = "",
+                 *, today: _dt.date | None = None) -> tuple[Event, list[str]]:
+    """`jobforge applied`: append what happened, refusing a date that cannot
+    be right (#34). Returns the event and any warnings."""
+    today = today or _dt.date.today()
+    date = date or today
+    if date > today:
+        raise JobforgeError(f"{date.isoformat()} is in the future. Record an event on "
+                            f"or after the day it happens.")
+    warnings = []
+    prepared = [e.date for e in read_events(folder) if e.stage == "prepared"]
+    if prepared and date < prepared[0]:
+        warnings.append(f"{date.isoformat()} is before this job was prepared "
+                        f"({prepared[0].isoformat()}). Recorded anyway: that is right "
+                        f"if you applied before making the folder.")
+    return append_event(folder, stage, date, note), warnings
+
+
 def current_status(events: list[Event], today: _dt.date, ghost_after_days: int) -> str:
     if not events:
         return "unknown"
