@@ -103,10 +103,14 @@ def _samples_tool():
 def test_readme_shows_the_sample_documents():
     # #104: a visitor sees what Jobforge makes before installing it.
     section = _section(README, "## What you get")
-    raw = "https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/"
+    # github.com/<repo>/raw/..., not raw.githubusercontent.com: the browser is
+    # signed in on github.com, so the image shows while the repo is private,
+    # and the absolute URL still works on PyPI once it is public.
+    raw = "https://github.com/jesse-anderson/jobforge/raw/main/docs/samples/"
     for name in ("resume", "cover_letter"):
-        assert f"{raw}{name}.png" in section, name
+        assert f"![John Smith's sample {name.replace('_', ' ')}]({raw}{name}.png)" in section, name
         assert (REPO / "docs" / "samples" / f"{name}.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    assert "raw.githubusercontent.com" not in README
 
 
 def test_sample_documents_are_not_stale():

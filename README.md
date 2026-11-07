@@ -39,7 +39,7 @@ confirmed.
 
 | Resume | Cover letter |
 |---|---|
-| [![John Smith's sample resume](https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/resume.png)](https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/resume.png) | [![John Smith's sample cover letter](https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/cover_letter.png)](https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/cover_letter.png) |
+| [![John Smith's sample resume](https://github.com/jesse-anderson/jobforge/raw/main/docs/samples/resume.png)](https://github.com/jesse-anderson/jobforge/blob/main/docs/samples/resume.png) | [![John Smith's sample cover letter](https://github.com/jesse-anderson/jobforge/raw/main/docs/samples/cover_letter.png)](https://github.com/jesse-anderson/jobforge/blob/main/docs/samples/cover_letter.png) |
 
 ## What you need
 
