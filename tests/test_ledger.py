@@ -60,6 +60,26 @@ def test_hand_edited_bad_ledger_reports_clearly(job_folder):
         read_events(job_folder)
 
 
+# Red-team follow-up to F7 (#28): `applied --mark` on a ledger it cannot
+# read says why and writes nothing, instead of a traceback or appending
+# to a file that is already broken.
+@pytest.mark.parametrize("content", [b"\xff\xfe", b"[[event\n"])
+def test_append_refuses_a_ledger_it_cannot_read(job_folder, content):
+    path = job_folder / "ledger.toml"
+    path.write_bytes(content)
+    with pytest.raises(JobforgeError, match=f"{job_folder.name}/ledger.toml is not"):
+        append_event(job_folder, "applied", D(2026, 11, 21))
+    assert path.read_bytes() == content
+
+
+def test_applied_mark_on_a_non_utf8_ledger_exits_1(ws, job_folder, monkeypatch, capsys):
+    from jobforge.cli import main
+    (job_folder / "ledger.toml").write_bytes(b"\xff\xfe")
+    monkeypatch.chdir(ws.root)
+    assert main(["applied", "--mark", job_folder.name, "--status", "applied"]) == 1
+    assert "ledger.toml is not UTF-8 text" in capsys.readouterr().err
+
+
 def test_no_ledger_means_no_events(tmp_path):
     assert read_events(tmp_path) == []
     assert current_status([], TODAY, 30) == "unknown"
