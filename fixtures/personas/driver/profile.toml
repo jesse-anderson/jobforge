@@ -1,0 +1,12 @@
+# Logistics / driver persona (D-09 #12). Fictional. A resume carried by the
+# CDL class, endorsements, the medical card, and a safety record. Must not
+# claim endorsements he does not hold.
+
+[person]
+name = "Ray Thompson"
+email = "ray.thompson@example.com"
+phone = "555-0168"
+location = "Joplin, MO"
+
+[claims]
+never_claim = ["Hazmat endorsement", "Doubles/Triples endorsement"]

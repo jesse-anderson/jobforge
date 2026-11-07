@@ -1,0 +1,102 @@
+[[summary]]
+id = "summary.main"
+text = "Server and barista with 5 years in busy front-of-house jobs, calm with a line out the door and good at turning a complaint around."
+
+[[role]]
+id = "copperpot"
+employer = "Copper Pot Bistro"
+title = "Server"
+location = "Savannah, GA"
+start = "2024-02"
+end = "present"
+
+[[bullet]]
+id = "copperpot.section"
+role = "copperpot"
+text = "Work weekend doubles in a 6-table section and train new servers on the menu and POS"
+basis = "records"
+
+[[bullet]]
+id = "copperpot.regulars"
+role = "copperpot"
+text = "Asked by the owner to cover private dining events because regulars request me by name"
+basis = "records"
+
+[[role]]
+id = "hillside"
+employer = "Hillside Coffee Co."
+title = "Barista"
+location = "Savannah, GA"
+start = "2023-01"
+end = "2024-01"
+
+[[bullet]]
+id = "hillside.open"
+role = "hillside"
+text = "Opened the shop alone 3 mornings a week, handling the cash count, prep, and the first rush"
+basis = "records"
+
+[[bullet]]
+id = "hillside.complaints"
+role = "hillside"
+text = "Handled customer complaints at the counter and turned most of them into return visits"
+basis = "estimate"
+
+[[role]]
+id = "harbor"
+employer = "Harbor Street Market"
+title = "Cashier"
+location = "Savannah, GA"
+start = "2022-05"
+end = "2022-12"
+
+[[bullet]]
+id = "harbor.cash"
+role = "harbor"
+text = "Balanced my register to the penny on every shift for 8 months"
+basis = "records"
+
+[[role]]
+id = "tidewater"
+employer = "Tidewater Cinemas"
+title = "Concessions Attendant"
+location = "Savannah, GA"
+start = "2021-06"
+end = "2022-04"
+
+[[bullet]]
+id = "tidewater.lines"
+role = "tidewater"
+text = "Kept concession lines moving on opening weekends and cross-trained on the box office"
+basis = "records"
+
+[[role]]
+id = "freshfold"
+employer = "Fresh Fold Laundry"
+title = "Counter Attendant"
+location = "Savannah, GA"
+start = "2020-09"
+end = "2021-05"
+
+[[bullet]]
+id = "freshfold.orders"
+role = "freshfold"
+text = "Took drop-off orders, tagged garments, and answered the phone for a busy neighborhood laundry"
+basis = "records"
+
+[[skill]]
+id = "skill.service"
+label = "Customer service"
+items = ["Toast POS", "Cash handling", "Opening and closing", "Conflict resolution"]
+
+[[credential]]
+id = "cred.foodhandler"
+name = "ServSafe Food Handler"
+date = "2023"
+
+[[education]]
+id = "edu.hs"
+school = "Marsh Point High School"
+credential = "High School Diploma"
+location = "Savannah, GA"
+date = "2020"

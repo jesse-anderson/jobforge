@@ -1,0 +1,214 @@
+[[summary]]
+id = "summary.main"
+text = "Middle school science teacher with 11 years in Oregon classrooms, focused on lab work students can explain in writing and on bringing families into the building."
+
+[[role]]
+id = "larkspur.chair"
+employer = "Larkspur Middle School"
+title = "Science Department Chair"
+location = "Eugene, OR"
+start = "2022-08"
+end = "present"
+
+[[bullet]]
+id = "larkspur.chair.budget"
+role = "larkspur.chair"
+text = "Manage the department's $14,000 yearly supply budget and order lab materials for 6 science teachers"
+basis = "records"
+
+[[bullet]]
+id = "larkspur.chair.pd"
+role = "larkspur.chair"
+text = "Plan and lead monthly department meetings and 2 professional development days a year on lab assessment and standards-aligned units"
+basis = "records"
+
+[[bullet]]
+id = "larkspur.chair.hiring"
+role = "larkspur.chair"
+text = "Sat on hiring panels for 5 science positions and set up a buddy system that pairs each first-year teacher with a veteran colleague"
+basis = "records"
+
+[[role]]
+id = "larkspur"
+employer = "Larkspur Middle School"
+title = "8th Grade Science Teacher"
+location = "Eugene, OR"
+start = "2019-08"
+end = "present"
+
+[[bullet]]
+id = "larkspur.scores"
+role = "larkspur"
+text = "Raised the share of my 8th graders meeting the state science standard from 54% to 68% over three years by adding weekly lab write-ups with a shared rubric and quick written feedback"
+basis = "records"
+defense = "State assessment reports for my sections, 2021 against 2024."
+
+[[bullet]]
+id = "larkspur.load"
+role = "larkspur"
+text = "Teach 5 sections of physical and earth science, 140 students a year, including two sections co-taught with special education staff"
+basis = "records"
+
+[[bullet]]
+id = "larkspur.night"
+role = "larkspur"
+text = "Started an annual family science night that grew from 80 to 400 attendees in four years, with student-run demonstrations and local partners"
+basis = "records"
+defense = "Sign-in sheets from each year."
+
+[[bullet]]
+id = "larkspur.curriculum"
+role = "larkspur"
+text = "Led the 3-teacher science team that rewrote our 8th grade units to the Next Generation Science Standards, including new labs, assessments, and pacing guides"
+basis = "records"
+
+[[bullet]]
+id = "larkspur.mentor"
+role = "larkspur"
+text = "Mentored 4 student teachers from the state university through full-term placements, with weekly observations and planning meetings"
+basis = "records"
+
+[[bullet]]
+id = "larkspur.grant"
+role = "larkspur"
+text = "Won a $6,500 district grant for classroom sensors and data loggers, and trained the department to use them in labs"
+basis = "records"
+defense = "Grant award letter."
+
+[[bullet]]
+id = "larkspur.iep"
+role = "larkspur"
+text = "Write accommodations into every unit for students on IEPs and 504 plans, and meet with families and case managers each term"
+basis = "records"
+
+[[project]]
+id = "proj.night"
+title = "Family Science Night"
+context = "larkspur"
+url = "https://example.com/gholloway/science-night"
+text = "Annual event site with demonstration guides"
+
+[[bullet]]
+id = "night.guides"
+project = "proj.night"
+text = "Published 30 demonstration guides on the event site that other district schools now use for their own science nights"
+basis = "records"
+
+[[role]]
+id = "riverbend"
+employer = "Riverbend Learning Center"
+title = "Summer Program Instructor"
+location = "Eugene, OR"
+start = "2016-06"
+end = "2019-08"
+
+[[bullet]]
+id = "riverbend.camp"
+role = "riverbend"
+text = "Taught a 6-week summer STEM camp each year for 24 rising 4th to 6th graders, building lessons around hands-on engineering challenges"
+basis = "records"
+
+[[bullet]]
+id = "riverbend.staff"
+role = "riverbend"
+text = "Trained and scheduled 3 college-aged assistants each summer and wrote the camp's daily safety checklist"
+basis = "records"
+
+[[role]]
+id = "briar"
+employer = "Briar Glen Elementary School"
+title = "5th Grade Teacher"
+location = "Springfield, OR"
+start = "2014-08"
+end = "2019-06"
+
+[[bullet]]
+id = "briar.reading"
+role = "briar"
+text = "Moved 22 of 27 students to grade-level reading by spring in my third year, using small-group guided reading and weekly running records"
+basis = "records"
+defense = "Running record benchmarks, fall and spring."
+
+[[bullet]]
+id = "briar.math"
+role = "briar"
+text = "Piloted a new math curriculum for the school and coached 5 colleagues through the switch the following year"
+basis = "records"
+
+[[bullet]]
+id = "briar.families"
+role = "briar"
+text = "Held conferences with every family twice a year and sent a weekly newsletter home in English and Spanish"
+basis = "records"
+
+[[bullet]]
+id = "briar.behavior"
+role = "briar"
+text = "Built a classroom behavior system with clear routines that cut office referrals from 31 to 9 in one year"
+basis = "records"
+defense = "Office referral counts from the school's student information system."
+
+[[role]]
+id = "cascade.ta"
+employer = "Cascade State University"
+title = "Graduate Teaching Assistant, Biology"
+location = "Eugene, OR"
+start = "2012-09"
+end = "2014-06"
+
+[[bullet]]
+id = "cascade.ta.labs"
+role = "cascade.ta"
+text = "Taught 4 sections of introductory biology lab each term, 96 students in all, and graded their weekly lab reports"
+basis = "records"
+
+[[bullet]]
+id = "cascade.ta.review"
+role = "cascade.ta"
+text = "Ran weekly exam review sessions for the introductory biology course and held open office hours before each exam"
+basis = "records"
+
+[[skill]]
+id = "skill.teaching"
+label = "Teaching"
+items = ["Next Generation Science Standards", "Lab safety", "Differentiated instruction", "IEP and 504 accommodations", "Guided reading"]
+
+[[skill]]
+id = "skill.tools"
+label = "Classroom tools"
+items = ["Google Classroom", "Canvas", "PowerSchool", "Vernier data loggers"]
+
+[[credential]]
+id = "cred.license"
+name = "Oregon Professional Teaching License, Integrated Science"
+issuer = "Teacher Standards and Practices Commission"
+date = "2019"
+expires = "2029"
+
+[[credential]]
+id = "cred.multiple"
+name = "Elementary Multiple Subjects Endorsement"
+issuer = "Teacher Standards and Practices Commission"
+date = "2014"
+
+[[credential]]
+id = "cred.cpr"
+name = "First Aid and CPR"
+issuer = "American Red Cross"
+date = "2025"
+
+[[education]]
+id = "edu.mat"
+school = "Cascade State University"
+credential = "Master of Arts in Teaching"
+field = "Science Education"
+location = "Eugene, OR"
+date = "2014"
+
+[[education]]
+id = "edu.bs"
+school = "Cascade State University"
+credential = "Bachelor of Science"
+field = "Biology"
+location = "Eugene, OR"
+date = "2012"

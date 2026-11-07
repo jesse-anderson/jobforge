@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "fit": {"score": "strong", "summary": "Four years of Python backend work on a billing service with PostgreSQL tuning and on-call; no Kubernetes."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "tallgrass", "bullets": ["tallgrass.api", "tallgrass.latency", "tallgrass.ci", "tallgrass.oncall"]},
+    {"role": "kestrel", "bullets": [
+      {"atom": "kestrel.tracking", "text": "Built a shipment tracking page in React and TypeScript used by 300 customer accounts"},
+      "kestrel.tests"
+    ]}
+  ],
+  "projects": [
+    {"project": "proj.tidycsv", "bullets": ["tidycsv.users"]},
+    {"project": "proj.status", "bullets": ["status.build"]}
+  ],
+  "skills": ["skill.languages", "skill.frameworks", "skill.infra"],
+  "education": ["edu.bs"],
+  "cover_letter": {
+    "hook": "Fieldnote Health's payments platform is the kind of system I work on now: Python services where latency and correctness both matter.",
+    "body": "At Tallgrass Software I built and maintain a FastAPI billing service that handles 2 million API requests a day, and I cut p95 latency on our invoice endpoint from 900 ms to 180 ms with PostgreSQL indexes and query batching. I also share on-call for 6 services and wrote the runbooks the rotation uses.\n\nOutside work I maintain tidycsv, a Python library for cleaning messy CSV files with 1,200 GitHub stars and 15 outside contributors (example.com/sampatel/tidycsv).",
+    "close": "I would like to hear how your team splits on-call across the payments services.",
+    "cites": ["tallgrass.api", "tallgrass.latency", "tallgrass.oncall", "proj.tidycsv", "tidycsv.users"]
+  },
+  "gaps": ["Kubernetes is a plus; Sam has not used it."]
+}

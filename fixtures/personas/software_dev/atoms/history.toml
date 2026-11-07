@@ -1,0 +1,108 @@
+[[summary]]
+id = "summary.main"
+text = "Backend engineer who builds Python services that stay fast under load, and writes the runbook before it is needed."
+
+[[role]]
+id = "tallgrass"
+employer = "Tallgrass Software"
+title = "Software Engineer"
+location = "Denver, CO"
+start = "2022-01"
+end = "present"
+
+[[bullet]]
+id = "tallgrass.api"
+role = "tallgrass"
+text = "Built and maintain a Python and FastAPI billing service that handles 2 million API requests a day"
+basis = "measured"
+defense = "Request counts on the service dashboard."
+
+[[bullet]]
+id = "tallgrass.latency"
+role = "tallgrass"
+text = "Cut p95 latency on the invoice endpoint from 900 ms to 180 ms by adding PostgreSQL indexes and query batching"
+basis = "measured"
+defense = "APM latency graphs before and after the release."
+
+[[bullet]]
+id = "tallgrass.ci"
+role = "tallgrass"
+text = "Moved the team's tests to GitHub Actions and brought CI time from 25 minutes to 8 minutes"
+basis = "measured"
+
+[[bullet]]
+id = "tallgrass.oncall"
+role = "tallgrass"
+text = "Share on-call for 6 services and wrote the runbooks the rotation uses"
+basis = "records"
+
+[[project]]
+id = "proj.status"
+title = "Tallgrass Status Page"
+context = "tallgrass"
+url = "https://example.com/tallgrass-status"
+url_status = "dead"
+text = "Public service status page, since retired"
+
+[[bullet]]
+id = "status.build"
+project = "proj.status"
+text = "Built the public status page that reported uptime to customers until the company moved to a vendor"
+basis = "records"
+
+[[role]]
+id = "kestrel"
+employer = "Kestrel Logistics"
+title = "Junior Developer"
+location = "Boulder, CO"
+start = "2020-06"
+end = "2021-12"
+
+[[bullet]]
+id = "kestrel.tracking"
+role = "kestrel"
+text = "Built a React and TypeScript shipment tracking page used by 300 customer accounts"
+basis = "records"
+
+[[bullet]]
+id = "kestrel.tests"
+role = "kestrel"
+text = "Raised unit test coverage on the Node.js API from 40% to 75%"
+basis = "measured"
+
+[[project]]
+id = "proj.tidycsv"
+title = "tidycsv"
+context = "personal"
+url = "https://example.com/sampatel/tidycsv"
+text = "Open-source Python library for cleaning messy CSV exports"
+
+[[bullet]]
+id = "tidycsv.users"
+project = "proj.tidycsv"
+text = "Wrote and maintain a Python library for cleaning messy CSV files, with 1,200 GitHub stars and 15 outside contributors"
+basis = "measured"
+defense = "The repository's star count and contributor list."
+
+[[skill]]
+id = "skill.languages"
+label = "Languages"
+items = ["Python", "TypeScript", "JavaScript", "SQL", "Go"]
+
+[[skill]]
+id = "skill.frameworks"
+label = "Frameworks"
+items = ["FastAPI", "React", "Node.js", "pytest"]
+
+[[skill]]
+id = "skill.infra"
+label = "Infrastructure"
+items = ["PostgreSQL", "Redis", "Docker", "AWS", "GitHub Actions", "Terraform"]
+
+[[education]]
+id = "edu.bs"
+school = "Front Range State University"
+credential = "Bachelor of Science"
+field = "Computer Science"
+location = "Fort Collins, CO"
+date = "2020"

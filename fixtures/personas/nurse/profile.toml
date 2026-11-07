@@ -1,0 +1,12 @@
+# White-collar healthcare persona (D-09 #9). Fictional. An ICU nurse with a
+# state license and short clinical acronyms, moving from a medical ICU to a
+# cardiovascular ICU. Must not claim the CCRN he has not earned.
+
+[person]
+name = "Daniel Kim"
+email = "daniel.kim@example.com"
+phone = "555-0162"
+location = "Milwaukee, WI"
+
+[claims]
+never_claim = ["CCRN", "Cerner"]
