@@ -2,13 +2,16 @@
 # branch push or a PR. Publishes with PyPI trusted publishing (OIDC), so no
 # token is stored anywhere.
 #
-#   v0.1.0rc1, v0.1.0a1, ... (pre-release tags) -> TestPyPI
-#   v0.1.0 (final X.Y.Z tags)                   -> PyPI
+#   v0.1.0 (final X.Y.Z)                    -> PyPI
+#   v0.1.0rc1, v0.1.0b1, v0.1.0a1 (pre-release) -> TestPyPI, then PyPI if
+#       that succeeded; pip skips pre-releases unless asked, so this
+#       reserves the name without becoming the default install
+#   anything else, e.g. v0.1.0.dev1             -> TestPyPI only
 #
 # Every upload waits for a maintainer to approve it: the `testpypi` and
 # `pypi` environments are set to require a reviewer (Settings > Environments).
 # PyPI never lets a version be reused, even after deletion, so the tag must
-# match __version__ and PyPI only takes a final version (tools/release_check.py).
+# match __version__, and PyPI never takes a .dev build (tools/release_check.py).
 #
 # One-time setup, before the first tag: on PyPI and TestPyPI, add this repo as
 # a trusted publisher (workflow `release.yml`, environment `pypi` or
@@ -36,13 +39,15 @@ jobs:
         run: |
           if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "target=pypi" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(a|b|rc)[0-9]+$ ]]; then
+            echo "target=both" >> "$GITHUB_OUTPUT"
           else
             echo "target=testpypi" >> "$GITHUB_OUTPUT"
           fi
       - name: Tag matches the version
         shell: bash
         run: |
-          if [ "${{ steps.target.outputs.target }}" = pypi ]; then
+          if [ "${{ steps.target.outputs.target }}" != testpypi ]; then
             python tools/release_check.py "$GITHUB_REF_NAME"
           else
             python tools/release_check.py "$GITHUB_REF_NAME" --test
@@ -71,7 +76,7 @@ jobs:
 
   testpypi:
     needs: build
-    if: needs.build.outputs.target == 'testpypi'
+    if: needs.build.outputs.target == 'testpypi' || needs.build.outputs.target == 'both'
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -88,8 +93,13 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   pypi:
-    needs: build
-    if: needs.build.outputs.target == 'pypi'
+    needs: [build, testpypi]
+    # A pre-release reaches PyPI only after its TestPyPI upload succeeded; a
+    # final version skips TestPyPI, so the skipped job must not block it.
+    if: >-
+      !cancelled() && needs.build.result == 'success' &&
+      (needs.build.outputs.target == 'pypi' ||
+       (needs.build.outputs.target == 'both' && needs.testpypi.result == 'success'))
     runs-on: ubuntu-latest
     environment:
       name: pypi

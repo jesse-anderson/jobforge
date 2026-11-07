@@ -48,7 +48,10 @@ def test_package_version_is_read_from_the_package():
     ("v0.1.0", "0.1.0", False, True),
     ("v0.1.0", "0.1.1", False, False),        # tag and version disagree
     ("v0.1.0.dev0", "0.1.0.dev0", False, False),  # never a dev build to PyPI
-    ("v0.1.0rc1", "0.1.0rc1", False, False),  # pre-releases go to TestPyPI
+    ("v0.1.0rc1", "0.1.0rc1", False, True),   # a pre-release may reach PyPI
+    ("v0.1.0b2", "0.1.0b2", False, True),
+    ("v0.1.0.dev1", "0.1.0.dev1", False, False),  # never a dev build to PyPI
+    ("v0.1.0rc", "0.1.0rc", False, False),    # a pre-release needs its number
     ("v0.1.0rc1", "0.1.0rc1", True, True),
     ("v0.1.0.dev0", "0.1.0.dev0", True, True),
     ("0.1.0", "0.1.0", True, False),          # the tag needs its "v"
@@ -64,3 +67,12 @@ def test_release_check_cli_exit_codes(capsys):
     assert tool.main(["v9.9.9"]) == 1
     assert "does not match" in capsys.readouterr().err
     assert tool.main([]) == 2
+
+
+def test_a_pre_release_reaches_pypi_only_after_testpypi():
+    pypi = WORKFLOW.split("\n  pypi:\n", 1)[1].split("steps:", 1)[0]
+    assert "needs: [build, testpypi]" in pypi
+    assert "needs.testpypi.result == 'success'" in pypi
+    assert "needs.build.outputs.target == 'pypi'" in pypi  # finals skip TestPyPI
+    testpypi = WORKFLOW.split("\n  testpypi:\n", 1)[1].split("steps:", 1)[0]
+    assert "'both'" in testpypi and "'testpypi'" in testpypi
