@@ -95,6 +95,49 @@ def number_tokens(text: str) -> list[Token]:
     return out
 
 
+# Common units, each under one name however it is written (issue #10).
+# Abbreviations match lowercase only, so "2MM" and "$5M" stay money slang.
+# "in" is left out: "12 in Chicago" is not inches.
+_UNIT_ABBR = {"mm": "mm", "cm": "cm", "m": "m", "km": "km", "ft": "ft", "mi": "mi",
+              "lb": "lb", "lbs": "lb", "kg": "kg", "gal": "gal", "psi": "psi",
+              "gpm": "gpm", "mph": "mph"}
+_UNIT_WORDS = {"millimeter": "mm", "millimetre": "mm", "centimeter": "cm",
+               "centimetre": "cm", "meter": "m", "metre": "m", "kilometer": "km",
+               "kilometre": "km", "inch": "in", "inches": "in", "foot": "ft", "feet": "ft",
+               "mile": "mi", "pound": "lb", "kilogram": "kg", "kilo": "kg",
+               "gallon": "gal", "liter": "l", "litre": "l", "ton": "ton", "tonne": "tonne"}
+
+
+def _alt(words):
+    return "|".join(sorted(map(re.escape, words), key=len, reverse=True))
+
+
+# A figure, at most two words, then a unit: "650,000 accident-free miles".
+UNIT_RE = re.compile(
+    r"(?<![\w.])(?P<int>\d{1,3}(?:,\d{3})+|\d+)(?P<dec>\.\d+)?"
+    r"(?:\s+[A-Za-z][\w-]*){0,2}?\s*"
+    rf"(?:(?P<abbr>{_alt(_UNIT_ABBR)})|(?i:(?P<word>{_alt(_UNIT_WORDS)})s?))\b")
+
+
+@dataclass(frozen=True)
+class UnitFigure:
+    value: str  # normalized, as in Token
+    unit: str   # one name per unit: "mi" for mi, mile, miles
+    shown: str  # as written, for messages
+
+
+def unit_figures(text: str) -> list[UnitFigure]:
+    """Figures written with a common unit. The fact check holds each to the
+    unit its atom uses: no rewording "miles" as "km" (issue #10)."""
+    out = []
+    for m in UNIT_RE.finditer(unicodedata.normalize("NFKC", text)):
+        val = Decimal(m.group("int").replace(",", "") + (m.group("dec") or ""))
+        unit = _UNIT_ABBR[m.group("abbr")] if m.group("abbr") else \
+            _UNIT_WORDS[m.group("word").lower()]
+        out.append(UnitFigure(_norm(val), unit, m.group(0)))
+    return out
+
+
 # A hedge word directly before a figure. "about 50%" invites the question it
 # tries to avoid (D-37). "over" and "more than" are claims of a bound, not
 # hedges, so they are allowed.

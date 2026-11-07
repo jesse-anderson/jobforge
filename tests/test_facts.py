@@ -1,7 +1,7 @@
 import pytest
 
 from jobforge.facts import (Token, find_hedges, number_tokens, split_sentences, term_in,
-                            word_count)
+                            unit_figures, word_count)
 
 
 @pytest.mark.parametrize("text,expected", [
@@ -111,3 +111,25 @@ def test_word_count():
 def test_split_sentences_keeps_decimals_and_urls():
     s = split_sentences("Accuracy rose to 99.6% here. See example.com/x. Then 3 more.")
     assert s == ["Accuracy rose to 99.6% here.", "See example.com/x.", "Then 3 more."]
+
+
+@pytest.mark.parametrize("text,expected", [
+    # Issue #10: common units, each under one name however it is spelled.
+    ("drove 650,000 miles", [("650000", "mi")]),
+    ("drove 650,000 accident-free miles", [("650000", "mi")]),
+    ("drove 650,000 km", [("650000", "km")]),
+    ("a 12 m span", [("12", "m")]),
+    ("12 meters of conveyor", [("12", "m")]),
+    ("held 0.05 mm", [("0.05", "mm")]),
+    ("rated to 3,000 psi at 450 gpm", [("3000", "psi"), ("450", "gpm")]),
+    ("lifts 50 lbs", [("50", "lb")]),
+    ("1,800 gallons a day", [("1800", "gal")]),
+    ("a 6 inch pipe", [("6", "in")]),
+    # Not units: "in" as a word, million slang, figures with no unit nearby.
+    ("trained 12 in Chicago", []),
+    ("2MM rows and $5M", []),
+    ("3 castings to a local foundry", []),
+    ("cut setup from 40 minutes to 15", []),
+])
+def test_unit_figures(text, expected):
+    assert [(f.value, f.unit) for f in unit_figures(text)] == expected
