@@ -1,8 +1,9 @@
 import pytest
 
-from jobforge.agent import AGENT_FILES
+from jobforge.agent import AGENT_FILES, NOTES_MARKER
 from jobforge.errors import WorkspaceError
-from jobforge.workspace import ENV_VAR, LAYOUT, MARKER, find_workspace, init_workspace
+from jobforge.workspace import (ENV_VAR, LAYOUT, MARKER, find_workspace, init_workspace,
+                                refresh_workspace)
 
 pytestmark = pytest.mark.critical
 
@@ -45,6 +46,78 @@ def test_refresh_rewrites_agent_files_only(ws):
     assert "stale" not in (ws.root / "CLAUDE.md").read_text(encoding="utf-8")
     assert ws.profile_path.read_text(encoding="utf-8") == profile_before
     assert sorted(p.name for p in ws.atoms_dir.iterdir()) == atoms_before
+
+
+# Issue #33: --refresh keeps what the user or their agent added.
+NOTE = "Ask me before applying to staffing agencies.\n"
+
+
+def claude_md(ws):
+    return (ws.root / "CLAUDE.md").read_text(encoding="utf-8")
+
+
+def set_limit(ws, words):
+    text = ws.profile_path.read_text(encoding="utf-8")
+    ws.profile_path.write_text(text.replace("cover_letter_max_words = 300",
+                                            f"cover_letter_max_words = {words}"), encoding="utf-8")
+
+
+def test_generated_files_end_with_a_notes_section(ws):
+    for name in AGENT_FILES:
+        assert NOTES_MARKER in (ws.root / name).read_text(encoding="utf-8")
+
+
+def test_unedited_files_refresh_quietly(ws):
+    _, notices = refresh_workspace(ws.root)
+    assert notices == [] and not list(ws.root.glob("*.bak*"))
+
+
+def test_notes_below_the_marker_survive_a_refresh(ws):
+    path = ws.root / "CLAUDE.md"
+    path.write_text(claude_md(ws) + NOTE, encoding="utf-8")
+    set_limit(ws, 220)
+    _, notices = refresh_workspace(ws.root)
+    assert claude_md(ws).endswith(NOTE)
+    assert "at most 220 words" in claude_md(ws)  # the generated part did refresh
+    assert notices == [] and not list(ws.root.glob("*.bak*"))
+
+
+def test_an_edit_above_the_marker_is_backed_up(ws):
+    path = ws.root / "CLAUDE.md"
+    edited = claude_md(ws).replace("## The one rule", "## The one rule\n\nMy own rule.") + NOTE
+    path.write_text(edited, encoding="utf-8")
+    _, notices = refresh_workspace(ws.root)
+    assert (ws.root / "CLAUDE.md.bak").read_text(encoding="utf-8") == edited
+    assert "My own rule." not in claude_md(ws) and claude_md(ws).endswith(NOTE)
+    assert len(notices) == 1 and "CLAUDE.md.bak" in notices[0]
+
+
+def test_an_older_file_with_an_added_line_is_backed_up(ws):
+    # Workspaces made before #33 have no notes section.
+    path = ws.root / "CLAUDE.md"
+    legacy = claude_md(ws).split(NOTES_MARKER)[0].rsplit("\n<!--", 1)[0] + "\n" + NOTE
+    path.write_text(legacy, encoding="utf-8")
+    _, notices = refresh_workspace(ws.root)
+    assert (ws.root / "CLAUDE.md.bak").read_text(encoding="utf-8") == legacy
+    assert any("CLAUDE.md.bak" in n for n in notices)
+
+
+def test_an_unedited_older_file_refreshes_quietly(ws):
+    path = ws.root / "CLAUDE.md"
+    path.write_text(claude_md(ws).split(NOTES_MARKER)[0].rsplit("\n<!--", 1)[0] + "\n",
+                    encoding="utf-8")
+    _, notices = refresh_workspace(ws.root)
+    assert notices == [] and NOTES_MARKER in claude_md(ws)
+
+
+def test_a_second_backup_never_replaces_the_first(ws):
+    path = ws.root / "CLAUDE.md"
+    for edit in ("First edit.", "Second edit."):
+        path.write_text(claude_md(ws).replace("## The one rule", f"## The one rule\n{edit}"),
+                        encoding="utf-8")
+        refresh_workspace(ws.root)
+    assert "First edit." in (ws.root / "CLAUDE.md.bak").read_text(encoding="utf-8")
+    assert "Second edit." in (ws.root / "CLAUDE.md.bak2").read_text(encoding="utf-8")
 
 
 def test_refresh_outside_a_workspace_fails(tmp_path):

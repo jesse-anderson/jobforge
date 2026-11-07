@@ -162,3 +162,8 @@ def test_instructions_explain_posting_figures():
 def test_instructions_say_units_are_never_converted():
     # Issue #10: the check catches a swapped unit; the agent is told first.
     assert "units included: never convert" in source_text()
+
+
+def test_instructions_say_where_notes_survive_a_refresh():
+    # Issue #33: the agent writes its notes where --refresh keeps them.
+    assert 'below the "Your notes" line' in source_text()

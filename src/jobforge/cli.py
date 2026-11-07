@@ -91,12 +91,15 @@ def _ws(args):
 def _run(args) -> int:
     cmd = args.command
     if cmd == "init":
-        from .workspace import init_workspace
+        from .workspace import init_workspace, refresh_workspace
         folder = args.workspace or args.folder
-        ws = init_workspace(folder, refresh=args.refresh)
         if args.refresh:
+            ws, notices = refresh_workspace(folder)
             print(f"Refreshed CLAUDE.md and AGENTS.md in {ws.root}")
+            for n in notices:
+                print(f"note: {n}")
         else:
+            ws = init_workspace(folder)
             print(f"Created a Jobforge workspace in {ws.root}\n\n"
                   f"Next: put your old resume in {ws.root / 'intake'}, open your AI "
                   f"agent in that folder, and ask it to set you up.")
