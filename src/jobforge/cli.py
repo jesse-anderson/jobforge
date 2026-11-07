@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import __version__
 from .errors import JobforgeError
-from .ledger import RECORDABLE
+from .ledger import LIST_STATUSES, RECORDABLE
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -65,7 +65,8 @@ def _parser() -> argparse.ArgumentParser:
     for name in ("jobs", "search"):
         s = sub.add_parser(name, help="list your jobs" + (" (same as jobs)" if name == "search" else ""))
         s.add_argument("text", nargs="?", help="only jobs whose company, title, or posting mention this")
-        s.add_argument("--status", help="only jobs with this status (including 'ghosted')")
+        s.add_argument("--status", choices=LIST_STATUSES, metavar="STATUS",
+                       help="only jobs with this status: " + ", ".join(LIST_STATUSES))
         s.add_argument("--company")
     return p
 
@@ -222,7 +223,8 @@ def _run(args) -> int:
         for r in rows:
             if r.problem:
                 print(f"warning: {r.problem}", file=sys.stderr)
-        print(format_table(rows))
+        filtered = bool(args.status or args.company or args.text)
+        print(format_table(rows, filtered=filtered))
         return 0
 
     raise AssertionError(f"unhandled command {cmd}")  # pragma: no cover
