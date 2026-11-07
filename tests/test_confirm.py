@@ -146,3 +146,42 @@ def test_describe_shows_employer_basis_and_defense(ws):
     shown = "\n".join(said)
     assert "Employer: Northwind Distribution" in shown
     assert "How you know: estimate" in shown and "Your explanation: My count." in shown
+
+
+def test_without_a_terminal_confirm_stops_before_asking(ws, monkeypatch):
+    """Issue #2 run: `! jobforge confirm` inside an agent has no stdin, and
+    confirm crashed with an EOFError traceback on the first prompt."""
+    import io
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    with pytest.raises(JobforgeError, match="needs a terminal") as exc:
+        run_confirm(ws, say=quiet)
+    assert str(ws.root) in exc.value.render()
+    assert (ws.pending_dir / "draft.toml").exists()
+    assert not (ws.atoms_dir / CONFIRMED_FILE).exists()
+
+
+def test_without_a_terminal_nothing_pending_still_reports(ws, monkeypatch):
+    import io
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    said = []
+    out = run_confirm(ws, say=said.append)
+    assert out.kept == [] and "Nothing to confirm" in said[0]
+
+
+def test_input_ending_mid_review_keeps_earlier_answers(ws):
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    answers = iter(["k"])
+
+    def ask(_prompt):
+        try:
+            return next(answers)
+        except StopIteration:
+            raise EOFError from None
+
+    said = []
+    out = run_confirm(ws, ask=ask, say=said.append)
+    assert out.kept == ["acme"]
+    assert out.skipped == ["skill.plc", "acme.uptime"]
+    assert any("Input ended" in s for s in said)
+    assert load_inventory(ws).get("acme") is not None
