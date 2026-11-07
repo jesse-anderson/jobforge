@@ -9,6 +9,8 @@ from jobforge.cli import _parser
 from jobforge.profile import load_profile
 from jobforge.workspace import init_workspace
 
+from conftest import FIXTURES
+
 
 def test_workspace_agent_files_match_the_source(ws):
     expected = render(values_for(ws))
@@ -121,3 +123,16 @@ def test_instructions_treat_a_skills_list_as_claims():
     text = source_text()
     assert "A skills list is claims too" in text
     assert "never_claim" in text.split("A skills list is claims too", 1)[1].split("\n6.", 1)[0]
+
+
+def test_page_text_capture_tells_the_agent_to_recapture():
+    # #16: a whole-page capture can hold other listings; the agent asks for
+    # the posting itself. The instructions quote the engine's own warning.
+    from jobforge.extract import from_url
+    page = (FIXTURES / "html" / "no_jsonld_google_style.html").read_text(encoding="utf-8")
+    _, warnings = from_url("https://example.com/j", company="Google", fetch=lambda url: page)
+    quoted = "No structured posting data"
+    assert warnings and warnings[0].startswith(quoted)
+    text = source_text()
+    assert f'warns "{quoted}"' in text
+    assert "direct link" in text and "--force" in text
