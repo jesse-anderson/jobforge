@@ -90,6 +90,22 @@ def test_full_flow(run, ws):
     assert "No jobs yet" in out
 
 
+def test_apply_with_a_locked_docx_exits_1_without_a_traceback(run, ws, monkeypatch):
+    # Issue #32: Word holds the resume open on Windows.
+    from jobforge import apply as apply_mod
+    prepare_john(run)
+    folder = next(ws.jobs_dir.iterdir())
+    shutil.copy(JOHN / "plan.json", folder / "plan.json")
+    assert run("apply", "prairie")[0] == 0
+
+    def locked(src, dst):
+        raise PermissionError(13, "Access is denied", str(dst))
+    monkeypatch.setattr(apply_mod, "_move", locked)
+    code, out, err = run("apply", "prairie")
+    assert code == 1 and "Traceback" not in err
+    assert "Close John_Smith_Resume.docx" in err and "Nothing was changed" in err
+
+
 def test_check_failure_exits_1_with_details(run, ws):
     prepare_john(run)
     folder = next(ws.jobs_dir.iterdir())
