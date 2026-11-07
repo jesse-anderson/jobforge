@@ -175,11 +175,19 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
         trial = dict(live)
         trial[atom.id] = atom
         check_references(trial, ws.rel, problems, only={atom.id})
+        missing_role = bool(problems)
+        if atom.kind == "bullet" and not (atom.get("defense") or "").strip():
+            # D-36: how the user knows it, in their words. Prep sheets are
+            # built from it (D-38), so a new bullet is not kept without it.
+            problems.append(
+                f"no defense note. Add how you know it to {ws.rel(atom.source)}, "
+                f"e.g. defense = \"Monthly report from the warehouse system\", "
+                f"then run confirm again (D-36).")
         owner = Inventory(trial).owner_role(atom)
         say(describe(atom, owner))
         if problems:
             say("  Cannot keep this yet:\n" + "\n".join(f"    {p}" for p in problems))
-            if atom.kind == "bullet":
+            if atom.kind == "bullet" and missing_role:
                 say("  (Keep or add the role it belongs to first, then run confirm again.)")
             out.refused.append(atom.id)
             say("")
