@@ -26,7 +26,7 @@ from .facts import (find_hedges, number_tokens, split_sentences, term_in, unit_f
                     word_count)
 from .plan import Line, ResolvedPlan
 from .profile import Profile, display_url
-from .scan import find_mixed_script
+from .scan import find_hidden, find_mixed_script
 
 
 @dataclass
@@ -182,6 +182,14 @@ def check_scripts(text: str, where: str, rep: Report) -> None:
                           f"ATS will not match it as written.")
 
 
+def check_hidden(text: str, where: str, rep: Report) -> None:
+    """The same hidden-character scan as `apply`'s read-back, run at `check`
+    so the agent's check loop catches it a round earlier (#85)."""
+    for hidden in find_hidden(text):
+        rep.errors.append(f"{where}: hidden character: {hidden}. Remove it from the "
+                          f"atom or plan text it came from.")
+
+
 def check_atom_ids(text: str, inv: Inventory, where: str, rep: Report) -> None:
     leaked = sorted(a for a in inv.atoms if "." in a and re.search(
         r"(?<![\w.])" + re.escape(a) + r"(?![\w])", text))
@@ -209,6 +217,7 @@ def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
     check_employers(line.text, line.cites, inv, line.where, rep)
     check_atom_ids(line.text, inv, line.where, rep)
     check_scripts(line.text, line.where, rep)
+    check_hidden(line.text, line.where, rep)
     # Voice rules are for text the agent wrote. An atom rendered as the user
     # wrote it is their own wording and is not second-guessed.
     if line.owner is None or line.text != (line.owner.get("text") or "").strip():
@@ -223,6 +232,9 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
     text = letter.text()
     where = "cover_letter"
     cites = letter.cites
+    # Each part as written, before paragraphs are reflowed.
+    for part in ("hook", "body", "close"):
+        check_hidden(getattr(letter, part), f"{where} {part}", rep)
     # Figures about the employer, quoted from its own posting, are ground truth
     # too ("your 40 locations"). They are not claims about the user. How far
     # the posting is trusted depends on how it was captured (#16):
