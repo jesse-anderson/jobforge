@@ -9,6 +9,7 @@ venv/
 .coverage
 htmlcov/
 .pytest_cache/
+uv.lock
 
 # Never commit a real workspace, credentials, or a PII denylist
 /workspace*/
