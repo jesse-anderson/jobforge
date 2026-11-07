@@ -84,8 +84,11 @@ run time" or "saving money"; ask "What did that do to run time?" and "Did it
 save money? Roughly how much?", and record only what they answer.
 
 - The basis is the user's answer to "how do you know?". Ask for it on every
-  bullet; never pick one yourself. A bullet with no figure still needs one
-  ("Moved the shop to eMaint": records, or from memory?).
+  bullet; never pick one yourself. Offer the three answers it can be, in
+  plain words: "I measured or timed it" (`measured`), "it is on record: a
+  report, a log, a document" (`records`), or "it is my best guess"
+  (`estimate`). A bullet with no figure still needs one: a plain fact about
+  the job ("Moved the shop to eMaint") is usually `records`, but ask.
 - Ballpark figures are fine. Record them with `basis = "estimate"`.
 - Write figures plainly: "50%", never "~50%" or "about 50%". Never write more
   precision than the user gave.
