@@ -82,7 +82,12 @@ def test_john_smith_has_what_the_sow_requires(ws):
     ('[[hobby]]\nid = "h"\n', "unknown section [[hobby]]"),
     ('[role]\nid = "r"\n', "must be written [[role]]"),
     ('[[role]]\nid = "northwind"\nemployer = "E"\ntitle = "T"\nstart = "2020"\n', "id already used"),
-    ('[[skill]]\nid = "s"\nlabel = "L"\nitems = "a, b"\n', "'items' must be a list"),
+    ('[[skill]]\nid = "s"\nlabel = "L"\nitems = "a, b"\n', "'items' must be a list"),    ('[[role]]\nid = "r"\nemployer = "E"\ntitle = "T"\nstart = "2020"\naliases = "E Co"\n',
+     "'aliases' must be a list"),
+    ('[[role]]\nid = "r"\nemployer = "E"\ntitle = "T"\nstart = "2020"\naliases = [" "]\n',
+     "'aliases' has an empty name"),
+    ('[[bullet]]\nid = "x.a"\nrole = "northwind"\ntext = "t"\nbasis = "records"\naliases = ["N"]\n',
+     "unknown field 'aliases'"),
 ])
 def test_schema_violations(ws, toml, needle):
     details = errors_for(ws, toml)
@@ -160,3 +165,16 @@ def test_texts_include_phrasings_and_facts(ws):
                   'basis = "estimate"\nfacts = ["50%"]\n[[bullet.phrasing]]\ntext = "Halved spend"\n')
     texts = load_inventory(ws).get("northwind.f").texts()
     assert "50%" in texts and "Halved spend" in texts
+
+
+def test_employer_names_gather_aliases_from_every_role(ws):
+    # Issue #9: two roles at one employer may each list aliases; each name
+    # counts once, full name first.
+    add_atoms(ws, '[[role]]\nid = "nw2"\nemployer = "Northwind Distribution"\n'
+                  'title = "Clerk"\nstart = "2018"\nend = "2019"\naliases = ["Northwind", "NWD"]\n'
+                  '[[role]]\nid = "nw3"\nemployer = "Northwind Distribution"\n'
+                  'title = "Picker"\nstart = "2017"\nend = "2018"\naliases = ["NWD"]\n')
+    inv = load_inventory(ws)
+    assert inv.employer_names()["Northwind Distribution"] == [
+        "Northwind Distribution", "Northwind", "NWD"]
+    assert "NWD" in inv.get("nw2").texts()

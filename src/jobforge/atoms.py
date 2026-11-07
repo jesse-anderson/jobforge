@@ -38,7 +38,7 @@ DATE_FIELDS = ("start", "end", "date")
 # kind -> (required fields, optional fields)
 SCHEMA: dict[str, tuple[set[str], set[str]]] = {
     "role": ({"id", "employer", "title", "start"},
-             {"end", "location", "notes"}),
+             {"end", "location", "notes", "aliases"}),
     "bullet": ({"id", "text", "basis"},
                {"role", "project", "defense", "facts", "phrasing", "reword_of", "tags"}),
     "project": ({"id", "title", "context"},
@@ -89,6 +89,7 @@ class Atom:
             if isinstance(v, str) and DATE_RE.match(v):
                 out.append(v[:4])
         out.extend(str(i) for i in self.fields.get("items") or [])
+        out.extend(str(a) for a in self.fields.get("aliases") or [])
         out.extend(str(f) for f in self.fields.get("facts") or [])
         out.extend(p.get("text", "") for p in self.phrasings)
         return out
@@ -135,6 +136,19 @@ class Inventory:
         out: dict[str, list[Atom]] = {}
         for role in self.of_kind("role"):
             out.setdefault(role.get("employer"), []).append(role)
+        return out
+
+    def employer_names(self) -> dict[str, list[str]]:
+        """Employer name -> every name it goes by: the full name first, then
+        the aliases from any of its roles ("KT" for "Kestrel Testing", #9)."""
+        out: dict[str, list[str]] = {}
+        for employer, roles in self.employers().items():
+            names = [employer]
+            for role in roles:
+                for alias in role.get("aliases") or []:
+                    if alias.strip() and alias.strip() not in names:
+                        names.append(alias.strip())
+            out[employer] = names
         return out
 
 
@@ -191,13 +205,15 @@ def check_fields(kind: str, entry: dict) -> list[str]:
         problems.append(f"id {atom_id!r} must be lowercase letters, digits, and . _ - "
                         f"(e.g. 'acme.downtime')")
 
-    list_fields = {"facts", "tags", "items"}
+    list_fields = {"facts", "tags", "items", "aliases"}
     for key, v in entry.items():
         if key == "phrasing":
             continue
         if key in list_fields:
             if not isinstance(v, list) or not all(isinstance(i, str) for i in v):
                 problems.append(f"{key!r} must be a list of text items")
+            elif key == "aliases" and not all(i.strip() for i in v):
+                problems.append("'aliases' has an empty name")
         elif not isinstance(v, str):
             problems.append(f"{key!r} must be text in quotes, got {type(v).__name__}")
         elif key in ("text", "title", "employer", "name", "label", "school",

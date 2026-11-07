@@ -148,6 +148,16 @@ def test_describe_shows_employer_basis_and_defense(ws):
     assert "How you know: estimate" in shown and "Your explanation: My count." in shown
 
 
+def test_describe_shows_a_roles_aliases(ws):
+    # Issue #9: the agent drafts aliases; the user sees them before keeping.
+    add_atoms(ws, '[[role]]\nid = "kt"\nemployer = "Kestrel Testing Laboratories"\n'
+                  'aliases = ["KT", "Kestrel Labs"]\ntitle = "Engineer"\nstart = "2020"\n',
+              "d.toml", pending=True)
+    said = []
+    run_confirm(ws, ask=script("s"), say=said.append)
+    assert "Also called: KT, Kestrel Labs" in "\n".join(said)
+
+
 def test_without_a_terminal_confirm_stops_before_asking(ws, monkeypatch):
     """Issue #2 run: `! jobforge confirm` inside an agent has no stdin, and
     confirm crashed with an EOFError traceback on the first prompt."""

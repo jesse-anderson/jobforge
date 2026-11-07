@@ -44,7 +44,7 @@ _FIELD_LABELS = (
     ("items", "Items"), ("issuer", "Issuer"), ("date", "Date"), ("expires", "Expires"),
     ("location", "Location"), ("details", "Details"), ("url", "URL"),
     ("writeup_url", "Writeup URL"), ("url_status", "URL status"),
-    ("facts", "Also states"), ("reword_of", "Rewords"), ("tags", "Tags"),
+    ("aliases", "Also called"), ("facts", "Also states"), ("reword_of", "Rewords"), ("tags", "Tags"),
 )
 
 

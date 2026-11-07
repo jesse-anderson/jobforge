@@ -28,6 +28,8 @@ def render_markdown(inv: Inventory) -> str:
     for r in roles:
         out.append(f"### `{r.id}`: {r.get('title')} at {r.get('employer')} "
                    f"({date_range(r.get('start'), r.get('end'))})")
+        if r.get("aliases"):
+            out.append(f"Also called: {', '.join(r.get('aliases'))}")
         for b in bullets:
             if b.get("role") == r.id:
                 out += _bullet(b)

@@ -79,6 +79,14 @@ def test_example_atoms_in_the_instructions_are_valid(tmp_path):
     (ws.atoms_dir / "example.toml").write_text(block, encoding="utf-8")
     inv = load_inventory(ws)
     assert inv.employer_of(inv.get("acme.downtime")) == "Acme Manufacturing"
+    assert inv.employer_names()["Acme Manufacturing"] == ["Acme Manufacturing", "Acme"]
+
+
+def test_agent_drafts_employer_aliases():
+    # Issue #9: the agent fills in aliases so the user never types them.
+    text = source_text()
+    setup = text.split("## First-time setup", 1)[1].split("\n## ", 1)[0]
+    assert "`aliases`" in setup and "never has to type them" in setup
 
 
 def test_example_plan_in_the_instructions_resolves(tmp_path):
