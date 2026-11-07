@@ -56,7 +56,11 @@ def test_no_tables_frames_or_headers(tmp_path):
     ("­", "soft hyphen"), (" ", "non-breaking space"),
     (" ", "narrow non-breaking space"), ("⁠", "word joiner"),
     ("‮", "text direction control"), ("ﬁ", "ligature glyph"),
-    ("\x07", "control character"), ("", "private-use character"),
+    ("\x07", "control character"),
+    # #49: any other invisible formatting character (Unicode Cf), e.g. the
+    # invisible separator and the Arabic letter mark.
+    ("\u2063", "invisible formatting character"), ("\u061c", "invisible formatting character"),
+    ("", "private-use character"),
 ])
 def test_hidden_characters_are_found(ch, name):
     found = find_hidden(f"Manage{ch}ment")
@@ -88,3 +92,12 @@ def test_ordinary_text_is_clean():
 
 def test_clean_fixes_posting_text():
     assert clean("a b​cﬁne­") == "a bcfine"
+
+
+def test_italic_run_is_written_and_reads_back(tmp_path):
+    # #49: the writer's italic run property.
+    path = write_docx([Block("para", [Run("Plain "), Run("slanted", italic=True)])],
+                      tmp_path / "i.docx")
+    with zipfile.ZipFile(path) as z:
+        assert "<w:i/>" in z.read("word/document.xml").decode()
+    assert extract_text(path) == "Plain slanted"

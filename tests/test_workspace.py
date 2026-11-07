@@ -156,3 +156,9 @@ def test_explicit_path_must_be_a_workspace(tmp_path):
 def test_rel_gives_forward_slash_paths(ws):
     assert ws.rel(ws.atoms_dir / "x.toml") == "profile/atoms/x.toml"
     assert ws.rel(ws.root.parent / "elsewhere") == str(ws.root.parent / "elsewhere")
+
+
+def test_intake_dir_is_the_folder_init_makes(tmp_path):
+    # #49: the README tells users to put their old resume here.
+    ws = init_workspace(tmp_path / "w")
+    assert ws.intake_dir == ws.root / "intake" and ws.intake_dir.is_dir()
