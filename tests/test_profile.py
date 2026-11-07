@@ -38,7 +38,12 @@ def test_invalid_toml_names_the_file(ws):
 @pytest.mark.parametrize("name,stem", [
     ("John Smith", "John_Smith"),
     ("Mary-Jane O'Neil", "Mary-Jane_ONeil"),
-    ("  Ana   María  López ", "Ana_Mara_Lpez"),
+    # Issue #36 (D-52): accents fold to plain letters instead of vanishing.
+    ("  Ana   María  López ", "Ana_Maria_Lopez"),
+    ("Siobhán O'Brien-Núñez", "Siobhan_OBrien-Nunez"),
+    ("Łukasz Øster", "Lukasz_Oster"),       # letters NFKD does not decompose
+    ("Jürgen Straße", "Jurgen_Strasse"),
+    ("Ærin Œstrand", "AErin_OEstrand"),
 ])
 def test_stem_from_name(name, stem):
     assert stem_from_name(name) == stem
@@ -47,6 +52,14 @@ def test_stem_from_name(name, stem):
 def test_explicit_file_stem_wins():
     p = profile_from_dict({"person": {"name": "José Núñez", "file_stem": "Jose_Nunez"}})
     assert p.resume_stem == "Jose_Nunez_Resume"
+
+
+def test_name_with_no_usable_letters_asks_for_file_stem():
+    # Issue #36: say what to do, not "file_stem '' may only use letters".
+    with pytest.raises(JobforgeError) as exc:
+        profile_from_dict({"person": {"name": "李小龍"}})
+    detail = next(d for d in exc.value.details if "file_stem" in d)
+    assert 'file_stem = "' in detail and "may only use" not in detail
 
 
 def test_bad_file_stem_rejected():

@@ -9,13 +9,14 @@ from pathlib import Path
 from .errors import JobforgeError
 from .extract import Job
 from .ledger import append_event
+from .profile import plain_letters
 from .workspace import Workspace
 
 SLUG_MAX = 40
 
 
 def slug(s: str) -> str:
-    s = re.sub(r"[^A-Za-z0-9]+", "_", s.strip()).strip("_").lower()
+    s = re.sub(r"[^A-Za-z0-9]+", "_", plain_letters(s).strip()).strip("_").lower()
     return s[:SLUG_MAX].rstrip("_") or "untitled"
 
 
