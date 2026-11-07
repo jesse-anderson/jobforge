@@ -52,6 +52,18 @@ def test_init_and_refresh(tmp_path, capsys):
     assert "already a Jobforge workspace" in capsys.readouterr().err
 
 
+def test_refresh_says_when_it_backs_up(tmp_path, capsys):
+    # Issue #33: never drop the user's edits silently.
+    main(["init", str(tmp_path / "w")])
+    path = tmp_path / "w" / "CLAUDE.md"
+    path.write_text(path.read_text(encoding="utf-8").replace("## The one rule",
+                                                             "## The one rule\nMine."),
+                    encoding="utf-8")
+    capsys.readouterr()
+    assert main(["init", "--refresh", str(tmp_path / "w")]) == 0
+    assert "CLAUDE.md.bak" in capsys.readouterr().out
+
+
 def test_outside_a_workspace_exits_2(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(ENV_VAR, raising=False)

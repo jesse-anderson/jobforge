@@ -157,6 +157,33 @@ def test_recordable_stages_are_every_stage_but_prepared():
     assert RECORDABLE == tuple(s for s in STAGES if s != "prepared")
 
 
+# Issue #39: FOLDER is the name users type back into `applied --mark`,
+# `check`, and `apply`, so it is never shortened.
+def row(folder, company="Lakeview Cold Storage", title="Distribution Supervisor"):
+    from jobforge.jobs import JobRow
+    return JobRow(folder=folder, company=company, title=title, status="applied",
+                  last_date="2026-09-15", url="")
+
+
+def test_table_shows_location_twins_in_full():
+    twins = ["lakeview_cold_storage__distribution_supervisor__2026-09-15",
+             "lakeview_cold_storage__distribution_supervisor__2026-09-15__2"]
+    lines = format_table([row(f) for f in twins]).splitlines()[1:]
+    assert [line.split()[-1] for line in lines] == twins
+
+
+def test_table_marks_a_shortened_company_or_title():
+    long_company = "The Very Long Regional Cold Storage and Logistics Cooperative"
+    out = format_table([row("x__y__2026-09-15", company=long_company)])
+    assert long_company not in out and "…" in out
+    assert "The Very Long Regional Cold Storage" in out
+
+
+def test_table_never_marks_what_fits():
+    out = format_table([row("acme__welder__2026-09-15", company="Acme", title="Welder")])
+    assert "…" not in out
+
+
 def test_list_skips_broken_folders(ws):
     add_job(ws, "Acme", "Welder")
     bad = ws.jobs_dir / "broken"

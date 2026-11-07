@@ -93,6 +93,19 @@ class Workspace:
 LAYOUT = ("profile", "profile/atoms", "profile/pending", "intake", "jobs")
 
 
+def refresh_workspace(root: Path) -> tuple[Workspace, list[str]]:
+    """Rewrite the generated agent files in an existing workspace, keeping
+    the user's notes (#33). Returns the workspace and any backup notices."""
+    from .agent import write_agent_files
+
+    ws = Workspace(Path(root).expanduser().resolve())
+    if not ws.marker.exists():
+        raise WorkspaceError(
+            f"{ws.root} is not a Jobforge workspace, so there is nothing to "
+            f"refresh. Run `jobforge init {ws.root}` first.")
+    return ws, write_agent_files(ws)
+
+
 def init_workspace(root: Path, *, refresh: bool = False) -> Workspace:
     """Create a workspace at `root`, or with `refresh` only rewrite the
     generated agent files in an existing one.
@@ -104,12 +117,7 @@ def init_workspace(root: Path, *, refresh: bool = False) -> Workspace:
     root = Path(root).expanduser().resolve()
     ws = Workspace(root)
     if refresh:
-        if not ws.marker.exists():
-            raise WorkspaceError(
-                f"{root} is not a Jobforge workspace, so there is nothing to "
-                f"refresh. Run `jobforge init {root}` first.")
-        write_agent_files(ws)
-        return ws
+        return refresh_workspace(root)[0]
 
     if ws.marker.exists():
         raise WorkspaceError(

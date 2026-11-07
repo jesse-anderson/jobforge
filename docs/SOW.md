@@ -29,7 +29,7 @@ The finish line for this SOW is **1.0**: a public repo and PyPI package that a u
 
 ### Preconditions (met)
 
--   Employer IP cleared: the tool is carved out of employer A's agreement (D-17), and no code derives from employer B's work, time, or equipment (D-18).
+-   Employer IP cleared: the tool is carved out of one employer's agreement (D-17), and no code derives from another employer's work, time, or equipment (D-18).
 
 ### In scope
 

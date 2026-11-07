@@ -36,7 +36,9 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--title")
     s.add_argument("--location")
     s.add_argument("--url", help="the posting's URL, when using --from-text")
-    s.add_argument("--force", action="store_true", help="replace an existing job.json")
+    s.add_argument("--force", action="store_true",
+                   help="replace this same posting's job.json (same URL, or same company, "
+                        "title, and location); a different posting always gets its own folder")
 
     s = sub.add_parser("check", help="validate a job's plan.json without writing documents")
     s.add_argument("job", help="job folder name, or a unique part of it")
@@ -92,12 +94,15 @@ def _ws(args):
 def _run(args) -> int:
     cmd = args.command
     if cmd == "init":
-        from .workspace import init_workspace
+        from .workspace import init_workspace, refresh_workspace
         folder = args.workspace or args.folder
-        ws = init_workspace(folder, refresh=args.refresh)
         if args.refresh:
+            ws, notices = refresh_workspace(folder)
             print(f"Refreshed CLAUDE.md and AGENTS.md in {ws.root}")
+            for n in notices:
+                print(f"note: {n}")
         else:
+            ws = init_workspace(folder)
             print(f"Created a Jobforge workspace in {ws.root}\n\n"
                   f"Next: put your old resume in {ws.root / 'intake'}, open your AI "
                   f"agent in that folder, and ask it to set you up.")

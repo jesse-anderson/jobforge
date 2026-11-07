@@ -54,16 +54,40 @@ def similar_jobs(ws: Workspace, job: Job, exclude: Path | None = None) -> list[s
     return hits
 
 
+def same_posting(other: dict, job: Job) -> bool:
+    """Whether a saved job.json is this posting: the same URL, or, when either
+    has none, the same company, title, and location as written. Not by slug:
+    every non-Latin company slugs to "untitled" (#31)."""
+    if job.url and other.get("url"):
+        return other.get("url") == job.url
+
+    def norm(v) -> str:
+        return " ".join(str(v or "").split()).casefold()
+    return all(norm(other.get(k)) == norm(getattr(job, k)) for k in
+               ("company", "title", "location"))
+
+
 def prepare(ws: Workspace, job: Job, *, force: bool = False,
             today: _dt.date | None = None) -> tuple[Path, list[str]]:
     """Write jobs/<company>__<title>__<date>/job.json and the first ledger
-    event. Returns the folder and warnings."""
+    event. Returns the folder and warnings.
+
+    A different posting that would get the same name (another city, the same
+    day) gets the next free one, `__2`, `__3`, as `jobforge import` does. Only
+    the same posting can be replaced, and only with `force` (#31)."""
     today = today or _dt.date.today()
-    folder = ws.jobs_dir / folder_name(job, today)
+    base = name = folder_name(job, today)
+    n = 1
+    while (ws.jobs_dir / name / "job.json").exists():
+        if same_posting(read_job(ws.jobs_dir / name), job):
+            if not force:
+                raise JobforgeError(f"jobs/{name}/job.json already holds this same "
+                                    f"posting. Use --force to replace its text.")
+            break
+        n += 1
+        name = f"{base}__{n}"
+    folder = ws.jobs_dir / name
     warnings = []
-    if (folder / "job.json").exists() and not force:
-        raise JobforgeError(f"jobs/{folder.name}/job.json already exists. "
-                            f"Use --force to replace the posting text.")
     earlier = similar_jobs(ws, job, exclude=folder)
     if earlier:
         warnings.append("You already have a folder for this posting: "
