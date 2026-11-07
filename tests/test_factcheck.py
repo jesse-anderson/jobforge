@@ -265,6 +265,15 @@ def test_letter_two_employers_in_one_sentence_warns(ws, john_plan):
     assert any("names 2 employers" in w for w in rep.warnings)
 
 
+def test_meters_written_short_match_the_atom(ws, john_plan):
+    # Issue #10: "12 m" for an atom's "12 meters" is the same figure.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.conveyor"\nrole = "northwind"\n'
+                  'text = "Laid out 12 meters of new conveyor"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.conveyor", "text": "Laid out 12 m of new conveyor"})
+    assert check(ws, john_plan).ok
+
+
 def with_aliases(ws, northwind, lakeside=()):
     """Give John's two employers the short names people use for them (#9)."""
     path = ws.atoms_dir / "work.toml"
@@ -337,6 +346,45 @@ def test_bullet_may_name_its_own_employers_alias(ws, john_plan):
     assert check(ws, john_plan).ok
 
 
+def test_unit_changed_from_the_atom_is_caught(ws, john_plan):
+    # Issue #10: same number, different unit, is a different fact.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.conveyor2"\nrole = "northwind"\n'
+                  'text = "Laid out 120 feet of new conveyor"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.conveyor2", "text": "Laid out 120 meters of new conveyor"})
+    expect(check(ws, john_plan), "120 meters changes the unit; the facts say 120 feet")
+
+
+@pytest.mark.parametrize("atom,line,ok", [
+    ("Cut p99 latency to 300 ms", "Cut p99 latency to 300 milliseconds", True),
+    ("Cut p99 latency to 300 ms", "Cut p99 latency to 300 seconds", False),
+    ("Shrank the nightly export to 120 MB", "Shrank the nightly export to 120 Mb", False),
+    ("Held the cooler at 38°F", "Held the cooler at 38 degrees Fahrenheit", True),
+    ("Held the cooler at 38°F", "Held the cooler at 38°C", False),
+    ("Ran a 10,000 sq ft cross-dock", "Ran a 10,000 square feet cross-dock", True),
+    ("Ran a 10,000 sq ft cross-dock", "Ran a 10,000 ft cross-dock", False),
+    ("Closed the backlog in 3 weeks", "Closed the backlog in 3 months", False),
+])
+def test_units_across_families(ws, john_plan, atom, line, ok):
+    # Jesse's review on #24: the check covers the units people write.
+    add_atoms(ws, f'[[bullet]]\nid = "northwind.unit"\nrole = "northwind"\n'
+                  f'text = "{atom}"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append({"atom": "northwind.unit", "text": line})
+    rep = check(ws, john_plan)
+    if ok:
+        assert rep.ok, rep.errors
+    else:
+        expect(rep, "changes the unit")
+
+
+def test_unit_spelled_differently_passes(ws, john_plan):
+    add_atoms(ws, '[[bullet]]\nid = "northwind.conveyor2"\nrole = "northwind"\n'
+                  'text = "Laid out 120 feet of new conveyor"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.conveyor2", "text": "Laid out 120 ft of new conveyor"})
+    assert check(ws, john_plan).ok
+
+
 def test_money_with_added_cents_is_added_precision(ws, john_plan):
     # Issue #11: "$84,000" confirmed; "$84,000.00" claims an exactness the
     # user never stated.
@@ -351,6 +399,31 @@ def test_letter_figure_with_added_decimal_is_caught(ws, john_plan):
     john_plan["cover_letter"]["cites"].append("lakeside.shrink")
     letter_body(john_plan, "I reduced produce shrink 18.0% with rotation checks.")
     expect(check(ws, john_plan), "the figure 18.0% is more precise than the facts (18%)")
+
+
+@pytest.mark.parametrize("atom,line,ok", [
+    # Jesse's review on #24: precision is the smallest amount a figure states.
+    # "$1.2M" is to the nearest $100,000; "$1.20M" to $10,000; "$1,200,000"
+    # to the dollar. A line may state a figure no more finely than its atom.
+    ("Ran a $1.2M budget", "Ran a $1.20M budget", False),
+    ("Ran a $1.2M budget", "Ran a $1,200,000 budget", False),
+    ("Ran a $1.2M budget", "Ran a $1.2 million budget", True),
+    ("Ran a $1,200,000 budget", "Ran a $1.2M budget", True),
+    ("Ran a $1,200,000 budget", "Ran a $1,200,000 budget", True),
+    ("Served 2.5 million riders", "Served 2.50 million riders", False),
+    ("Served 2.5 million riders", "Served 2,500,000 riders", False),
+    ("Shipped 12,000 orders", "Shipped 12k orders", True),
+    ("Shipped 12k orders", "Shipped 12,000 orders", False),
+])
+def test_precision_counts_the_multiplier(ws, john_plan, atom, line, ok):
+    add_atoms(ws, f'[[bullet]]\nid = "northwind.scale"\nrole = "northwind"\n'
+                  f'text = "{atom}"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append({"atom": "northwind.scale", "text": line})
+    rep = check(ws, john_plan)
+    if ok:
+        assert rep.ok, rep.errors
+    else:
+        expect(rep, "is more precise than the facts")
 
 
 def test_letter_may_quote_the_postings_figures(ws, john_plan):
