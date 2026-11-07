@@ -61,6 +61,26 @@ def test_hand_edited_bad_ledger_reports_clearly(job_folder):
         read_events(job_folder)
 
 
+# Red-team follow-up to F7 (#28): `applied --mark` on a ledger it cannot
+# read says why and writes nothing, instead of a traceback or appending
+# to a file that is already broken.
+@pytest.mark.parametrize("content", [b"\xff\xfe", b"[[event\n"])
+def test_append_refuses_a_ledger_it_cannot_read(job_folder, content):
+    path = job_folder / "ledger.toml"
+    path.write_bytes(content)
+    with pytest.raises(JobforgeError, match=f"{job_folder.name}/ledger.toml is not"):
+        append_event(job_folder, "applied", D(2026, 11, 21))
+    assert path.read_bytes() == content
+
+
+def test_applied_mark_on_a_non_utf8_ledger_exits_1(ws, job_folder, monkeypatch, capsys):
+    from jobforge.cli import main
+    (job_folder / "ledger.toml").write_bytes(b"\xff\xfe")
+    monkeypatch.chdir(ws.root)
+    assert main(["applied", "--mark", job_folder.name, "--status", "applied"]) == 1
+    assert "ledger.toml is not UTF-8 text" in capsys.readouterr().err
+
+
 def test_no_ledger_means_no_events(tmp_path):
     assert read_events(tmp_path) == []
     assert current_status([], TODAY, 30) == "unknown"
@@ -190,6 +210,33 @@ def test_list_skips_broken_folders(ws):
     bad.mkdir()
     (bad / "job.json").write_text("{", encoding="utf-8")
     assert len(list_jobs(ws, today=TODAY)) == 1
+
+
+# Red-team finding F7 (#28): one broken ledger.toml must not stop the
+# listing. The job stays in it, marked unreadable, with the reason.
+def test_list_keeps_a_job_whose_ledger_is_broken(ws):
+    good = add_job(ws, "Acme", "Welder")
+    bad = add_job(ws, "Bolt", "Painter")
+    (bad / "ledger.toml").write_text("[[event\n", encoding="utf-8")
+    rows = {r.company: r for r in list_jobs(ws, today=TODAY)}
+    assert rows["Acme"].status == "prepared" and rows["Acme"].problem == ""
+    assert rows["Bolt"].status == "unreadable" and rows["Bolt"].last_date == ""
+    assert f"{bad.name}/ledger.toml is not valid TOML" in rows["Bolt"].problem
+    assert good.name in format_table(list(rows.values()))
+
+
+def test_list_keeps_a_job_whose_ledger_is_not_utf8(ws):
+    bad = add_job(ws, "Bolt", "Painter")
+    (bad / "ledger.toml").write_bytes(b'[[event]]\nnote = "\xff"\n')
+    [only] = list_jobs(ws, today=TODAY)
+    assert only.status == "unreadable"
+    assert f"{bad.name}/ledger.toml is not UTF-8 text" in only.problem
+
+
+def test_non_utf8_ledger_reports_clearly(job_folder):
+    (job_folder / "ledger.toml").write_bytes(b"\xff\xfe")
+    with pytest.raises(JobforgeError, match="ledger.toml is not UTF-8 text"):
+        read_events(job_folder)
 
 
 def test_empty_table_message(ws):

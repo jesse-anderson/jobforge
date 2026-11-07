@@ -57,6 +57,7 @@ def test_no_tables_frames_or_headers(tmp_path):
     (" ", "narrow non-breaking space"), ("⁠", "word joiner"),
     ("‮", "text direction control"), ("ﬁ", "ligature glyph"),
     ("\x07", "control character"), ("", "private-use character"),
+    ("\ud800", "lone surrogate"),  # F8 (#28): cannot be written to a file
 ])
 def test_hidden_characters_are_found(ch, name):
     found = find_hidden(f"Manage{ch}ment")
@@ -88,3 +89,7 @@ def test_ordinary_text_is_clean():
 
 def test_clean_fixes_posting_text():
     assert clean("a b​cﬁne­") == "a bcfine"
+
+
+def test_clean_drops_a_lone_surrogate():
+    assert clean("Ware\ud800house") == "Warehouse"

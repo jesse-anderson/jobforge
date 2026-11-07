@@ -219,6 +219,9 @@ def _run(args) -> int:
             ghost = Profile(name="").ghost_after_days
         rows = list_jobs(ws, ghost_after_days=ghost, status=args.status,
                          company=args.company, text=args.text)
+        for r in rows:
+            if r.problem:
+                print(f"warning: {r.problem}", file=sys.stderr)
         print(format_table(rows))
         return 0
 
