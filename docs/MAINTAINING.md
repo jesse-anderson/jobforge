@@ -52,6 +52,9 @@ Every change ships with tests, written in the same change. No exceptions for
 - A bug fix starts with a test that fails without the fix.
 - New fact-check rules get a planted-violation test and a clean-passes test.
 - Persona fixtures in `fixtures/personas/` are fictional, always.
+- Before every push, run the suite with coverage and paste the pytest
+  summary and coverage TOTAL into the PR. CI is Ubuntu only while the repo
+  is private, so that local run is the only Windows check.
 
 ## Branches and merging
 
