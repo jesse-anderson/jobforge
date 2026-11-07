@@ -207,6 +207,21 @@ def test_jobs_warns_about_a_broken_ledger_and_lists_the_rest(run, ws):
     assert err.count("warning:") == 1
 
 
+# #72: a broken job.json is a warning naming the file, the same as a broken
+# ledger, and the job stays listed as unreadable.
+def test_jobs_warns_about_a_broken_job_json_and_lists_the_rest(run, ws):
+    run("import", str(SAMPLE_CSV), "--write")
+    folders = sorted(ws.jobs_dir.iterdir())
+    (folders[0] / "job.json").write_bytes(b'{"company": "Caf\xe9"}')
+    code, out, err = run("jobs")
+    assert code == 0
+    assert f"warning: {folders[0].name}/job.json is not UTF-8 text" in err
+    assert all(f.name in out for f in folders)
+    assert err.count("warning:") == 1
+    code, out, _ = run("jobs", "--status", "unreadable")
+    assert code == 0 and folders[0].name in out and folders[1].name not in out
+
+
 def test_jobs_works_with_a_starter_profile(tmp_path, monkeypatch, capsys):
     main(["init", str(tmp_path / "w")])
     monkeypatch.chdir(tmp_path / "w")

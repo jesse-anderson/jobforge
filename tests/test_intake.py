@@ -401,12 +401,25 @@ def test_prepare_is_not_stopped_by_another_jobs_bad_file(ws):
     assert read_job(folder)["company"] == "Bolt"
 
 
-def test_jobs_listing_skips_a_bad_job_json(ws):
+def test_jobs_listing_keeps_a_bad_job_json_marked(ws):
+    # #72: listed as unreadable, not dropped (was: skipped silently).
     from jobforge.jobs import list_jobs
-    bad_bytes_job(ws)
+    bad = bad_bytes_job(ws)
     job, _ = from_text(LONG, company="Bolt", title="Painter")
     prepare(ws, job, today=TODAY)
-    assert [r.company for r in list_jobs(ws, today=TODAY)] == ["Bolt"]
+    rows = {r.folder: (r.company, r.status) for r in list_jobs(ws, today=TODAY)}
+    assert rows[bad.name] == ("", "unreadable")
+    assert ("Bolt", "prepared") in rows.values()
+
+
+def test_read_job_needs_a_json_object(ws):
+    # #72: valid JSON that is not an object (a list, a number) is reported,
+    # never handed on to crash whatever reads a field from it.
+    folder = ws.jobs_dir / "acme__welder__2026-11-20"
+    folder.mkdir(parents=True)
+    (folder / "job.json").write_text("[1, 2]", encoding="utf-8")
+    with pytest.raises(JobforgeError, match="job.json must be a JSON object"):
+        read_job(folder)
 
 
 # Red-team finding F8 (#28): a lone surrogate in a posting is dropped at
