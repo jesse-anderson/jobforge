@@ -13,7 +13,7 @@
   "credentials": ["cred.journeyman", "cred.osha30"],
   "education": ["edu.jatc"],
   "cover_letter": {
-    "hook": "Keeping 9 packaging lines running around the clock is the kind of work I want to do full time.",
+    "hook": "Your 9 packaging lines run around the clock. Keeping lines like that running is the work I want to do full time.",
     "body": "At Brightline Electric I troubleshoot motor controls and 480V three-phase service calls at food plants and warehouses. I have wired 14 commercial tenant build-outs with no failed inspections, and I led a 3-person crew on a 40,000 sq ft LED retrofit that finished 2 weeks early.\n\nI hold a Journeyman Electrician License and finished 8,000 hours of supervised field work as an apprentice.",
     "close": "I would like to hear how your maintenance team splits planned work and breakdowns.",
     "cites": ["brightline.journeyman.service", "brightline.journeyman.buildouts", "brightline.journeyman.retrofit", "brightline.apprentice.hours", "cred.journeyman"]

@@ -158,6 +158,24 @@ def test_unmarked_reword_warns_and_marked_does_not(ws):
     assert not any("state the same figures" in w for w in load_inventory(ws).warnings)
 
 
+def test_only_bullets_with_a_figure_and_no_defense_warn(ws):
+    # Issue #127: a figure is what an interviewer probes and what prep sheets
+    # are built from (D-38); a plain duty needs no defense note.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.a"\nrole = "northwind"\ntext = "Cut dock wait 3 hours"\n'
+                  'basis = "records"\n[[bullet]]\nid = "northwind.b"\nrole = "northwind"\n'
+                  'text = "Saved $40K on pallets"\nbasis = "estimate"\ndefense = " "\n'
+                  '[[bullet]]\nid = "northwind.c"\nrole = "northwind"\n'
+                  'text = "Ran the morning dock check"\nbasis = "records"\n'
+                  '[[bullet]]\nid = "northwind.d"\nrole = "northwind"\n'
+                  'text = "Moved the 2nd shift to scanners in 2019"\nbasis = "records"\n')
+    found = [w for w in load_inventory(ws).warnings if "defense" in w]
+    assert len(found) == 1, found
+    assert "northwind.a" in found[0] and "northwind.b" in found[0] and "(D-36)" in found[0]
+    assert "northwind.c" not in found[0]  # a plain duty
+    assert "northwind.d" not in found[0]  # a year and an ordinal only place it
+    assert "northwind.accuracy" not in found[0]  # John's figures have notes
+
+
 def test_pending_atoms_are_not_loaded_by_default(ws):
     add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\ntext = "t"\nbasis = "records"\n',
               pending=True)

@@ -48,7 +48,8 @@ def test_confirmed_atoms_with_bom(ws):
 
 def test_pending_atoms_with_bom_are_confirmed_without_one(ws):
     path = add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\n'
-                         'text = "Did 3 audits"\nbasis = "records"\n', "d.toml", pending=True)
+                         'text = "Did 3 audits"\nbasis = "records"\n'
+                         'defense = "Audit sign-off sheets."\n', "d.toml", pending=True)
     add_bom(path)
     answers = iter(["k"])
     run_confirm(ws, ask=lambda prompt: next(answers), say=lambda *_: None)
@@ -76,7 +77,7 @@ def test_posting_file_with_bom(ws, tmp_path, monkeypatch):
     assert main(["prepare", "--from-text", str(posting), "--company", "Prairie Freight Co.",
                  "--title", "Operations Supervisor"]) == 0
     folder = next((ws.root / "jobs").iterdir())
-    assert not read_job(folder)["description"].startswith("﻿")
+    assert not read_job(folder)["description"].startswith("\ufeff")
 
 
 def test_files_jobforge_writes_have_no_bom(ws, job_folder):

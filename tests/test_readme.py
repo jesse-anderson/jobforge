@@ -89,3 +89,55 @@ def test_readme_claims_no_more_than_the_fact_check_does():
     assert anchor in claim
     mvp = (REPO / "docs" / "MVP.md").read_text(encoding="utf-8")
     assert "\n### Known limits of the fact check\n" in mvp  # the anchor resolves
+
+
+def test_friction_log_records_the_linux_runs():
+    """#3: every place a Linux run stopped is in the log, each marked fixed,
+    documented, or open, so the next run starts from what is known."""
+    log = _section(CHECKLIST, "## Friction log")
+    rows = [r for r in log.splitlines() if r.startswith("| ") and not r.startswith("| Step")]
+    assert len(rows) >= 13, rows
+    for row in rows:
+        outcome = row.rstrip(" |").rsplit(" | ", 1)[1]
+        assert outcome.split(":")[0].split(" (")[0] in ("Fixed", "Documented", "Open"), row
+    for issue in ("#39", "#40", "#102", "#105", "#106", "#107", "#118"):
+        assert issue in log, issue
+
+
+def _samples_tool():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("readme_samples",
+                                                  REPO / "tools" / "readme_samples.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_readme_shows_the_sample_documents():
+    # #104: a visitor sees what Jobforge makes before installing it.
+    section = _section(README, "## What you get")
+    # github.com/<repo>/raw/..., not raw.githubusercontent.com: the browser is
+    # signed in on github.com, so the image shows while the repo is private,
+    # and the absolute URL still works on PyPI once it is public.
+    raw = "https://github.com/jesse-anderson/jobforge/raw/main/docs/samples/"
+    for name in ("resume", "cover_letter"):
+        assert f"![John Smith's sample {name.replace('_', ' ')}]({raw}{name}.png)" in section, name
+        assert (REPO / "docs" / "samples" / f"{name}.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    assert "raw.githubusercontent.com" not in README
+
+
+def test_sample_documents_are_not_stale():
+    # #104: the images cannot be compared, so each has a text snapshot of the
+    # same document. Any change to what John's application renders fails
+    # here until `python tools/readme_samples.py` is run and both committed.
+    assert _samples_tool().stale() == [], (
+        "docs/samples is stale: run python tools/readme_samples.py and commit "
+        "the .txt and .png files")
+
+
+def test_stale_samples_are_caught(tmp_path):
+    tool = _samples_tool()
+    for name in ("resume", "cover_letter"):
+        (tmp_path / f"{name}.txt").write_text("an older version\n", encoding="utf-8")
+    assert tool.stale(tmp_path) == ["resume", "cover_letter"]
+    assert tool.stale(tmp_path / "missing") == ["resume", "cover_letter"]

@@ -25,6 +25,15 @@ def test_every_command_in_the_instructions_exists():
     assert mentioned <= commands, mentioned - commands
 
 
+def test_instructions_put_career_wide_figures_in_their_own_sentence(ws):
+    """#122: "with 9 years" next to an employer's name reads as that
+    employer's 9 years, so the agent writes it in a sentence of its own."""
+    for name in AGENT_FILES:
+        flat = " ".join((ws.root / name).read_text(encoding="utf-8").split())
+        assert "A career-wide figure (years of experience, totals)" in flat, name
+        assert "Warehouse supervisor with 9 years in distribution. Currently at" in flat, name
+
+
 def test_every_flag_in_the_instructions_exists():
     parser = _parser()
     sub = parser._subparsers._group_actions[0].choices
@@ -32,6 +41,32 @@ def test_every_flag_in_the_instructions_exists():
         flags = set(re.findall(r"(--[a-z-]+)", rest))
         known = {opt for a in sub[cmd]._actions for opt in a.option_strings}
         assert flags <= known, (cmd, flags - known)
+
+
+DASH_RULE = "no dashes of any kind"
+
+
+def test_generated_instructions_state_the_full_dash_rule(ws):
+    """#114: the check refuses every dash but the ASCII hyphen (#98), so the
+    agent is told that, not only "no em or en dashes"."""
+    for name in AGENT_FILES:
+        flat = " ".join((ws.root / name).read_text(encoding="utf-8").split())
+        assert DASH_RULE in flat and "plain hyphen (-)" in flat, name
+        assert "em or en dashes" not in flat, name
+
+
+def test_no_dash_rule_when_the_profile_allows_dashes(ws):
+    text = ws.profile_path.read_text(encoding="utf-8").replace("ban_dashes = true", "ban_dashes = false")
+    ws.profile_path.write_text(text, encoding="utf-8")
+    init_workspace(ws.root, refresh=True)
+    for name in AGENT_FILES:
+        assert DASH_RULE not in (ws.root / name).read_text(encoding="utf-8"), name
+
+
+def test_profile_template_states_the_full_dash_rule(tmp_path):
+    profile = init_workspace(tmp_path).profile_path.read_text(encoding="utf-8")
+    line = next(ln for ln in profile.splitlines() if ln.startswith("ban_dashes"))
+    assert DASH_RULE in line and "plain hyphen (-)" in line
 
 
 def test_limits_come_from_the_profile(ws):
@@ -107,6 +142,16 @@ def test_example_plan_in_the_instructions_resolves(tmp_path):
     assert errors == []
 
 
+def test_instructions_ask_for_a_defense_only_where_it_matters():
+    """#127: a defense for a figure or a big claim, written from what the
+    user already said where possible; never a question per bullet."""
+    text = " ".join(source_text().split())
+    assert "For a bullet with a figure or a big claim, ask how they know" in text
+    assert "A plain duty needs no defense" in text
+    assert "will not keep a new bullet without" not in text
+    assert "For every bullet, ask how they know" not in text
+
+
 def test_instructions_send_the_user_to_their_own_terminal_for_confirm():
     """Issue #2 run: the agent suggested `! jobforge confirm`, which cannot
     take typed answers."""
@@ -162,8 +207,18 @@ def test_instructions_say_the_check_misses_unknown_tools():
 
 def test_instructions_explain_posting_figures():
     # Issue #16: the agent knows what the refusal and the warning mean.
-    text = source_text()
-    assert "saved as the whole page: `check`" in text and "show the user" in text
+    text = " ".join(source_text().split())
+    assert "saved as the whole page gives no figures at all: `check`" in text
+    assert "show the user" in text
+    # #83 item 1: only a sentence about the employer may quote the posting.
+    assert 'with no "I", "my", or "we" in it' in text and "two sentences" in text
+
+
+def test_instructions_say_a_sentence_carries_the_employer_before_it():
+    """#83 item 3: the agent knows why "There I also..." is refused and how
+    to write it instead."""
+    text = " ".join(source_text().split())
+    assert "is read as the same employer's" in text and "in general terms" in text
 
 
 def test_instructions_say_units_are_never_converted():
@@ -207,3 +262,12 @@ def test_instructions_say_every_bullet_needs_a_basis_from_the_user(tmp_path):
         # And the drafting rules say whose answer it is.
         assert ('The basis is the user\'s answer to "how do you know?". Ask for it on '
                 'every bullet; never pick one yourself.') in flat
+        # #118: the example offers only values confirm accepts, and says
+        # which one fits a plain fact with no figure.
+        from jobforge.atoms import BASIS
+        rule = flat.split("The basis is the user's answer", 1)[1].split("\n- ", 1)[0]
+        rule = rule.split(" - ", 1)[0]
+        named = set(re.findall(r"`([a-z]+)`", rule))
+        assert named == set(BASIS), named
+        assert "from memory" not in flat
+        assert 'is usually `records`, but ask' in rule

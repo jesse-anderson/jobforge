@@ -12,7 +12,7 @@
   "skills": ["skill.analysis"],
   "education": ["edu.state"],
   "cover_letter": {
-    "hook": "Scheduling staff and supplies around patient volume across 11 locations is the kind of problem I studied for.",
+    "hook": "Your 11 locations schedule staff and supplies around patient volume. That is the kind of problem I studied for.",
     "body": "For my capstone I modeled 2 years of campus bike share trips in R to find the 5 stations that ran empty most often (example.com/alexchen/bike-share). The campus ran a pilot on my recommendation and empty-station reports fell by half.\n\nI also built an Excel inventory sheet that a volunteer food pantry uses for 300 weekly visits.",
     "close": "I would like to learn how your clinics forecast patient volume today.",
     "cites": ["proj.bikes", "proj.bikes.model", "proj.bikes.result", "proj.pantry.sheet"]

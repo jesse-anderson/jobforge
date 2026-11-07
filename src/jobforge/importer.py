@@ -128,7 +128,7 @@ def plan_import(ws: Workspace, text: str, *,
                 today: _dt.date | None = None) -> ImportPlan:
     """Read a tracker CSV and decide what each row becomes. Writes nothing."""
     today = today or _dt.date.today()
-    reader = csv.reader(io.StringIO(text.lstrip("﻿")))
+    reader = csv.reader(io.StringIO(text.lstrip("\ufeff")))
     header = next(reader, None)
     if not header:
         raise JobforgeError("The file is empty or has no header row. The first "

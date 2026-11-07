@@ -42,7 +42,7 @@ ghost_after_days = 30    # an application with no reply after this is "ghosted"
 add_banned_words = []
 allow_words = []
 add_banned_phrases = []
-ban_dashes = true        # no em or en dashes in text you author
+ban_dashes = true        # no dashes of any kind in text you author; a plain hyphen (-) is fine
 
 [claims]
 # Tools, skills, or credentials you do NOT have and must never be claimed.

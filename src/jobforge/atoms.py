@@ -322,7 +322,26 @@ def check_references(atoms: dict[str, Atom], rel_of, errors: list[str],
                 errors.append(f"{where}: reword_of points at itself")
 
 
+_NOT_A_CLAIM = re.compile(r"\b(?:19|20)\d\d\b|\b\d+(?:st|nd|rd|th)\b", re.IGNORECASE)
+
+
+def states_a_figure(text: str) -> bool:
+    """A figure an interviewer would ask about: "28%", "14 techs", "$40K".
+    A year ("in 2019") or an ordinal ("2nd shift") only places the fact."""
+    return bool(number_tokens(_NOT_A_CLAIM.sub(" ", text)))
+
+
 def _warnings(inv: Inventory, rel_of) -> None:
+    # D-36: a bullet that states a figure is what an interviewer probes and
+    # what prep sheets are built from (D-38), so one without a defense note is
+    # named. A plain duty needs none (#127).
+    bare = [a.id for a in inv.of_kind("bullet")
+            if states_a_figure(a.get("text") or "") and not (a.get("defense") or "").strip()]
+    if bare:
+        inv.warnings.append(
+            f"{len(bare)} bullet(s) state a figure but have no defense note (D-36): "
+            f"{', '.join(bare)}. An interviewer may ask how you know; add "
+            f"defense = \"...\" to each, in your words.")
     seen: dict[tuple, Atom] = {}
     for atom in inv.atoms.values():
         for text in [atom.get("text") or ""] + [p.get("text", "") for p in atom.phrasings]:

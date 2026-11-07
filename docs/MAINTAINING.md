@@ -53,6 +53,11 @@ Every change ships with tests, written in the same change. No exceptions for
 - A bug fix starts with a test that fails without the fix.
 - New fact-check rules get a planted-violation test and a clean-passes test.
 - Persona fixtures in `fixtures/personas/` are fictional, always.
+- The README's sample pages (`docs/samples/`) are John Smith's application.
+  When a change alters what it renders, `test_sample_documents_are_not_stale`
+  fails: run `python tools/readme_samples.py` (Word on Windows, LibreOffice
+  and poppler-utils on Linux), look at the new images, and commit them with
+  the change (#104).
 - Before every push, run the suite with coverage and paste the pytest
   summary and coverage TOTAL into the PR. CI is Ubuntu only while the repo
   is private, so that local run is the only Windows check.
@@ -65,6 +70,42 @@ Every change ships with tests, written in the same change. No exceptions for
 - Merge by PR, even between the two of us, so the other maintainer sees it.
   Reference the issue (`Closes #12`).
 - External PRs stay closed until the regression tooling exists (D-19).
+
+## Releasing
+
+Releases publish from `.github/workflows/release.yml` with trusted
+publishing: no token is stored anywhere. Only a pushed version tag starts
+it, never a branch push or a PR (#54, #69).
+
+1. In a PR, set `__version__` in `src/jobforge/__init__.py`, and merge it.
+2. On that commit: `git tag vX.Y.Z` then `git push origin vX.Y.Z`. The tag
+   must be `v` plus the version exactly; `tools/release_check.py` stops the
+   run otherwise.
+3. The `build` job checks the tag, runs the suite with coverage, builds the
+   wheel and sdist, runs `twine check`, and installs the wheel in a clean
+   venv to run `jobforge --version` and `jobforge init`. Nothing uploads if
+   any of that fails.
+4. The tag decides where it goes:
+
+   | Tag | Goes to |
+   |---|---|
+   | `v0.1.0` (final) | PyPI |
+   | `v0.1.0rc1`, `b1`, `a1` (pre-release) | TestPyPI, then PyPI if that succeeded |
+   | anything else, e.g. `v0.1.0.dev1` | TestPyPI only |
+
+5. Check it: in a clean environment, `pip install jobforge==X.Y.Z` on
+   Windows and `pipx install jobforge==X.Y.Z` on Linux, then
+   `jobforge --version`. For a TestPyPI-only build, add
+   `--index-url https://test.pypi.org/simple/` (pip) or the full pipx
+   command in `docs/VM_CHECKLIST.md` step 3.
+
+A version can never be reused on PyPI or TestPyPI, even after it is
+deleted, so a mistake costs a version number: bump it and tag again. Yank a
+bad release on pypi.org instead of deleting it. Until a final release
+exists, a plain `pip install jobforge` installs the newest pre-release.
+
+The `pypi` and `testpypi` environments (Settings > Environments) deploy
+from `v*` tags only.
 
 ## Moving code from `jobs`
 

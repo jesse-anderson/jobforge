@@ -228,7 +228,8 @@ def check_voice(text: str, profile: Profile, where: str, rep: Report) -> None:
         for ch in sorted(set(text) & _DASHES.keys(), key=text.index):
             name = _DASHES[ch]
             article = "an" if name[0] in "aeiou" else "a"
-            fix = ("Type a plain hyphen (-) instead." if "hyphen" in name
+            # A minus sign stands for a hyphen-minus ("-20%"), not a pause (#114).
+            fix = ("Type a plain hyphen (-) instead." if "hyphen" in name or "minus" in name
                    else "Use a comma, colon, or period.")
             rep.errors.append(f"{where}: contains {article} {name} "
                               f"({ch}, U+{ord(ch):04X}). {fix}")
@@ -277,24 +278,87 @@ def live_url(atom: Atom) -> str | None:
 
 def check_sentence(sentence: str, figures: str, cites: list[Atom], pool: str,
                    inv: Inventory, profile: Profile, vocab: list[str], where: str,
-                   rep: Report) -> None:
+                   rep: Report, posting: str = "", company: str = "",
+                   carried: dict[str, str] | None = None) -> dict[str, str]:
     """A sentence that names one employer may use only that employer's facts
-    (D-40). One that names none may use any of `pool`."""
+    (D-40). One that names none carries `carried`, the employer the paragraph
+    named last (#83 item 3), unless it is about the employer it applies to:
+    it may not use another employer's facts, but skills, credentials, and
+    personal or volunteer work, which belong to no employer, stay allowed.
+    Otherwise it may use any of `pool`, and the posting's figures and tools
+    only when it is about the employer (#83 item 1). Returns what the next
+    sentence carries."""
     named = employers_named(sentence, inv)
+    how = "names"
+    if not named and carried and not about_the_employer(sentence, company):
+        named, how = carried, "follows"
     if len(named) == 1:
         (employer, written), = named.items()
-        bound = [a for a in cites if inv.employer_of(a) == employer]
+        allowed = {employer, None} if how == "follows" else {employer}
+        bound = [a for a in cites if inv.employer_of(a) in allowed]
         bound += inv.employers()[employer]
         scoped = _pool_text(bound, inv)
-        check_figures(figures, scoped, f"{where} (names {written!r})", rep)
-        check_terms(sentence, scoped, vocab, profile, f"{where} (names {written!r})", rep)
-        return
+        # A figure the cited summary states is career-wide ("with 9 years in
+        # distribution"), not this employer's: say where it belongs instead
+        # of "not in the facts this line cites", which it is (#122).
+        own = set(number_tokens(scoped))
+        career = set(number_tokens(_pool_text([a for a in cites if a.kind == "summary"], inv)))
+        moved = [t for t in dict.fromkeys(number_tokens(figures))
+                 if t not in own and t in career]
+        for tok in moved:
+            rep.errors.append(
+                f"{where} ({how} {written!r}): the figure {tok} is not in {employer}'s "
+                f"facts. If it is about your whole career, put it in a sentence that "
+                f"names no employer.")
+        check_figures(figures, scoped, f"{where} ({how} {written!r})", rep,
+                      extra_pool=" ".join(t.shown for t in moved))
+        check_terms(sentence, scoped, vocab, profile, f"{where} ({how} {written!r})", rep)
+        return named
     if len(named) > 1:
         rep.warnings.append(f"{where}: names {len(named)} employers "
                             f"({', '.join(named.values())}); check each figure is "
                             f"credited to the right one.")
-    check_figures(figures, pool, where, rep)
-    check_terms(sentence, pool, vocab, profile, where, rep)
+    if posting and not about_the_employer(sentence, company):
+        own = set(number_tokens(pool))
+        for tok in dict.fromkeys(number_tokens(figures)):
+            if tok not in own and tok in set(number_tokens(posting)):
+                rep.errors.append(
+                    f"{where}: the figure {tok} is in the posting, not your facts. The "
+                    f"posting's figures may appear only in a sentence about the employer "
+                    f"(\"your team of 20\"), not in one about you (I, my, we).")
+        for term in vocab:
+            if (term_in(term, sentence) and not term_in(term, pool)
+                    and term_in(term, posting)):
+                rep.errors.append(
+                    f"{where}: {term!r} is in the posting, not your facts. Write it only "
+                    f"about the employer (\"your team uses {term}\"), or cite the atom "
+                    f"where you used it.")
+    # What is left is checked as before; the posting no longer hides it twice.
+    check_figures(figures, pool, where, rep, extra_pool=posting)
+    check_terms(sentence, "\n".join([pool, posting]), vocab, profile, where, rep)
+    # Two employers in one sentence: nothing single to carry. A sentence about
+    # the employer keeps what came before it.
+    return {} if named else (carried or {})
+
+
+_ME = {"i", "i'm", "i've", "i'd", "i'll", "me", "my", "mine", "myself",
+       "we", "we're", "we've", "we'd", "we'll", "us", "our", "ours", "ourselves"}
+_YOU = {"you", "you're", "you've", "you'll", "your", "yours"}
+_COMPANY_SUFFIX = re.compile(r"[\s,]+(co|corp|corporation|company|inc|incorporated|llc|ltd)\.?$",
+                             re.IGNORECASE)
+
+
+def about_the_employer(sentence: str, company: str) -> bool:
+    """True when the sentence speaks of the employer ("you", "your", or its
+    name) and not of the user ("I", "my", "we"): only then may it quote the
+    posting (#83 item 1, option a)."""
+    words = set(re.findall(r"[a-z]+(?:'[a-z]+)?", sentence.lower().replace("\u2019", "'")))
+    if words & _ME:
+        return False
+    if words & _YOU:
+        return True
+    name = _COMPANY_SUFFIX.sub("", company.strip())
+    return bool(name) and term_in(name, sentence)
 
 
 def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
@@ -304,9 +368,11 @@ def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
     if line.where == "summary" and not own_words:
         # A reworded summary is prose: each sentence is scoped to the
         # employer it names, as in the letter (#90).
+        carried: dict[str, str] = {}
         for sentence in split_sentences(line.text):
-            check_sentence(sentence, sentence, line.cites, pool, inv, profile, vocab,
-                           f"{line.where}, \"{_opening(sentence)}\"", rep)
+            carried = check_sentence(sentence, sentence, line.cites, pool, inv, profile,
+                                     vocab, f"{line.where}, \"{_opening(sentence)}\"", rep,
+                                     carried=carried)
     else:
         check_figures(line.text, pool, line.where, rep)
         check_terms(line.text, pool, vocab, profile, line.where, rep)
@@ -320,11 +386,10 @@ def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
         check_voice(line.text, profile, line.where, rep)
 
 
-def _letter_sentences(letter) -> list[tuple[str, str]]:
-    """Each sentence with the part it is in, split within its own paragraph."""
-    return [(part, sentence) for part in ("hook", "body", "close")
-            for para in letter.part_paragraphs(part)
-            for sentence in split_sentences(para)]
+def _letter_sentences(letter) -> list[tuple[str, list[str]]]:
+    """Each paragraph's sentences with the part it is in."""
+    return [(part, split_sentences(para)) for part in ("hook", "body", "close")
+            for para in letter.part_paragraphs(part)]
 
 
 def _opening(sentence: str, words: int = 6) -> str:
@@ -352,16 +417,19 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
     #              letter takes only from it is named once for the user.
     #   page-text  the whole page, other listings included: its description
     #              is not trusted at all.
-    posting = description = ""
-    source = ""
+    # The company, title, and location may appear anywhere. The description
+    # is about the employer, so a sentence may quote it only when it is about
+    # the employer too (#83 item 1).
+    heading = description = posting = company = source = ""
     if job:
         source = str(job.get("source") or "manual")
+        company = str(job.get("company", ""))
         description = str(job.get("description", ""))
-        posting = " ".join(str(job.get(k, "")) for k in ("company", "title", "location"))
+        heading = " ".join(str(job.get(k, "")) for k in ("company", "title", "location"))
         if source != "page-text":
-            posting += " " + description
+            posting = description
     facts = _pool_text(cites, inv)
-    pool = "\n".join([facts, posting])
+    pool = "\n".join([facts, heading])
 
     check_voice(text, profile, where, rep)
     check_atom_ids(text, inv, where, rep)
@@ -377,9 +445,13 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
                           f"{profile.cover_letter_max_words} (profile setting "
                           f"cover_letter_max_words). Cut it down.")
 
-    for part, sentence in _letter_sentences(letter):
-        check_sentence(sentence, _strip_contact(sentence, profile), cites, pool, inv,
-                       profile, vocab, f"{where} {part}, \"{_opening(sentence)}\"", rep)
+    for part, sentences in _letter_sentences(letter):
+        carried: dict[str, str] = {}  # a new paragraph starts fresh
+        for sentence in sentences:
+            carried = check_sentence(
+                sentence, _strip_contact(sentence, profile), cites, pool, inv, profile,
+                vocab, f"{where} {part}, \"{_opening(sentence)}\"", rep, posting, company,
+                carried)
 
     figures = number_tokens(_strip_contact(text, profile))
     own = set(number_tokens(facts))

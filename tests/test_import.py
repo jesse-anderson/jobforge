@@ -211,7 +211,7 @@ def test_any_error_writes_nothing(ws):
 # --- File shape -------------------------------------------------------------
 
 def test_header_aliases_bom_and_blank_lines(ws):
-    text = ("﻿Employer,Job Title,Applied Date,Stage\n"
+    text = ("\ufeffEmployer,Job Title,Applied Date,Stage\n"
             "Cedar Mill Foods,Shift Supervisor,2026-09-10,applied\n"
             ",,,\n\n")
     plan = plan_import(ws, text, today=TODAY)
