@@ -263,3 +263,147 @@ def test_readme_example_imports_cleanly(ws):
     plan = plan_import(ws, example, today=TODAY)
     assert plan.rows and [r.action for r in plan.rows] == ["new"] * len(plan.rows)
     assert plan.warnings == []
+
+
+# --- #78: an interrupted --write, then the same import again ---------------
+# A Ctrl+C partway through left a folder without job.json (the rerun crashed),
+# a row without all its events (the rerun called it a duplicate and skipped
+# it), or an empty job.json (the rerun refused). The rerun now finishes.
+
+def interrupt_at(monkeypatch, n):
+    """Ctrl+C at the nth write step: making a folder, writing a job.json
+    (left empty, as a cut write leaves it), or appending one event."""
+    from pathlib import Path
+    import jobforge.importer as importer
+    steps = {"n": 0}
+
+    def step():
+        steps["n"] += 1
+        return steps["n"] == n
+
+    real_mkdir, real_write, real_append = Path.mkdir, Path.write_text, importer.append_event
+
+    def mkdir(self, *a, **k):
+        real_mkdir(self, *a, **k)
+        if self.parent.name == "jobs" and step():
+            raise KeyboardInterrupt
+
+    def write_text(self, data, *a, **k):
+        if self.name == "job.json" and step():
+            real_write(self, "", *a, **k)
+            raise KeyboardInterrupt
+        return real_write(self, data, *a, **k)
+
+    def append(folder, *a, **k):
+        if step():
+            raise KeyboardInterrupt
+        return real_append(folder, *a, **k)
+
+    monkeypatch.setattr(Path, "mkdir", mkdir)
+    monkeypatch.setattr(Path, "write_text", write_text)
+    monkeypatch.setattr(importer, "append_event", append)
+    return steps
+
+
+def test_rerun_after_ctrl_c_at_any_step_finishes_the_import(ws, tmp_path, monkeypatch):
+    from conftest import make_workspace
+    clean = make_workspace(tmp_path / "clean")
+    run(clean, SAMPLE)
+    want = events_by_company(clean)
+    n = 1
+    while True:
+        work = make_workspace(tmp_path / f"w{n}")
+        with monkeypatch.context() as m:
+            steps = interrupt_at(m, n)
+            try:
+                run(work, SAMPLE)
+                interrupted = False
+            except KeyboardInterrupt:
+                interrupted = True
+        if not interrupted:
+            break
+        plan = run(work, SAMPLE)  # the same import again
+        assert events_by_company(work) == want, (n, format_preview(plan))
+        assert all((f / "job.json").exists() for f in work.jobs_dir.iterdir()), n
+        n += 1
+    assert n > 20  # every folder, job.json, and event of the sample was a step
+
+
+def test_rerun_finishes_a_row_whose_events_were_cut_short(ws):
+    run(ws, SAMPLE)
+    folder = next(f for f in job_folders(ws) if f.name.startswith("prairie_freight"))
+    ledger = folder / "ledger.toml"
+    full = ledger.read_text(encoding="utf-8")
+    ledger.write_text(full.split("[[event]]", 2)[0] + "[[event]]" + full.split("[[event]]", 2)[1],
+                      encoding="utf-8")  # only the first event kept
+    assert [e.stage for e in read_events(folder)] == ["applied"]
+    plan = plan_import(ws, SAMPLE, today=TODAY)
+    row = next(r for r in plan.rows if r.company == "Prairie Freight Co.")
+    assert row.action == "finish" and row.folder == folder.name
+    assert "FINISH" in format_preview(plan) and "1 to finish" in format_preview(plan)
+    run(ws, SAMPLE)
+    assert [e.stage for e in read_events(folder)] == ["applied", "rejected"]
+
+
+def test_rerun_leaves_a_job_the_user_has_updated_since(ws):
+    # Events the user added after the import mean it is not an unfinished
+    # import: still a duplicate, never touched.
+    from jobforge.ledger import append_event
+    run(ws, SAMPLE)
+    folder = next(f for f in job_folders(ws) if f.name.startswith("riverbend"))
+    append_event(folder, "offer", TODAY)
+    before = (folder / "ledger.toml").read_bytes()
+    plan = run(ws, SAMPLE)
+    assert {r.action for r in plan.rows} == {"duplicate"}
+    assert (folder / "ledger.toml").read_bytes() == before
+
+
+def test_rerun_reuses_an_empty_folder_but_never_a_users_folder(ws):
+    first = plan_import(ws, SAMPLE, today=TODAY).rows[0].folder
+    second = plan_import(ws, SAMPLE, today=TODAY).rows[1].folder
+    (ws.jobs_dir / first).mkdir(parents=True)            # left empty by a cut import
+    (ws.jobs_dir / second).mkdir(parents=True)
+    (ws.jobs_dir / second / "my_notes.txt").write_text("mine", encoding="utf-8")
+    plan = run(ws, SAMPLE)
+    assert plan.rows[0].folder == first and (ws.jobs_dir / first / "job.json").exists()
+    assert plan.rows[1].folder == f"{second}__2"
+    assert sorted(p.name for p in (ws.jobs_dir / second).iterdir()) == ["my_notes.txt"]
+
+
+def test_an_unreadable_job_json_is_a_warning_not_a_refusal(ws):
+    # Broken but not empty: someone's data, so it is reported, never reused.
+    bad = ws.jobs_dir / "acme__welder__2026-09-01"
+    bad.mkdir(parents=True)
+    (bad / "job.json").write_text('{"company": "Acme"', encoding="utf-8")
+    plan = run(ws, SAMPLE)
+    assert plan.count("new") == 6
+    assert any("acme__welder__2026-09-01/job.json" in w and "not checked" in w
+               for w in plan.warnings)
+    assert (bad / "job.json").read_text(encoding="utf-8") == '{"company": "Acme"'
+
+
+def test_rerun_reuses_a_folder_holding_only_an_empty_job_json(ws):
+    first = plan_import(ws, SAMPLE, today=TODAY).rows[0].folder
+    (ws.jobs_dir / first).mkdir(parents=True)
+    (ws.jobs_dir / first / "job.json").write_text("", encoding="utf-8")  # cut mid-write
+    plan = run(ws, SAMPLE)
+    assert plan.rows[0].folder == first and plan.warnings == []
+    assert json.loads((ws.jobs_dir / first / "job.json").read_text(encoding="utf-8"))
+
+
+def test_rerun_leaves_a_job_whose_ledger_it_cannot_read(ws):
+    run(ws, SAMPLE)
+    folder = next(f for f in job_folders(ws) if f.name.startswith("prairie_freight"))
+    (folder / "ledger.toml").write_text("[[event\n", encoding="utf-8")
+    plan = run(ws, SAMPLE)
+    row = next(r for r in plan.rows if r.company == "Prairie Freight Co.")
+    assert row.action == "duplicate"
+    assert (folder / "ledger.toml").read_text(encoding="utf-8") == "[[event\n"
+
+
+def test_readme_says_a_rerun_finishes_and_adds_new_statuses():
+    # #100: FINISH also appears when a tracker row gained a status since the
+    # last import, not only after an interrupted run; the README says so.
+    readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
+    assert "finishes an import that was stopped partway" in readme
+    assert "adds a status a row has gained in your tracker since" in readme

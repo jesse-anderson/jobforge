@@ -128,7 +128,10 @@ it happened in `status_date`; if you do not know it, import the row as
 1. `jobforge import past.csv` shows what each row will become and writes
    nothing. Check it.
 2. `jobforge import past.csv --write` creates the job folders. Running it again
-   skips rows already imported.
+   skips rows already imported. It also finishes an import that was stopped
+   partway, and adds a status a row has gained in your tracker since, as long
+   as you have not recorded anything for that job in Jobforge. The preview
+   shows these as FINISH.
 
 Imported jobs hold only what happened: no posting text, plan, or documents.
 
