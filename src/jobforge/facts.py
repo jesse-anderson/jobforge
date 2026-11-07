@@ -95,28 +95,79 @@ def number_tokens(text: str) -> list[Token]:
     return out
 
 
-# Common units, each under one name however it is written (issue #10).
-# Abbreviations match lowercase only, so "2MM" and "$5M" stay money slang.
-# "in" is left out: "12 in Chicago" is not inches.
-_UNIT_ABBR = {"mm": "mm", "cm": "cm", "m": "m", "km": "km", "ft": "ft", "mi": "mi",
-              "lb": "lb", "lbs": "lb", "kg": "kg", "gal": "gal", "psi": "psi",
-              "gpm": "gpm", "mph": "mph"}
-_UNIT_WORDS = {"millimeter": "mm", "millimetre": "mm", "centimeter": "cm",
-               "centimetre": "cm", "meter": "m", "metre": "m", "kilometer": "km",
-               "kilometre": "km", "inch": "in", "inches": "in", "foot": "ft", "feet": "ft",
-               "mile": "mi", "pound": "lb", "kilogram": "kg", "kilo": "kg",
-               "gallon": "gal", "liter": "l", "litre": "l", "ton": "ton", "tonne": "tonne"}
+# Common units, each under one name however it is written (issue #10). The
+# check compares units, never converts them, so the list only has to name
+# what people write on a resume.
+#
+# Abbreviations match exactly as cased: "MB" (bytes) and "Mb" (bits) differ
+# eightfold, and "2MM" and "$5M" stay money slang. "in", "s", "g", and "A"
+# are left out: "12 in Chicago" is not inches.
+_UNIT_ABBR = {
+    # length, area, volume
+    "µm": "µm", "mm": "mm", "cm": "cm", "m": "m", "km": "km", "ft": "ft", "yd": "yd",
+    "mi": "mi", "sq ft": "ft2", "sq. ft.": "ft2", "sqft": "ft2", "ft²": "ft2",
+    "sq m": "m2", "m²": "m2", "cu ft": "ft3", "cu yd": "yd3", "m³": "m3",
+    "L": "L", "mL": "mL", "ml": "mL", "gal": "gal", "bbl": "bbl",
+    # weight
+    "mg": "mg", "kg": "kg", "lb": "lb", "lbs": "lb", "oz": "oz",
+    # time
+    "ns": "ns", "µs": "µs", "ms": "ms", "sec": "sec", "secs": "sec", "min": "min",
+    "mins": "min", "hr": "hr", "hrs": "hr", "wk": "wk", "wks": "wk", "yr": "yr", "yrs": "yr",
+    # data, bandwidth, frequency
+    "KB": "KB", "kB": "KB", "MB": "MB", "GB": "GB", "TB": "TB", "PB": "PB",
+    "Kb": "Kb", "Mb": "Mb", "Gb": "Gb", "Tb": "Tb",
+    "kbps": "kbps", "Kbps": "kbps", "Mbps": "Mbps", "Gbps": "Gbps", "Tbps": "Tbps",
+    "Hz": "Hz", "kHz": "kHz", "MHz": "MHz", "GHz": "GHz",
+    # electrical and energy
+    "mV": "mV", "V": "V", "kV": "kV", "mA": "mA", "mAh": "mAh", "W": "W", "kW": "kW",
+    "MW": "MW", "GW": "GW", "kWh": "kWh", "MWh": "MWh", "GWh": "GWh",
+    "BTU": "BTU", "btu": "BTU",
+    # pressure, flow, speed, temperature
+    "psi": "psi", "PSI": "psi", "bar": "bar", "kPa": "kPa", "MPa": "MPa",
+    "gpm": "gpm", "GPM": "gpm", "cfm": "cfm", "CFM": "cfm", "rpm": "rpm", "RPM": "rpm",
+    "mph": "mph", "MPH": "mph", "kph": "km/h", "km/h": "km/h", "°F": "°F", "°C": "°C",
+}
+# Words match in any case, with or without a plural "s".
+_UNIT_WORDS = {
+    "micron": "µm", "millimeter": "mm", "millimetre": "mm", "centimeter": "cm",
+    "centimetre": "cm", "meter": "m", "metre": "m", "kilometer": "km", "kilometre": "km",
+    "inch": "in", "inches": "in", "foot": "ft", "feet": "ft", "yard": "yd", "mile": "mi",
+    "square foot": "ft2", "square feet": "ft2", "square meter": "m2", "square metre": "m2",
+    "acre": "acre", "hectare": "ha", "cubic foot": "ft3", "cubic feet": "ft3",
+    "cubic yard": "yd3", "cubic meter": "m3", "cubic metre": "m3",
+    "liter": "L", "litre": "L", "milliliter": "mL", "millilitre": "mL", "gallon": "gal",
+    "barrel": "bbl", "milligram": "mg", "gram": "g", "kilogram": "kg", "kilo": "kg",
+    "pound": "lb", "ounce": "oz", "ton": "ton", "tonne": "tonne",
+    "nanosecond": "ns", "microsecond": "µs", "millisecond": "ms", "second": "sec",
+    "minute": "min", "hour": "hr", "day": "day", "week": "wk", "month": "mo", "year": "yr",
+    "kilobyte": "KB", "megabyte": "MB", "gigabyte": "GB", "terabyte": "TB",
+    "petabyte": "PB", "hertz": "Hz", "kilohertz": "kHz", "megahertz": "MHz",
+    "gigahertz": "GHz", "volt": "V", "kilovolt": "kV", "amp": "A", "ampere": "A",
+    "milliamp": "mA", "watt": "W", "kilowatt": "kW", "megawatt": "MW",
+    "kilowatt-hour": "kWh", "kilowatt hour": "kWh", "megawatt-hour": "MWh",
+    "megawatt hour": "MWh", "miles per hour": "mph", "kilometers per hour": "km/h",
+    "knot": "kn", "gallons per minute": "gpm", "cubic feet per minute": "cfm",
+    "revolutions per minute": "rpm", "degree fahrenheit": "°F", "degrees fahrenheit": "°F",
+    "degree celsius": "°C", "degrees celsius": "°C",
+}
+
+
+# Text is NFKC-normalized before matching ("µ" becomes Greek "μ", "²" becomes
+# "2"), so the table is too.
+_UNIT_ABBR_N = {unicodedata.normalize("NFKC", k): v for k, v in _UNIT_ABBR.items()}
 
 
 def _alt(words):
-    return "|".join(sorted(map(re.escape, words), key=len, reverse=True))
+    """Longest first, so "sq ft" wins over "ft"; a space matches any run."""
+    return "|".join(re.escape(w).replace(r"\ ", r"\s+")
+                    for w in sorted(words, key=len, reverse=True))
 
 
 # A figure, at most two words, then a unit: "650,000 accident-free miles".
 UNIT_RE = re.compile(
     r"(?<![\w.])(?P<int>\d{1,3}(?:,\d{3})+|\d+)(?P<dec>\.\d+)?"
-    r"(?:\s+[A-Za-z][\w-]*){0,2}?\s*"
-    rf"(?:(?P<abbr>{_alt(_UNIT_ABBR)})|(?i:(?P<word>{_alt(_UNIT_WORDS)})s?))\b")
+    r"(?:\s+[A-Za-z][\w-]*){0,2}?\s*(?:(?<=\d)|(?<=\s))"
+    rf"(?:(?P<abbr>{_alt(_UNIT_ABBR_N)})|(?i:(?P<word>{_alt(_UNIT_WORDS)})s?))(?![\w-])")
 
 
 @dataclass(frozen=True)
@@ -132,8 +183,9 @@ def unit_figures(text: str) -> list[UnitFigure]:
     out = []
     for m in UNIT_RE.finditer(unicodedata.normalize("NFKC", text)):
         val = Decimal(m.group("int").replace(",", "") + (m.group("dec") or ""))
-        unit = _UNIT_ABBR[m.group("abbr")] if m.group("abbr") else \
-            _UNIT_WORDS[m.group("word").lower()]
+        written = m.group("abbr") or m.group("word")
+        key = re.sub(r"\s+", " ", written)
+        unit = _UNIT_ABBR_N[key] if m.group("abbr") else _UNIT_WORDS[key.lower()]
         out.append(UnitFigure(_norm(val), unit, m.group(0)))
     return out
 

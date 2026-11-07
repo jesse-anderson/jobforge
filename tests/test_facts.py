@@ -129,7 +129,43 @@ def test_split_sentences_keeps_decimals_and_urls():
     ("trained 12 in Chicago", []),
     ("2MM rows and $5M", []),
     ("3 castings to a local foundry", []),
-    ("cut setup from 40 minutes to 15", []),
+    ("cut setup from 40 minutes to 15", [("40", "min")]),
+    # Jesse's review: the units people write, by family.
+    ("cut p99 latency to 300 ms", [("300", "ms")]),
+    ("cut p99 latency to 300 milliseconds", [("300", "ms")]),
+    ("a 2 second timeout", [("2", "sec")]),
+    ("worked 50 hrs a week", [("50", "hr")]),
+    ("closed it in 3 weeks", [("3", "wk")]),
+    ("a 4 year degree", [("4", "yr")]),
+    ("a 120 MB cache", [("120", "MB")]),
+    ("a 120 Mb link", [("120", "Mb")]),
+    ("moved 4 TB nightly over 10 Gbps", [("4", "TB"), ("10", "Gbps")]),
+    ("a 1.5 GHz part", [("1.5", "GHz")]),
+    ("a 480 V panel and 75 kW drive", [("480", "V"), ("75", "kW")]),
+    ("saved 120,000 kWh a year", [("120000", "kWh")]),
+    ("a 10,000 sq ft warehouse", [("10000", "ft2")]),
+    ("a 10,000 square feet warehouse", [("10000", "ft2")]),
+    ("held 38°F in the cooler", [("38", "°F")]),
+    ("held 3 degrees Celsius", [("3", "°C")]),
+    ("poured 40 cubic yards", [("40", "yd3")]),
+    ("rated to 150 bar and 1,750 RPM", [("150", "bar"), ("1750", "rpm")]),
+    ("cruised at 400 km/h", [("400", "km/h")]),
+    ("a 2.5 oz sample", [("2.5", "oz")]),
+    ("a 250 mL dose", [("250", "mL")]),
+    # More words that are not units.
+    ("led the 2 second-shift crews", []),
+    ("filed 5 W-2 forms", []),
+    ("rolled out 5G at 3 sites", []),
+    ("a 22-stop route", []),
+    ("team of 14 at 2 sites", []),
 ])
 def test_unit_figures(text, expected):
     assert [(f.value, f.unit) for f in unit_figures(text)] == expected
+
+
+def test_every_unit_spelling_is_read():
+    """Each listed spelling, after a figure, reads as its unit (issue #10)."""
+    from jobforge.facts import _UNIT_ABBR, _UNIT_WORDS
+    for spelling, unit in [*_UNIT_ABBR.items(), *_UNIT_WORDS.items()]:
+        found = [(f.value, f.unit) for f in unit_figures(f"reached 12 {spelling} last year")]
+        assert found[:1] == [("12", unit)], (spelling, found)

@@ -346,6 +346,45 @@ def test_bullet_may_name_its_own_employers_alias(ws, john_plan):
     assert check(ws, john_plan).ok
 
 
+def test_unit_changed_from_the_atom_is_caught(ws, john_plan):
+    # Issue #10: same number, different unit, is a different fact.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.conveyor2"\nrole = "northwind"\n'
+                  'text = "Laid out 120 feet of new conveyor"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.conveyor2", "text": "Laid out 120 meters of new conveyor"})
+    expect(check(ws, john_plan), "120 meters changes the unit; the facts say 120 feet")
+
+
+@pytest.mark.parametrize("atom,line,ok", [
+    ("Cut p99 latency to 300 ms", "Cut p99 latency to 300 milliseconds", True),
+    ("Cut p99 latency to 300 ms", "Cut p99 latency to 300 seconds", False),
+    ("Shrank the nightly export to 120 MB", "Shrank the nightly export to 120 Mb", False),
+    ("Held the cooler at 38°F", "Held the cooler at 38 degrees Fahrenheit", True),
+    ("Held the cooler at 38°F", "Held the cooler at 38°C", False),
+    ("Ran a 10,000 sq ft cross-dock", "Ran a 10,000 square feet cross-dock", True),
+    ("Ran a 10,000 sq ft cross-dock", "Ran a 10,000 ft cross-dock", False),
+    ("Closed the backlog in 3 weeks", "Closed the backlog in 3 months", False),
+])
+def test_units_across_families(ws, john_plan, atom, line, ok):
+    # Jesse's review on #24: the check covers the units people write.
+    add_atoms(ws, f'[[bullet]]\nid = "northwind.unit"\nrole = "northwind"\n'
+                  f'text = "{atom}"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append({"atom": "northwind.unit", "text": line})
+    rep = check(ws, john_plan)
+    if ok:
+        assert rep.ok, rep.errors
+    else:
+        expect(rep, "changes the unit")
+
+
+def test_unit_spelled_differently_passes(ws, john_plan):
+    add_atoms(ws, '[[bullet]]\nid = "northwind.conveyor2"\nrole = "northwind"\n'
+                  'text = "Laid out 120 feet of new conveyor"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.conveyor2", "text": "Laid out 120 ft of new conveyor"})
+    assert check(ws, john_plan).ok
+
+
 def test_letter_may_quote_the_postings_figures(ws, john_plan):
     letter_body(john_plan, "Your 6 cross-dock facilities and a second-shift team of 20 "
                            "sound like the work I do now.")
