@@ -82,7 +82,9 @@ def prepare(ws: Workspace, job: Job, *, force: bool = False,
     today = today or _dt.date.today()
     base = name = folder_name(job, today)
     n = 1
+    ws.check_inside(ws.jobs_dir)  # never create job folders through a link (#65)
     while (ws.jobs_dir / name / "job.json").exists():
+        ws.check_inside(ws.jobs_dir / name)  # before reading its job.json
         if same_posting(read_job(ws.jobs_dir / name), job):
             if not force:
                 raise JobforgeError(f"jobs/{name}/job.json already holds this same "
@@ -91,6 +93,7 @@ def prepare(ws: Workspace, job: Job, *, force: bool = False,
         n += 1
         name = f"{base}__{n}"
     folder = ws.jobs_dir / name
+    ws.check_inside(folder)  # --force writes into an existing folder
     warnings = []
     earlier = similar_jobs(ws, job, exclude=folder)
     if earlier:

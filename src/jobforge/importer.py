@@ -204,6 +204,7 @@ def write_import(ws: Workspace, plan: ImportPlan) -> list[str]:
             f"Nothing imported: {len(errors)} row(s) have problems. Fix or delete "
             f"them, then run the import again:",
             [f"line {r.line}: {r.message}" for r in errors])
+    ws.check_inside(ws.jobs_dir)  # never create job folders through a link (#65)
     written = []
     for row in plan.rows:
         if row.action != "new":
