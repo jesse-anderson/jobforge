@@ -134,8 +134,22 @@ def test_applied_before_prepared_warns(run, ws):
 
 
 def test_applied_rejects_unknown_stage(run):
+    code, _, err = run("applied", "--mark", "x", "--status", "ghosted")
+    assert code == 1 and "Unknown stage 'ghosted'" in err and "prepared" not in err
+
+
+def test_applied_refuses_prepared(run, ws):
+    # Issue #35.
+    prepare_john(run)
+    code, _, err = run("applied", "--mark", "prairie", "--status", "prepared")
+    assert code == 1 and "recorded by `jobforge prepare`" in err
+
+
+def test_applied_help_lists_no_prepared(capsys):
     with pytest.raises(SystemExit):
-        run("applied", "--mark", "x", "--status", "ghosted")
+        main(["applied", "--help"])
+    help_text = capsys.readouterr().out
+    assert "applied, skipped, screen" in help_text and "prepared" not in help_text
 
 
 class FakeTerminal:

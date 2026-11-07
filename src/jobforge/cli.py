@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import __version__
 from .errors import JobforgeError
-from .ledger import STAGES
+from .ledger import RECORDABLE
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -46,7 +46,10 @@ def _parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("applied", help="record what happened to an application")
     s.add_argument("--mark", required=True, metavar="JOB", help="job folder, or a unique part of its name")
-    s.add_argument("--status", required=True, choices=STAGES)
+    # Checked by the command, not argparse, so "prepared" gets a message that
+    # says who records it (#35).
+    s.add_argument("--status", required=True, metavar="STAGE",
+                   help="what happened: " + ", ".join(RECORDABLE))
     s.add_argument("--date", help="YYYY-MM-DD (default: today)")
     s.add_argument("--note", default="")
 
@@ -158,7 +161,8 @@ def _run(args) -> int:
         return 0
 
     if cmd == "applied":
-        from .ledger import parse_date, record_event, resolve_job
+        from .ledger import check_recordable, parse_date, record_event, resolve_job
+        check_recordable(args.status)
         folder = resolve_job(ws, args.mark)
         ev, warnings = record_event(folder, args.status, parse_date(args.date), args.note)
         for w in warnings:

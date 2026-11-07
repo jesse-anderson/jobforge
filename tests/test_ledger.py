@@ -8,7 +8,7 @@ from jobforge.errors import JobforgeError
 from jobforge.extract import from_text
 from jobforge.jobs import format_table, list_jobs
 from jobforge.ledger import (GHOSTED, STAGES, append_event, current_status, parse_date,
-                             record_event,
+                             RECORDABLE, record_event,
                              read_events, resolve_job)
 from jobforge.prepare import prepare
 
@@ -144,6 +144,17 @@ def test_imported_job_has_no_prepared_date_to_compare(ws):
     folder = next(ws.jobs_dir.iterdir())
     _, warnings = record_event(folder, "rejected", D(2026, 9, 1), today=TODAY)
     assert warnings == []
+
+
+# Issue #35: "prepared" is recorded by `prepare`, never by the user.
+def test_applied_refuses_prepared(job_folder):
+    with pytest.raises(JobforgeError, match="recorded by `jobforge prepare`"):
+        record_event(job_folder, "prepared", TODAY, today=TODAY)
+    assert [e.stage for e in read_events(job_folder)] == ["prepared"]
+
+
+def test_recordable_stages_are_every_stage_but_prepared():
+    assert RECORDABLE == tuple(s for s in STAGES if s != "prepared")
 
 
 def test_list_skips_broken_folders(ws):

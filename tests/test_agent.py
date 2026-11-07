@@ -160,3 +160,11 @@ def test_instructions_explain_posting_figures():
 def test_instructions_say_units_are_never_converted():
     # Issue #10: the check catches a swapped unit; the agent is told first.
     assert "units included: never convert" in source_text()
+
+
+def test_instructions_list_the_stages_a_user_records():
+    # Issue #35: the agent's list matches what `applied` accepts.
+    from jobforge.ledger import RECORDABLE
+    text = source_text()
+    listed = text.split("Stages you record: ", 1)[1].split(".", 1)[0]
+    assert tuple(s.strip() for s in listed.replace("\n", " ").split(",")) == RECORDABLE
