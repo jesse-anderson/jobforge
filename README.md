@@ -132,4 +132,7 @@ python -m coverage run -m pytest && python -m coverage report
 - `docs/DECISIONS.md`: every scope decision; the governing record
 - `docs/SOW.md`: phases to 1.0
 - `docs/MAINTAINING.md`: how work is assigned and merged
+- `CONTRIBUTING.md`: issues welcome; outside PRs closed until the regression
+  harness exists (D-19)
+- `SECURITY.md`: how to report a problem that could expose a user's data
 - `docs/VM_CHECKLIST.md`: the clean-machine check before every release

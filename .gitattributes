@@ -1,0 +1,11 @@
+# Text files are stored and checked out with LF on every OS, so Windows and
+# Linux checkouts match and diffs carry no line-ending churn.
+* text=auto eol=lf
+
+# Binary formats, never converted.
+*.docx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.zip binary
+*.whl binary
