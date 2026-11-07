@@ -70,6 +70,7 @@ what changed and why. Do not silently edit old answers.
 | D-48 | Commits | Only Jesse or Mike commit. AI may propose a commit message, with no AI attribution lines. (2026-11-06) |
 | D-49 | Copyright | Jesse and Mike hold the copyright jointly; a license change needs both. Contributors keep their copyright and license contributions under PolyForm NC by submitting them, with a DCO sign-off. (2026-11-06) |
 | D-50 | Rounding | Claiming less is fine: dropping decimals passes. Rounding that changes a figure is refused; the user confirms a rounded form once as a phrasing on the atom, and the agent offers it. (2026-11-06) |
+| D-52 | File names | File and folder names are plain ASCII: accents fold to plain letters ("Núñez" to "Nunez"); a name with nothing left asks for `file_stem`. A recruiter sees the resume's file name, and uploads, email, and zip tools mangle anything else. (2026-11-07) |
 
 ---
 
@@ -937,3 +938,25 @@ under the project license.**
   During setup the agent offers a plain rounded form for long or exact
   figures ("Want this recorded as $36k too?"), rounding in the conservative
   direction for what the figure measures.
+
+### File names (stated 2026-11-07, #36)
+> Yes, record as a decision. I get the idea of preserving accented names and
+> not bowing to the ever encroaching "Giver"-esque greying of our
+> existence... but if the recruiter sees a virus looking file they're
+> probably gonna skip.
+
+**D-52. File and folder names are plain ASCII; accents fold, never vanish.**
+- The resume and cover letter file names (from the profile name) and job
+  folder names (from company and title) fold accents to plain letters:
+  NFKD, then drop combining marks ("Siobhán O'Brien-Núñez" becomes
+  `Siobhan_OBrien-Nunez`, "Café Société" becomes `cafe_societe`). Letters
+  NFKD leaves whole are spelled out ("Łódź" becomes `Lodz`, "ß" becomes
+  `ss`).
+- Why ASCII rather than keeping the accents: non-ASCII file names are fine
+  on a local disk, but ATS upload forms, email attachment encodings, and zip
+  tools mangle them ("Siobha╠ün"), and a recruiter who sees a broken file
+  name may not open it.
+- A name with no Latin letters at all (李小龍) leaves nothing to use, so the
+  profile asks the user to set `file_stem` under `[person]`, with an
+  example. Text inside the documents is unchanged: the name prints as
+  written.

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import __version__
 from .errors import JobforgeError
-from .ledger import STAGES
+from .ledger import RECORDABLE
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -48,7 +48,10 @@ def _parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("applied", help="record what happened to an application")
     s.add_argument("--mark", required=True, metavar="JOB", help="job folder, or a unique part of its name")
-    s.add_argument("--status", required=True, choices=STAGES)
+    # Checked by the command, not argparse, so "prepared" gets a message that
+    # says who records it (#35).
+    s.add_argument("--status", required=True, metavar="STAGE",
+                   help="what happened: " + ", ".join(RECORDABLE))
     s.add_argument("--date", help="YYYY-MM-DD (default: today)")
     s.add_argument("--note", default="")
 
@@ -67,7 +70,24 @@ def _parser() -> argparse.ArgumentParser:
     return p
 
 
+def _utf8_output(stream) -> None:
+    """Write UTF-8 whatever the console or pipe would choose (#52). On
+    Windows a pipe, which is how every agent runs jobforge, defaults to the
+    locale code page, and printing "Łódź" or "株式会社" crashed after the work
+    was already saved. If a stream cannot switch, replace what it cannot
+    encode rather than raise."""
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is None:
+        return
+    try:
+        reconfigure(encoding="utf-8")
+    except (ValueError, OSError):
+        reconfigure(errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        _utf8_output(stream)
     parser = _parser()
     args = parser.parse_args(argv)
     if not args.command:
@@ -163,9 +183,12 @@ def _run(args) -> int:
         return 0
 
     if cmd == "applied":
-        from .ledger import append_event, parse_date, resolve_job
+        from .ledger import check_recordable, parse_date, record_event, resolve_job
+        check_recordable(args.status)
         folder = resolve_job(ws, args.mark)
-        ev = append_event(folder, args.status, parse_date(args.date), args.note)
+        ev, warnings = record_event(folder, args.status, parse_date(args.date), args.note)
+        for w in warnings:
+            print(f"warning: {w}", file=sys.stderr)
         print(f"{folder.name}: {ev.stage} on {ev.date.isoformat()}")
         return 0
 
@@ -196,6 +219,9 @@ def _run(args) -> int:
             ghost = Profile(name="").ghost_after_days
         rows = list_jobs(ws, ghost_after_days=ghost, status=args.status,
                          company=args.company, text=args.text)
+        for r in rows:
+            if r.problem:
+                print(f"warning: {r.problem}", file=sys.stderr)
         print(format_table(rows))
         return 0
 

@@ -130,6 +130,37 @@ def test_plan_not_json(ws, job_folder):
         run_check(ws, job_folder)
 
 
+# Red-team finding F8 (#28): plan files that used to end in a traceback.
+def test_lone_surrogate_in_a_plan_is_reported_where_it_is(ws, job_folder):
+    edit_plan(job_folder, lambda p: p["cover_letter"].update(
+        body=p["cover_letter"]["body"] + " Ware\ud800house"))
+    with pytest.raises(JobforgeError, match=r"cover_letter\.body.*U\+D800"):
+        apply(ws, job_folder, today=TODAY)
+    assert not any((job_folder / name).exists() for name in DELIVERABLES)
+
+
+def test_lone_surrogate_in_a_list_or_key_is_reported(ws, job_folder):
+    edit_plan(job_folder, lambda p: p.update({"x\udfff": ["ok", "b\ud800"]}))
+    with pytest.raises(JobforgeError, match=r"U\+DFFF") as err:
+        run_check(ws, job_folder)
+    edit_plan(job_folder, lambda p: (p.pop("x\udfff"), p.update(extra=["ok", "b\ud800"])))
+    with pytest.raises(JobforgeError, match=r"extra\[1\].*U\+D800"):
+        run_check(ws, job_folder)
+    assert "plan.json" in str(err.value)
+
+
+def test_deeply_nested_plan_is_reported(ws, job_folder):
+    (job_folder / "plan.json").write_text("[" * 100_000, encoding="utf-8")
+    with pytest.raises(JobforgeError, match="nested too deeply"):
+        run_check(ws, job_folder)
+
+
+def test_plan_not_utf8(ws, job_folder):
+    (job_folder / "plan.json").write_bytes(b'{"version": 1, "x": "\xff"}')
+    with pytest.raises(JobforgeError, match="plan.json is not UTF-8 text"):
+        run_check(ws, job_folder)
+
+
 def test_readback_failure_blocks_and_cleans_up(ws, job_folder, monkeypatch):
     # Simulate a writer bug that drops text: the read-back must catch it.
     monkeypatch.setattr(apply_mod, "extract_text", lambda path: "John Smith")
@@ -146,3 +177,99 @@ def test_verify_readback_reports_missing_url_and_hidden():
     assert any("non-breaking space" in e for e in rep.errors)
     assert any("Line two" in e for e in rep.errors)
     assert any("example.com/a" in e for e in rep.errors)
+
+
+# Issue #32: a deliverable open in Word (locked on Windows) must not crash
+# apply or leave the folder's files out of step. All or nothing.
+def lock(monkeypatch, folder, name):
+    """Moving onto or away from folder/name fails, as with a file Word holds."""
+    real = apply_mod._move
+    locked = folder / name
+
+    def move(src, dst):
+        if locked in (src, dst):
+            raise PermissionError(13, "Access is denied", str(locked))
+        real(src, dst)
+    monkeypatch.setattr(apply_mod, "_move", move)
+
+
+def snapshot(folder):
+    return {n: (folder / n).read_bytes() for n in DELIVERABLES}
+
+
+@pytest.mark.parametrize("name", DELIVERABLES)
+def test_locked_deliverable_changes_nothing(ws, job_folder, monkeypatch, name):
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    edit_plan(job_folder, lambda p: p["experience"][1].update(bullets=["lakeside.shrink"]))
+    lock(monkeypatch, job_folder, name)
+    with pytest.raises(JobforgeError, match=f"Close {name}") as exc:
+        apply(ws, job_folder, today=TODAY)
+    assert "Nothing was changed" in exc.value.message
+    assert snapshot(job_folder) == before
+    assert not [p for p in job_folder.iterdir() if p.name.startswith(".jobforge-")]
+
+
+def test_failure_placing_a_new_file_restores_the_old_ones(ws, job_folder, monkeypatch):
+    # The old files moved aside, then a new one could not be placed.
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    edit_plan(job_folder, lambda p: p["experience"][1].update(bullets=["lakeside.shrink"]))
+    real = apply_mod._move
+    target = job_folder / "John_Smith_Cover_Letter.docx"
+
+    def move(src, dst):
+        if dst == target and src.parent.name.startswith(".jobforge-"):  # the new file
+            raise PermissionError(13, "Access is denied", str(dst))
+        real(src, dst)
+    monkeypatch.setattr(apply_mod, "_move", move)
+    with pytest.raises(JobforgeError, match="Close John_Smith_Cover_Letter.docx"):
+        apply(ws, job_folder, today=TODAY)
+    assert snapshot(job_folder) == before
+
+
+@pytest.mark.parametrize("nth", range(1, 7))
+def test_ctrl_c_during_the_swap_loses_nothing(ws, job_folder, monkeypatch, nth):
+    # Found red-teaming (#28): Ctrl+C is not an OSError, so the rollback was
+    # skipped and the cleanup deleted the old files moved aside.
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    real = apply_mod._move
+    calls = {"n": 0}
+
+    def move(src, dst):
+        calls["n"] += 1
+        if calls["n"] == nth:
+            raise KeyboardInterrupt
+        real(src, dst)
+    monkeypatch.setattr(apply_mod, "_move", move)
+    with pytest.raises(KeyboardInterrupt):
+        apply(ws, job_folder, today=TODAY)
+    assert snapshot(job_folder) == before
+    assert not [p for p in job_folder.iterdir() if p.name.startswith(".jobforge-")]
+
+
+@pytest.mark.skipif(__import__("sys").platform != "win32", reason="needs a real Windows lock")
+def test_real_windows_lock_changes_nothing(ws, job_folder):
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    with open(job_folder / "John_Smith_Resume.docx", "rb"):
+        with pytest.raises(JobforgeError, match="Close John_Smith_Resume.docx"):
+            apply(ws, job_folder, today=TODAY)
+    assert snapshot(job_folder) == before
+
+
+def test_other_file_errors_roll_back_and_are_not_called_a_lock(ws, job_folder, monkeypatch):
+    # A full disk is not "close the file in Word": roll back, then report it.
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    real = apply_mod._move
+
+    def move(src, dst):
+        if dst == job_folder / COVER_MD_NAME and src.parent.name.startswith(".jobforge-"):
+            raise OSError(28, "No space left on device")
+        real(src, dst)
+    monkeypatch.setattr(apply_mod, "_move", move)
+    with pytest.raises(OSError, match="No space"):
+        apply(ws, job_folder, today=TODAY)
+    assert snapshot(job_folder) == before

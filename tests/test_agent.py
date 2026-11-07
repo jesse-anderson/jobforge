@@ -164,6 +164,14 @@ def test_instructions_say_units_are_never_converted():
     assert "units included: never convert" in source_text()
 
 
+def test_instructions_list_the_stages_a_user_records():
+    # Issue #35: the agent's list matches what `applied` accepts.
+    from jobforge.ledger import RECORDABLE
+    text = source_text()
+    listed = text.split("Stages you record: ", 1)[1].split(".", 1)[0]
+    assert tuple(s.strip() for s in listed.replace("\n", " ").split(",")) == RECORDABLE
+
+
 def test_instructions_say_where_notes_survive_a_refresh():
     # Issue #33: the agent writes its notes where --refresh keeps them.
     assert 'below the "Your notes" line' in source_text()

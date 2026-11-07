@@ -8,6 +8,7 @@ from jobforge.errors import JobforgeError
 from jobforge.extract import from_text
 from jobforge.jobs import format_table, list_jobs
 from jobforge.ledger import (GHOSTED, STAGES, append_event, current_status, parse_date,
+                             RECORDABLE, record_event,
                              read_events, resolve_job)
 from jobforge.prepare import prepare
 
@@ -58,6 +59,26 @@ def test_hand_edited_bad_ledger_reports_clearly(job_folder):
     (job_folder / "ledger.toml").write_text("[[event]\n", encoding="utf-8")
     with pytest.raises(JobforgeError, match="not valid TOML"):
         read_events(job_folder)
+
+
+# Red-team follow-up to F7 (#28): `applied --mark` on a ledger it cannot
+# read says why and writes nothing, instead of a traceback or appending
+# to a file that is already broken.
+@pytest.mark.parametrize("content", [b"\xff\xfe", b"[[event\n"])
+def test_append_refuses_a_ledger_it_cannot_read(job_folder, content):
+    path = job_folder / "ledger.toml"
+    path.write_bytes(content)
+    with pytest.raises(JobforgeError, match=f"{job_folder.name}/ledger.toml is not"):
+        append_event(job_folder, "applied", D(2026, 11, 21))
+    assert path.read_bytes() == content
+
+
+def test_applied_mark_on_a_non_utf8_ledger_exits_1(ws, job_folder, monkeypatch, capsys):
+    from jobforge.cli import main
+    (job_folder / "ledger.toml").write_bytes(b"\xff\xfe")
+    monkeypatch.chdir(ws.root)
+    assert main(["applied", "--mark", job_folder.name, "--status", "applied"]) == 1
+    assert "ledger.toml is not UTF-8 text" in capsys.readouterr().err
 
 
 def test_no_ledger_means_no_events(tmp_path):
@@ -117,6 +138,45 @@ def test_list_jobs_status_and_filters(ws):
     assert b.name in format_table(list_jobs(ws, today=TODAY))
 
 
+# Issue #34: `applied` refuses dates that cannot be right, like `import`.
+def test_applied_in_the_future_is_refused(job_folder):
+    with pytest.raises(JobforgeError, match="2099-01-01 is in the future"):
+        record_event(job_folder, "applied", D(2099, 1, 1), today=TODAY)
+    assert [e.stage for e in read_events(job_folder)] == ["prepared"]
+
+
+def test_applied_before_prepared_is_recorded_with_a_warning(job_folder):
+    # Real when someone applied, then made the folder afterwards.
+    ev, warnings = record_event(job_folder, "applied", D(2020, 1, 1), today=TODAY)
+    assert ("applied", D(2020, 1, 1)) in [(e.stage, e.date) for e in read_events(job_folder)]
+    assert len(warnings) == 1 and "before this job was prepared (2026-11-20)" in warnings[0]
+
+
+def test_applied_on_or_after_prepared_is_quiet(job_folder):
+    _, warnings = record_event(job_folder, "applied", TODAY, today=TODAY)
+    assert warnings == []
+
+
+def test_imported_job_has_no_prepared_date_to_compare(ws):
+    from jobforge.importer import import_csv
+    import_csv(ws, "company,title,applied\nCedar Mill Foods,Clerk,2026-09-10\n",
+               write=True, today=TODAY)
+    folder = next(ws.jobs_dir.iterdir())
+    _, warnings = record_event(folder, "rejected", D(2026, 9, 1), today=TODAY)
+    assert warnings == []
+
+
+# Issue #35: "prepared" is recorded by `prepare`, never by the user.
+def test_applied_refuses_prepared(job_folder):
+    with pytest.raises(JobforgeError, match="recorded by `jobforge prepare`"):
+        record_event(job_folder, "prepared", TODAY, today=TODAY)
+    assert [e.stage for e in read_events(job_folder)] == ["prepared"]
+
+
+def test_recordable_stages_are_every_stage_but_prepared():
+    assert RECORDABLE == tuple(s for s in STAGES if s != "prepared")
+
+
 # Issue #39: FOLDER is the name users type back into `applied --mark`,
 # `check`, and `apply`, so it is never shortened.
 def row(folder, company="Lakeview Cold Storage", title="Distribution Supervisor"):
@@ -150,6 +210,33 @@ def test_list_skips_broken_folders(ws):
     bad.mkdir()
     (bad / "job.json").write_text("{", encoding="utf-8")
     assert len(list_jobs(ws, today=TODAY)) == 1
+
+
+# Red-team finding F7 (#28): one broken ledger.toml must not stop the
+# listing. The job stays in it, marked unreadable, with the reason.
+def test_list_keeps_a_job_whose_ledger_is_broken(ws):
+    good = add_job(ws, "Acme", "Welder")
+    bad = add_job(ws, "Bolt", "Painter")
+    (bad / "ledger.toml").write_text("[[event\n", encoding="utf-8")
+    rows = {r.company: r for r in list_jobs(ws, today=TODAY)}
+    assert rows["Acme"].status == "prepared" and rows["Acme"].problem == ""
+    assert rows["Bolt"].status == "unreadable" and rows["Bolt"].last_date == ""
+    assert f"{bad.name}/ledger.toml is not valid TOML" in rows["Bolt"].problem
+    assert good.name in format_table(list(rows.values()))
+
+
+def test_list_keeps_a_job_whose_ledger_is_not_utf8(ws):
+    bad = add_job(ws, "Bolt", "Painter")
+    (bad / "ledger.toml").write_bytes(b'[[event]]\nnote = "\xff"\n')
+    [only] = list_jobs(ws, today=TODAY)
+    assert only.status == "unreadable"
+    assert f"{bad.name}/ledger.toml is not UTF-8 text" in only.problem
+
+
+def test_non_utf8_ledger_reports_clearly(job_folder):
+    (job_folder / "ledger.toml").write_bytes(b"\xff\xfe")
+    with pytest.raises(JobforgeError, match="ledger.toml is not UTF-8 text"):
+        read_events(job_folder)
 
 
 def test_empty_table_message(ws):

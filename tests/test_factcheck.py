@@ -377,6 +377,28 @@ def test_units_across_families(ws, john_plan, atom, line, ok):
         expect(rep, "changes the unit")
 
 
+@pytest.mark.parametrize("atom,line,ok", [
+    # Issue #37: each of these used to pass.
+    ("Drove 650,000 miles", "Set a 650,000-km record", False),
+    ("Cut setup to 40 minutes", "Cut setup to a 40-hour job", False),
+    ("Drove 650,000 miles", "Drove 650k km", False),
+    ("Drove 650,000 miles", "Drove 0.65 million km", False),
+    # Clean passes stay clean.
+    ("Worked a 40-hour week", "Worked a 40-hour week", True),
+    ("Drove 650,000 miles", "Drove 650k miles", True),
+    ("Led the 2 second-shift crews", "Led the 2 second-shift crews", True),
+])
+def test_hyphenated_and_multiplied_units(ws, john_plan, atom, line, ok):
+    add_atoms(ws, f'[[bullet]]\nid = "northwind.unit"\nrole = "northwind"\n'
+                  f'text = "{atom}"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append({"atom": "northwind.unit", "text": line})
+    rep = check(ws, john_plan)
+    if ok:
+        assert rep.ok, rep.errors
+    else:
+        expect(rep, "changes the unit")
+
+
 def test_unit_spelled_differently_passes(ws, john_plan):
     add_atoms(ws, '[[bullet]]\nid = "northwind.conveyor2"\nrole = "northwind"\n'
                   'text = "Laid out 120 feet of new conveyor"\nbasis = "records"\n')

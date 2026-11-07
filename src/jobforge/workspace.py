@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import __version__
-from .errors import WorkspaceError
+from .errors import JobforgeError, WorkspaceError
 
 MARKER = ".jobforge"
 ENV_VAR = "JOBFORGE_WORKSPACE"
@@ -81,6 +81,23 @@ class Workspace:
     @property
     def jobs_dir(self) -> Path:
         return self.root / "jobs"
+
+    def contains(self, path: Path) -> bool:
+        """Whether `path`, with every link followed, is inside the workspace
+        (#28, F2 and F3)."""
+        return path.resolve().is_relative_to(self.root.resolve())
+
+    def outside_message(self, path: Path) -> str:
+        shown = path.relative_to(self.root).as_posix() if path.is_relative_to(self.root) \
+            else str(path)
+        return (f"{shown} links outside this workspace, to {path.resolve()}. Jobforge only "
+                f"reads and writes inside {self.root}; put the file itself here instead "
+                f"of a link.")
+
+    def check_inside(self, path: Path) -> None:
+        """Refuse to read or write a file that leads out of the workspace."""
+        if (path.exists() or path.is_symlink()) and not self.contains(path):
+            raise JobforgeError(self.outside_message(path))
 
     def rel(self, path: Path) -> str:
         """Path relative to the workspace, with forward slashes, for messages."""

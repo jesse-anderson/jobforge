@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 
 from .errors import JobforgeError
 from .extract import Job
-from .ledger import STAGES, Event, append_event, job_folders
+from .ledger import RECORDABLE, Event, append_event, job_folders
 from .prepare import folder_name, read_job, slug
 from .workspace import Workspace
 
@@ -46,7 +46,7 @@ COLUMNS: dict[str, tuple[str, ...]] = {
 REQUIRED = ("company", "title", "applied")
 # "prepared" is something Jobforge does, so it cannot have happened before
 # Jobforge. "ghosted" is computed (D-47), so it imports as "applied".
-STATUSES = tuple(s for s in STAGES if s != "prepared") + ("ghosted",)
+STATUSES = RECORDABLE + ("ghosted",)
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 

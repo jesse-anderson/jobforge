@@ -20,9 +20,12 @@ and name the company only in the page title ("... at Acme").
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import re
+import socket
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import asdict, dataclass
 from html import unescape
@@ -297,6 +300,49 @@ def _location_text(node: Any) -> str:
     return node if isinstance(node, str) else ""
 
 
+def _not_public(newurl: str) -> str | None:
+    """Why a redirect target is off limits, or None for a public web page."""
+    parts = urllib.parse.urlsplit(newurl)
+    if parts.scheme not in ("http", "https"):
+        return "not a web page"
+    host = (parts.hostname or "").lower()
+    local = "on this computer or your local network"
+    if host == "localhost" or host.endswith(".localhost"):
+        return local
+    try:
+        addresses = [ipaddress.ip_address(host)]
+    except ValueError:
+        try:
+            addresses = [ipaddress.ip_address(info[4][0])
+                         for info in socket.getaddrinfo(host, None)]
+        except (OSError, ValueError):
+            return None  # unresolvable: the fetch itself reports it
+    if any(not a.is_global for a in addresses):
+        return local
+    return None
+
+
+class _SafeRedirect(urllib.request.HTTPRedirectHandler):
+    """Follow a posting's redirects only to public web pages (#28, F5): never
+    to another scheme (ftp), and never to this computer or the local network,
+    whose pages would otherwise be saved into job.json."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        why = _not_public(newurl)
+        if why:
+            raise FetchBlocked(f"{req.full_url} redirected to {newurl}, which is {why}. "
+                               f"Jobforge only follows a posting's redirects to other public "
+                               f"web pages.\n" + PASTE_HINT)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(_SafeRedirect)
+
+
+def _open(req, timeout):
+    return _OPENER.open(req, timeout=timeout)
+
+
 def fetch_html(url: str, *, timeout: int = 30) -> str:
     req = urllib.request.Request(url, headers={
         "User-Agent": BROWSER_UA,
@@ -304,7 +350,7 @@ def fetch_html(url: str, *, timeout: int = 30) -> str:
         "Accept-Language": "en-US,en;q=0.9",
     })
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with _open(req, timeout) as resp:
             charset = resp.headers.get_content_charset() or "utf-8"
             return resp.read().decode(charset, errors="replace")
     except urllib.error.HTTPError as exc:

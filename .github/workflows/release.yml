@@ -1,0 +1,104 @@
+# Release (#54). Runs only when a maintainer pushes a version tag, never on a
+# branch push or a PR. Publishes with PyPI trusted publishing (OIDC), so no
+# token is stored anywhere.
+#
+#   v0.1.0rc1, v0.1.0a1, ... (pre-release tags) -> TestPyPI
+#   v0.1.0 (final X.Y.Z tags)                   -> PyPI
+#
+# Every upload waits for a maintainer to approve it: the `testpypi` and
+# `pypi` environments are set to require a reviewer (Settings > Environments).
+# PyPI never lets a version be reused, even after deletion, so the tag must
+# match __version__ and PyPI only takes a final version (tools/release_check.py).
+#
+# One-time setup, before the first tag: on PyPI and TestPyPI, add this repo as
+# a trusted publisher (workflow `release.yml`, environment `pypi` or
+# `testpypi`), and create both environments here with required reviewers.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      target: ${{ steps.target.outputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Choose the target from the tag
+        id: target
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "target=pypi" >> "$GITHUB_OUTPUT"
+          else
+            echo "target=testpypi" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Tag matches the version
+        shell: bash
+        run: |
+          if [ "${{ steps.target.outputs.target }}" = pypi ]; then
+            python tools/release_check.py "$GITHUB_REF_NAME"
+          else
+            python tools/release_check.py "$GITHUB_REF_NAME" --test
+          fi
+      - name: Test before building
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m coverage run -m pytest -q
+          python -m coverage report --fail-under=95
+      - name: Build and check
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+      - name: Install the wheel in a clean venv and run it
+        shell: bash
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install dist/*.whl
+          /tmp/smoke/bin/jobforge --version
+          /tmp/smoke/bin/jobforge init /tmp/smoke-ws
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    needs: build
+    if: needs.build.outputs.target == 'testpypi'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/jobforge
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    needs: build
+    if: needs.build.outputs.target == 'pypi'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/jobforge
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

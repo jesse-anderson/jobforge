@@ -52,6 +52,8 @@ def _name(ch: str) -> str | None:
         return "private-use character"
     if cat == "Cf":
         return "invisible formatting character"
+    if cat == "Cs":  # half of a broken character; no file can store it (#28)
+        return "lone surrogate"
     return None
 
 
