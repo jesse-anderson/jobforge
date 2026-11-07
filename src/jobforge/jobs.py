@@ -55,14 +55,25 @@ def list_jobs(ws: Workspace, *, today: _dt.date | None = None, ghost_after_days:
     return rows
 
 
+def _fit(text: str, cap: int | None) -> str:
+    if cap is None or len(text) <= cap:
+        return text
+    return text[:cap - 1].rstrip() + "…"
+
+
 def format_table(rows: list[JobRow]) -> str:
     if not rows:
         return "No jobs yet. Add one with `jobforge prepare --from-url <url>`."
     headers = ("STATUS", "DATE", "COMPANY", "TITLE", "FOLDER")
-    data = [(r.status, r.last_date, r.company, r.title, r.folder) for r in rows]
-    widths = [min(max(len(h), *(len(d[i]) for d in data)), 40) for i, h in enumerate(headers)]
+    # COMPANY and TITLE may be shortened, visibly. FOLDER never is: it is the
+    # name users type back into `applied --mark`, `check`, and `apply` (#39).
+    caps = (None, None, 40, 40, None)
+    data = [tuple(_fit(c, cap) for c, cap in
+                  zip((r.status, r.last_date, r.company, r.title, r.folder), caps))
+            for r in rows]
+    widths = [max(len(h), *(len(d[i]) for d in data)) for i, h in enumerate(headers)]
 
     def fmt(cells):
-        return "  ".join(c[:w].ljust(w) for c, w in zip(cells, widths)).rstrip()
+        return "  ".join(c.ljust(w) for c, w in zip(cells, widths)).rstrip()
 
     return "\n".join([fmt(headers), *(fmt(d) for d in data)])
