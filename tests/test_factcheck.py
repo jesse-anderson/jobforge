@@ -539,8 +539,52 @@ def test_precision_counts_the_multiplier(ws, john_plan, atom, line, ok):
 
 def test_letter_may_quote_the_postings_figures(ws, john_plan):
     letter_body(john_plan, "Your 6 cross-dock facilities and a second-shift team of 20 "
-                           "sound like the work I do now.")
+                           "need steady leadership.")
     assert check(ws, john_plan).ok
+
+
+# Issue #83 item 1 (audit A4): the posting's figures and tools are about the
+# employer. A sentence may use them only when it is about the employer ("you",
+# "your", or the company's name) and not about the user ("I", "my", "we").
+@pytest.mark.parametrize("text,needle", [
+    ("I bring 20 years of supervising warehouse teams.", "the figure 20"),
+    ("Your team of 20 is the size I lead now.", "the figure 20"),
+    ("My last team was 20 people.", "the figure 20"),
+    ("We ran 6 cross-dock facilities.", "the figure 6"),
+])
+def test_letter_sentence_about_the_user_cannot_take_the_postings_figures(
+        ws, john_plan, text, needle):
+    letter_body(john_plan, text)
+    expect(check(ws, john_plan), f'{needle} is in the posting, not your facts')
+
+
+@pytest.mark.parametrize("text", [
+    "Your 6 cross-dock facilities need a steady second shift.",
+    "Prairie Freight runs 6 cross-dock facilities.",
+    "Prairie Freight Co. needs a lead for a team of 20.",
+])
+def test_letter_sentence_about_the_employer_may_quote_the_posting(ws, john_plan, text):
+    letter_body(john_plan, text)
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+EXCEL_JOB = {**JOB, "description": JOB["description"] + " Schedules are kept in Excel."}
+
+
+def with_excel_skill(ws):
+    add_atoms(ws, '[[skill]]\nid = "skills.office"\nlabel = "Office"\nitems = ["Excel"]\n')
+
+
+def test_letter_cannot_claim_a_tool_only_the_posting_names(ws, john_plan):
+    with_excel_skill(ws)
+    letter_body(john_plan, "I keep every schedule in Excel.")
+    expect(check(ws, john_plan, EXCEL_JOB), "'Excel' is in the posting, not your facts")
+
+
+def test_letter_may_name_the_postings_tool_about_the_employer(ws, john_plan):
+    with_excel_skill(ws)
+    letter_body(john_plan, "Your schedules live in Excel.")
+    assert check(ws, john_plan, EXCEL_JOB).ok
 
 
 def test_letter_never_claim(ws, john_plan):
@@ -572,7 +616,7 @@ def test_letter_banned_word_phrase_dash(ws, john_plan):
 # captured. Structured data (json-ld) is the posting itself; a whole-page
 # capture (page-text) may hold other listings; a paste is whatever the user
 # selected.
-POSTING_FIGURES = "Your 6 cross-dock facilities and a second-shift team of 20 sound like my work."
+POSTING_FIGURES = "Your 6 cross-dock facilities and a second-shift team of 20 need a steady lead."
 OWN_FIGURE = "I lead a team of 14 associates across two shifts."
 
 
@@ -745,7 +789,7 @@ def test_vocabulary_includes_skills_credentials_and_never_claim(ws):
 # Issue #49: the remaining fact-check branches, each with the behavior it guards.
 def test_without_a_job_the_letter_cannot_quote_posting_figures(ws, john_plan):
     # No job.json to trust: a figure only the posting states is not a fact.
-    letter_body(john_plan, "Your 6 cross-dock facilities sound like my work.")
+    letter_body(john_plan, "Your 6 cross-dock facilities need a steady lead.")
     expect(check(ws, john_plan, job=None), "the figure 6 is not in the facts")
 
 

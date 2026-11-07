@@ -155,8 +155,11 @@ def test_instructions_say_the_check_misses_unknown_tools():
 
 def test_instructions_explain_posting_figures():
     # Issue #16: the agent knows what the refusal and the warning mean.
-    text = source_text()
-    assert "saved as the whole page: `check`" in text and "show the user" in text
+    text = " ".join(source_text().split())
+    assert "saved as the whole page gives no figures at all: `check`" in text
+    assert "show the user" in text
+    # #83 item 1: only a sentence about the employer may quote the posting.
+    assert 'with no "I", "my", or "we" in it' in text and "two sentences" in text
 
 
 def test_instructions_say_units_are_never_converted():
