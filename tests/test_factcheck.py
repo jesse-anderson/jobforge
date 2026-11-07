@@ -384,6 +384,51 @@ def test_letter_banned_word_phrase_dash(ws, john_plan):
     expect(rep, "en dash")
 
 
+# Issue #16: how far the letter may trust the posting depends on how it was
+# captured. Structured data (json-ld) is the posting itself; a whole-page
+# capture (page-text) may hold other listings; a paste is whatever the user
+# selected.
+POSTING_FIGURES = "Your 6 cross-dock facilities and a second-shift team of 20 sound like my work."
+OWN_FIGURE = "I lead a team of 14 associates across two shifts."
+
+
+def test_letter_may_quote_a_structured_postings_figures_quietly(ws, john_plan):
+    letter_body(john_plan, POSTING_FIGURES)
+    rep = check(ws, john_plan, {**JOB, "source": "json-ld"})
+    assert rep.ok and not any("only from the posting" in w for w in rep.warnings)
+
+
+def test_letter_figure_only_in_a_page_capture_is_refused(ws, john_plan):
+    letter_body(john_plan, POSTING_FIGURES)
+    rep = check(ws, john_plan, {**JOB, "source": "page-text"})
+    expect(rep, "the figure 6 is not in the facts")
+    expect(rep, "the figure 20 is not in the facts")
+    assert any("whole page" in w for w in rep.warnings), rep.warnings
+
+
+def test_letter_without_posting_figures_passes_a_page_capture(ws, john_plan):
+    letter_body(john_plan, OWN_FIGURE)
+    rep = check(ws, john_plan, {**JOB, "source": "page-text"})
+    assert rep.ok, rep.errors
+    assert not any("whole page" in w for w in rep.warnings)
+
+
+def test_letter_figure_only_in_a_pasted_posting_warns(ws, john_plan):
+    letter_body(john_plan, POSTING_FIGURES)
+    rep = check(ws, john_plan, {**JOB, "source": "manual"})
+    assert rep.ok, rep.errors
+    only = [w for w in rep.warnings if "only from the posting" in w]
+    assert len(only) == 1 and "6, 20" in only[0], rep.warnings
+
+
+def test_letter_figure_in_the_facts_and_the_posting_does_not_warn(ws, john_plan):
+    # 14 is John's own figure; that the posting also says 14 changes nothing.
+    letter_body(john_plan, OWN_FIGURE)
+    job = {**JOB, "source": "manual", "description": "Lead a team of 14."}
+    rep = check(ws, john_plan, job)
+    assert rep.ok and not any("only from the posting" in w for w in rep.warnings)
+
+
 def test_letter_dashes_allowed_when_profile_says_so(ws, john_plan):
     text = ws.profile_path.read_text(encoding="utf-8").replace("ban_dashes = true", "ban_dashes = false")
     ws.profile_path.write_text(text, encoding="utf-8")
