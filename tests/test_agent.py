@@ -95,3 +95,29 @@ def test_example_plan_in_the_instructions_resolves(tmp_path):
     plan["cover_letter"]["cites"] = ["acme.downtime"]
     _, errors, _ = resolve(plan, load_inventory(ws))
     assert errors == []
+
+
+def test_instructions_send_the_user_to_their_own_terminal_for_confirm():
+    """Issue #2 run: the agent suggested `! jobforge confirm`, which cannot
+    take typed answers."""
+    text = source_text()
+    assert "in a terminal window of their\n   own" in text
+    assert "Never suggest the `!` prefix" in text
+    assert "! jobforge confirm" not in text
+
+
+def test_instructions_list_every_fit_score():
+    """Issue #2 run: the agent wrote "medium", because the example only
+    showed "strong"."""
+    from jobforge.plan import FIT_SCORES
+    line = next(l for l in source_text().splitlines() if "`fit.score` is one of" in l)
+    for score in FIT_SCORES:
+        assert f"`{score}`" in line, score
+
+
+def test_instructions_treat_a_skills_list_as_claims():
+    """Issue #2 run: a broad skills item from an old resume was carried
+    over unquestioned and later cited as a fit."""
+    text = source_text()
+    assert "A skills list is claims too" in text
+    assert "never_claim" in text.split("A skills list is claims too", 1)[1].split("\n6.", 1)[0]

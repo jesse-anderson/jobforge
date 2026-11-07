@@ -122,9 +122,16 @@ def test_applied_rejects_unknown_stage(run):
         run("applied", "--mark", "x", "--status", "ghosted")
 
 
+class FakeTerminal:
+    """Stands in for an interactive stdin; answers come from a patched input()."""
+    def isatty(self):
+        return True
+
+
 def test_confirm_via_cli(run, ws, monkeypatch):
     add_atoms(ws, '[[skill]]\nid = "skill.new"\nlabel = "L"\nitems = ["x"]\n', "d.toml", pending=True)
     monkeypatch.setattr("builtins.input", lambda prompt: "k")
+    monkeypatch.setattr("sys.stdin", FakeTerminal())
     code, out, _ = run("confirm")
     assert code == 0 and "Kept 1" in out
 
@@ -203,3 +210,14 @@ def test_import_refuses_undecodable_bytes(run, tmp_path):
 def test_import_missing_file(run):
     code, _, err = run("import", "nope.csv")
     assert code == 1 and "does not exist" in err
+
+
+def test_confirm_without_a_terminal_gives_a_message_not_a_traceback(run, ws, monkeypatch):
+    """Issue #2 run: `! jobforge confirm` from inside an agent session."""
+    import io
+    add_atoms(ws, '[[skill]]\nid = "skill.x"\nlabel = "X"\nitems = ["Excel"]\n',
+              "draft.toml", pending=True)
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    code, out, err = run("confirm")
+    assert code != 0
+    assert "needs a terminal" in err and "Traceback" not in err

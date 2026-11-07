@@ -146,3 +146,90 @@ def test_describe_shows_employer_basis_and_defense(ws):
     shown = "\n".join(said)
     assert "Employer: Northwind Distribution" in shown
     assert "How you know: estimate" in shown and "Your explanation: My count." in shown
+
+
+def test_without_a_terminal_confirm_stops_before_asking(ws, monkeypatch):
+    """Issue #2 run: `! jobforge confirm` inside an agent has no stdin, and
+    confirm crashed with an EOFError traceback on the first prompt."""
+    import io
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    with pytest.raises(JobforgeError, match="needs a terminal") as exc:
+        run_confirm(ws, say=quiet)
+    assert str(ws.root) in exc.value.render()
+    assert (ws.pending_dir / "draft.toml").exists()
+    assert not (ws.atoms_dir / CONFIRMED_FILE).exists()
+
+
+def test_without_a_terminal_nothing_pending_still_reports(ws, monkeypatch):
+    import io
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    said = []
+    out = run_confirm(ws, say=said.append)
+    assert out.kept == [] and "Nothing to confirm" in said[0]
+
+
+def test_input_ending_mid_review_keeps_earlier_answers(ws):
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    answers = iter(["k"])
+
+    def ask(_prompt):
+        try:
+            return next(answers)
+        except StopIteration:
+            raise EOFError from None
+
+    said = []
+    out = run_confirm(ws, ask=ask, say=said.append)
+    assert out.kept == ["acme"]
+    assert out.skipped == ["skill.plc", "acme.uptime"]
+    assert any("Input ended" in s for s in said)
+    assert load_inventory(ws).get("acme") is not None
+
+
+def test_review_shows_dates_and_details_the_user_is_confirming():
+    """Issue #2 run: a credential's date and a degree's field and date were
+    confirmed without ever being shown."""
+    from pathlib import Path
+
+    from jobforge.atoms import Atom
+    from jobforge.confirm import describe
+    cred = Atom("credential", "cred.osha30", {
+        "id": "cred.osha30", "name": "OSHA 30-Hour General Industry",
+        "issuer": "OSHA Training Institute", "date": "2019", "expires": "2029"}, Path("p"))
+    text = describe(cred, None)
+    for shown in ("OSHA 30-Hour General Industry", "Issuer: OSHA Training Institute",
+                  "Date: 2019", "Expires: 2029"):
+        assert shown in text, text
+    edu = Atom("education", "edu.cc", {
+        "id": "edu.cc", "school": "Prairie Ridge Community College",
+        "credential": "Associate of Applied Science",
+        "field": "Industrial Maintenance Technology", "date": "2011",
+        "location": "Decatur, IL", "details": "Dean's list"}, Path("p"))
+    text = describe(edu, None)
+    for shown in ("Field: Industrial Maintenance Technology", "Date: 2011",
+                  "Location: Decatur, IL", "Details: Dean's list"):
+        assert shown in text, text
+
+
+@pytest.mark.parametrize("kind", ["role", "bullet", "project", "skill", "credential",
+                                  "education", "summary"])
+def test_review_shows_every_schema_field(kind):
+    """No field the schema allows is hidden from the person confirming it."""
+    from pathlib import Path
+
+    from jobforge.atoms import SCHEMA, Atom
+    from jobforge.confirm import describe
+    required, optional = SCHEMA[kind]
+    fields = {}
+    for key in sorted(required | optional):
+        if key in ("phrasing", "role", "project", "context"):
+            continue  # shown as "Also worded" / the owner line
+        fields[key] = ["v-" + key] if key in ("facts", "tags", "items") else "v-" + key
+    fields["id"] = "x.y"
+    text = describe(Atom(kind, "x.y", fields, Path("p")), None)
+    for key, value in fields.items():
+        if key == "id":
+            continue
+        shown = value[0] if isinstance(value, list) else value
+        assert shown in text, (key, text)

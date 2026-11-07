@@ -11,6 +11,7 @@ kept (D-40).
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -23,6 +24,11 @@ from .workspace import Workspace
 
 CONFIRMED_FILE = "confirmed.toml"
 
+NO_TERMINAL = ("`jobforge confirm` asks you about each drafted fact, so it needs a "
+               "terminal you can type in, and this one cannot take answers. An agent's "
+               "shell, or a `!` command inside an agent, cannot answer for you. Open a "
+               "terminal window yourself and run:\n\n  cd \"{root}\"\n  jobforge confirm")
+
 
 @dataclass
 class Outcome:
@@ -30,6 +36,16 @@ class Outcome:
     dropped: list[str]
     skipped: list[str]
     refused: list[str]
+
+
+_FIELD_LABELS = (
+    ("text", "Text"), ("title", "Title"), ("name", "Name"), ("school", "School"),
+    ("credential", "Credential"), ("field", "Field"), ("label", "Label"),
+    ("items", "Items"), ("issuer", "Issuer"), ("date", "Date"), ("expires", "Expires"),
+    ("location", "Location"), ("details", "Details"), ("url", "URL"),
+    ("writeup_url", "Writeup URL"), ("url_status", "URL status"),
+    ("facts", "Also states"), ("reword_of", "Rewords"), ("tags", "Tags"),
+)
 
 
 def describe(atom: Atom, owner: Atom | None) -> str:
@@ -43,13 +59,21 @@ def describe(atom: Atom, owner: Atom | None) -> str:
     elif atom.kind in ("bullet", "project"):
         ctx = atom.get("context") or atom.get("project") or atom.get("role")
         lines.append(f"  Belongs to: {ctx}")
-    for key in ("text", "title", "name", "school", "credential", "label"):
-        if atom.get(key) and not (atom.kind == "role" and key == "title"):
-            lines.append(f"  {key.capitalize()}: {atom.get(key)}")
-    if atom.get("items"):
-        lines.append(f"  Items: {', '.join(atom.get('items'))}")
-    if atom.get("url"):
-        lines.append(f"  URL: {atom.get('url')}")
+    # Every field the user is asked to keep is shown. A date or field of study
+    # confirmed unseen is still a fact the check will trust (issue #2 run).
+    shown = {"id", "employer", "start", "end", "role", "project", "context",
+             "phrasing", "basis", "defense"} | ({"title"} if atom.kind == "role" else set())
+    for key, label in _FIELD_LABELS:
+        value = atom.get(key)
+        if key in shown or value in (None, "", []):
+            continue
+        shown.add(key)
+        if isinstance(value, list):
+            value = ", ".join(str(v) for v in value)
+        lines.append(f"  {label}: {value}")
+    for key, value in atom.fields.items():  # anything a later schema adds
+        if key not in shown and value not in (None, "", []):
+            lines.append(f"  {key.capitalize()}: {value}")
     if atom.get("basis"):
         lines.append(f"  How you know: {atom.get('basis')}")
     if atom.get("defense"):
@@ -89,6 +113,7 @@ def _rewrite_pending(path: Path, remaining: list[Atom]) -> None:
 
 def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
                 say: Callable[[str], None] | None = None) -> Outcome:
+    interactive = ask is not None or (sys.stdin is not None and sys.stdin.isatty())
     ask = ask or input
     say = say or print
     confirmed = load_inventory(ws)  # raises if confirmed atoms are broken
@@ -111,6 +136,8 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
                           f"confirmed atom. Rename one of them.")
     if errors:
         raise JobforgeError("Cannot confirm:", errors)
+    if not interactive:
+        raise JobforgeError(NO_TERMINAL.format(root=ws.root))
 
     order = sorted(pending, key=lambda a: CONFIRM_ORDER.index(a.kind))
     live = dict(confirmed.atoms)
@@ -135,7 +162,12 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
             say("")
             continue
         while True:
-            answer = ask("  Keep this fact? [k/d/s/q] ").strip().lower()[:1]
+            try:
+                answer = ask("  Keep this fact? [k/d/s/q] ").strip().lower()[:1]
+            except EOFError:
+                say("\n  Input ended, so confirm stopped here. Your answers so far are "
+                    "saved; the rest stay in profile/pending/.")
+                answer = "q"
             if answer in ("k", "d", "s", "q"):
                 break
             say("  Please answer k, d, s, or q.")
