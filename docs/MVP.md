@@ -148,7 +148,8 @@ deliverable still matter.
 - **Short names and synonyms.** An employer written by a short name or an
   abbreviation binds to its role only when recorded as an alias on the role
   (#22). A synonym of a known term ("Postgres" for "PostgreSQL") is a
-  different term; hyphen and spacing variants are #92.
+  different term. Hyphen, slash, and spacing variants ("Black-Belt" for
+  "Black Belt") do match.
 - **Pronouns.** A sentence that refers back to an employer without naming it
   ("There I also...") is checked against every cited fact, not only that
   employer's (#83, #90).

@@ -145,6 +145,15 @@ def test_never_claim_with_a_look_alike_letter(ws, john_plan):
     expect(rep, "mixes Latin and Cyrillic")
 
 
+@pytest.mark.parametrize("written", ["Six Sigma Black-Belt", "Six Sigma Black/Belt",
+                                     "Six Sigma  Black Belt", "Six-Sigma Black Belt"])
+def test_never_claim_matches_hyphen_slash_and_spacing_variants(ws, john_plan, written):
+    # Issue #92 (audit A9): a hyphen or extra space made a different string.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": f"Cut weekly overtime 25% as a {written}"}
+    expect(check(ws, john_plan), "claims 'Six Sigma Black Belt'")
+
+
 def test_never_claim_written_all_in_cyrillic(ws, john_plan):
     john_plan["experience"][0]["bullets"][2] = {
         "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using \u0405\u0410\u0420"}
@@ -188,6 +197,50 @@ def test_summary_may_cite_extra_atoms(ws, john_plan):
     john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind.accuracy"],
                             "text": "Warehouse supervisor with 9 years in distribution; raised pick accuracy to 99.6%."}
     assert check(ws, john_plan).ok
+
+
+# Issue #90: the summary was checked as one line against all its cites, so a
+# sentence could credit one employer with another's figure (D-40).
+def test_summary_credits_employer_a_with_employer_bs_figure(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
+                            "text": "At Northwind Distribution, reduced produce shrink 18%."}
+    expect(check(ws, john_plan),
+           'summary, "At Northwind Distribution, reduced produce shrink..." '
+           "(names 'Northwind Distribution'): the figure 18% is not in the facts")
+
+
+def test_summary_names_each_employer_with_its_own_figures(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside.shrink", "northwind.accuracy"],
+        "text": "At Northwind Distribution I raised pick accuracy to 99.6%. "
+                "At Lakeside Grocery Co-op I reduced produce shrink 18%."}
+    assert check(ws, john_plan).ok
+
+
+def test_summary_sentence_naming_no_employer_uses_all_its_cites(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
+        "text": "I work at Northwind Distribution. I reduced produce shrink 18%."}
+    assert check(ws, john_plan).ok
+
+
+def test_summary_two_employers_in_one_sentence_warns(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside", "northwind"],
+        "text": "Supervisor at Lakeside Grocery Co-op and then Northwind Distribution."}
+    rep = check(ws, john_plan)
+    assert any(w.startswith('summary, "Supervisor at Lakeside Grocery Co-op and...": '
+                            "names 2 employers") for w in rep.warnings), rep.warnings
+
+
+def test_summary_in_the_users_own_words_is_not_scoped(ws, john_plan):
+    # The user confirmed this summary as written; 9 years spans both jobs.
+    add_atoms(ws, '[[summary]]\nid = "summary.own"\n'
+                  'text = "Supervisor at Northwind Distribution with 9 years in operations."\n')
+    john_plan["summary"] = {"atom": "summary.own", "cites": ["northwind"]}
+    assert check(ws, john_plan).ok
+    john_plan["summary"]["text"] = "Supervisor at Northwind Distribution for 9 years."
+    expect(check(ws, john_plan), "(names 'Northwind Distribution'): the figure 9")
 
 
 def test_voice_rules_apply_to_rewordings_only(ws, john_plan):
@@ -362,6 +415,42 @@ def test_letter_two_employers_in_one_sentence_warns(ws, john_plan):
     letter_body(john_plan, "I worked at Lakeside Grocery Co-op and then Northwind Distribution.")
     rep = check(ws, john_plan)
     assert any("names 2 employers" in w for w in rep.warnings)
+
+
+# Issue #93: letter errors numbered sentences across hook, body, and close
+# together ("cover_letter sentence 2"). They name the part and quote the start.
+def test_letter_error_names_the_part_and_quotes_the_sentence(ws, john_plan):
+    letter_body(john_plan, "I lead a team of 14. I cut overtime 40% at my current job.")
+    rep = check(ws, john_plan)
+    expect(rep, 'cover_letter body, "I cut overtime 40% at my...": '
+                "the figure 40% is not in the facts")
+    assert not any("sentence" in e for e in rep.errors), rep.errors
+
+
+@pytest.mark.parametrize("part", ["hook", "close"])
+def test_letter_error_in_hook_or_close_names_that_part(ws, john_plan, part):
+    john_plan["cover_letter"][part] = "I saved $1M."
+    expect(check(ws, john_plan), f'cover_letter {part}, "I saved $1M.": the figure')
+
+
+def test_letter_error_counts_sentences_within_its_own_paragraph(ws, john_plan):
+    # A paragraph that ends without a stop is still its own sentence.
+    letter_body(john_plan, "Hello there\n\nI saved $1M.")
+    expect(check(ws, john_plan), 'cover_letter body, "I saved $1M.": the figure')
+
+
+def test_letter_employer_error_quotes_the_sentence(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At Northwind Distribution I reduced shrink 18% with rotation checks.")
+    expect(check(ws, john_plan), 'cover_letter body, "At Northwind Distribution I reduced '
+                                 "shrink...\" (names 'Northwind Distribution')")
+
+
+def test_letter_two_employers_warning_quotes_the_sentence(ws, john_plan):
+    letter_body(john_plan, "I worked at Lakeside Grocery Co-op and then Northwind Distribution.")
+    rep = check(ws, john_plan)
+    assert any(w.startswith('cover_letter body, "I worked at Lakeside Grocery Co-op...": '
+                            "names 2 employers") for w in rep.warnings), rep.warnings
 
 
 def test_meters_written_short_match_the_atom(ws, john_plan):

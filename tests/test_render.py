@@ -1,5 +1,7 @@
 import datetime as dt
 
+import pytest
+
 from jobforge.atoms import load_inventory
 from jobforge.docx import Block, Run
 from jobforge.plan import resolve
@@ -96,6 +98,22 @@ def test_working_copy_says_do_not_send(ws, john_plan):
     md = letter_markdown(resolved(ws, john_plan), JOB)
     assert md.startswith("# Cover letter (working copy, do not send)")
     assert "`northwind.accuracy`" in md
+
+
+# Issue #106: a posting captured with --from-text has no URL, and the working
+# copy printed an empty "_Posting: _" line.
+def test_working_copy_names_the_posting_url(ws, john_plan):
+    md = letter_markdown(resolved(ws, john_plan), JOB)
+    assert "_Posting: https://example.com/jobs/1_" in md
+
+
+@pytest.mark.parametrize("url", [None, "", "   "])
+def test_working_copy_leaves_out_an_empty_posting_line(ws, john_plan, url):
+    job = {**JOB, "url": url} if url is not None else {k: v for k, v in JOB.items() if k != "url"}
+    md = letter_markdown(resolved(ws, john_plan), job)
+    assert "Posting:" not in md
+    assert md.startswith("# Cover letter (working copy, do not send): Prairie Freight Co.")
+    assert "\n\n\n" not in md  # no blank line left where it was
 
 
 def test_page_estimate_grows_with_content():

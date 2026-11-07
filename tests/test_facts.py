@@ -99,6 +99,16 @@ def test_not_hedges(text):
     ("SAP", "used \u0405\u0410\u0420 daily", True),       # all Cyrillic
     ("Excel", "in \u0395xcel", True),                     # Greek capital epsilon
     ("Lakeside Grocery Co-op", "at Lakeside Gr\u043ecery Co-op", True),
+    # Issue #92 (audit A9): hyphens, slashes, and runs of spaces are one space.
+    ("Six Sigma Black Belt", "a Six Sigma Black-Belt", True),
+    ("Six Sigma Black Belt", "a Six Sigma Black/Belt", True),
+    ("Six Sigma Black Belt", "a Six Sigma  Black   Belt", True),
+    ("Six Sigma Black Belt", "a Six-Sigma Black\u2011Belt", True),  # non-breaking hyphen
+    ("Black-Belt", "a black belt holder", True),             # variant on the term side
+    ("CI/CD", "built CI CD pipelines", True),
+    ("Lakeside Grocery Co-op", "at Lakeside Grocery Co op", True),
+    ("Six Sigma Black Belt", "Six Sigma Black Belts", False),  # still whole words
+    ("Six Sigma Black Belt", "Six Sigma Blackbelt", False),    # joined is a different word
 ])
 def test_term_in(term, text, hit):
     assert term_in(term, text) is hit
