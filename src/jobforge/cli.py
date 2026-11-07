@@ -36,7 +36,9 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--title")
     s.add_argument("--location")
     s.add_argument("--url", help="the posting's URL, when using --from-text")
-    s.add_argument("--force", action="store_true", help="replace an existing job.json")
+    s.add_argument("--force", action="store_true",
+                   help="replace this same posting's job.json (same URL, or same company, "
+                        "title, and location); a different posting always gets its own folder")
 
     s = sub.add_parser("check", help="validate a job's plan.json without writing documents")
     s.add_argument("job", help="job folder name, or a unique part of it")
