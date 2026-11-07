@@ -1,4 +1,5 @@
 """The CLI end to end, the way a user (or their agent) runs it."""
+import datetime as _dt
 import json
 import shutil
 import subprocess
@@ -80,8 +81,9 @@ def test_full_flow(run, ws):
     assert code == 0 and "Check passed" in out
     code, out, _ = run("apply", "prairie")
     assert code == 0 and "John_Smith_Resume.docx" in out and "do not send" in out
-    code, out, _ = run("applied", "--mark", "prairie", "--status", "applied", "--date", "2026-11-21")
-    assert code == 0 and "applied on 2026-11-21" in out
+    today = _dt.date.today().isoformat()
+    code, out, _ = run("applied", "--mark", "prairie", "--status", "applied", "--date", today)
+    assert code == 0 and f"applied on {today}" in out
     code, out, _ = run("jobs")
     assert code == 0 and "Prairie Freight Co." in out
     code, out, _ = run("search", "--status", "prepared")
@@ -129,9 +131,37 @@ def test_prepare_from_stdin(run, monkeypatch, ws):
     assert code == 0, err
 
 
+def test_applied_future_date_exits_1(run, ws):
+    # Issue #34.
+    prepare_john(run)
+    code, _, err = run("applied", "--mark", "prairie", "--status", "applied", "--date", "2099-01-01")
+    assert code == 1 and "2099-01-01 is in the future" in err
+
+
+def test_applied_before_prepared_warns(run, ws):
+    prepare_john(run)
+    code, out, err = run("applied", "--mark", "prairie", "--status", "applied", "--date", "2020-01-01")
+    assert code == 0 and "applied on 2020-01-01" in out
+    assert "warning:" in err and "before this job was prepared" in err
+
+
 def test_applied_rejects_unknown_stage(run):
+    code, _, err = run("applied", "--mark", "x", "--status", "ghosted")
+    assert code == 1 and "Unknown stage 'ghosted'" in err and "prepared" not in err
+
+
+def test_applied_refuses_prepared(run, ws):
+    # Issue #35.
+    prepare_john(run)
+    code, _, err = run("applied", "--mark", "prairie", "--status", "prepared")
+    assert code == 1 and "recorded by `jobforge prepare`" in err
+
+
+def test_applied_help_lists_no_prepared(capsys):
     with pytest.raises(SystemExit):
-        run("applied", "--mark", "x", "--status", "ghosted")
+        main(["applied", "--help"])
+    help_text = capsys.readouterr().out
+    assert "applied, skipped, screen" in help_text and "prepared" not in help_text
 
 
 class FakeTerminal:
