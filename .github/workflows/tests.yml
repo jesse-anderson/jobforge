@@ -1,6 +1,8 @@
 # Tests only (D-15). Never scrapes, never runs on a schedule, never touches
-# the network from a test. On a private repo, Windows minutes bill at 2x, so
-# this runs on pushes to main and on pull requests, and cancels superseded runs.
+# the network from a test. Runs on pushes to main and on pull requests, and
+# cancels superseded runs. Ubuntu only while the repo is private, since
+# Windows minutes bill at 2x; add windows-latest back to the matrix at launch
+# (the public flip), when Actions minutes are free.
 name: tests
 
 on:
@@ -17,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
         python: ["3.11", "3.13"]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
