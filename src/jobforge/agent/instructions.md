@@ -185,6 +185,10 @@ an employer is never described as a personal project, and the reverse.
 - A bullet goes only under its own role. A cover-letter sentence that names
   an employer may only use that employer's facts.
 - Nothing from the never-claim list, and no tool the cited atoms do not show.
+  The check only knows the tools and credentials named somewhere in the
+  user's facts, so it cannot catch one it has never seen. Before `check`,
+  reread every line: each tool, license, certification, and acronym must
+  appear in an atom that line cites.
 - If you mention a project that has a URL, include the URL in full.
 - No hedged figures ("about 50%"), no atom ids in the letter.
 - Cover letter: at most {{cover_letter_max_words}} words{{dash_rule}}. Avoid
