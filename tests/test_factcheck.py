@@ -199,6 +199,50 @@ def test_summary_may_cite_extra_atoms(ws, john_plan):
     assert check(ws, john_plan).ok
 
 
+# Issue #90: the summary was checked as one line against all its cites, so a
+# sentence could credit one employer with another's figure (D-40).
+def test_summary_credits_employer_a_with_employer_bs_figure(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
+                            "text": "At Northwind Distribution, reduced produce shrink 18%."}
+    expect(check(ws, john_plan),
+           'summary, "At Northwind Distribution, reduced produce shrink..." '
+           "(names 'Northwind Distribution'): the figure 18% is not in the facts")
+
+
+def test_summary_names_each_employer_with_its_own_figures(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside.shrink", "northwind.accuracy"],
+        "text": "At Northwind Distribution I raised pick accuracy to 99.6%. "
+                "At Lakeside Grocery Co-op I reduced produce shrink 18%."}
+    assert check(ws, john_plan).ok
+
+
+def test_summary_sentence_naming_no_employer_uses_all_its_cites(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
+        "text": "I work at Northwind Distribution. I reduced produce shrink 18%."}
+    assert check(ws, john_plan).ok
+
+
+def test_summary_two_employers_in_one_sentence_warns(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside", "northwind"],
+        "text": "Supervisor at Lakeside Grocery Co-op and then Northwind Distribution."}
+    rep = check(ws, john_plan)
+    assert any(w.startswith('summary, "Supervisor at Lakeside Grocery Co-op and...": '
+                            "names 2 employers") for w in rep.warnings), rep.warnings
+
+
+def test_summary_in_the_users_own_words_is_not_scoped(ws, john_plan):
+    # The user confirmed this summary as written; 9 years spans both jobs.
+    add_atoms(ws, '[[summary]]\nid = "summary.own"\n'
+                  'text = "Supervisor at Northwind Distribution with 9 years in operations."\n')
+    john_plan["summary"] = {"atom": "summary.own", "cites": ["northwind"]}
+    assert check(ws, john_plan).ok
+    john_plan["summary"]["text"] = "Supervisor at Northwind Distribution for 9 years."
+    expect(check(ws, john_plan), "(names 'Northwind Distribution'): the figure 9")
+
+
 def test_voice_rules_apply_to_rewordings_only(ws, john_plan):
     add_atoms(ws, '[[bullet]]\nid = "northwind.robust"\nrole = "northwind"\n'
                   'text = "Built a robust receiving checklist"\nbasis = "records"\n')
