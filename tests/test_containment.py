@@ -157,3 +157,46 @@ def test_apply_and_applied_never_write_outside(ws, job_folder, outside):
     with pytest.raises(JobforgeError):
         run_check(ws, resolve_job(ws, str(outside)))
     assert sorted(p.name for p in outside.iterdir()) == ["job.json", "plan.json"]
+
+
+# The refusals above need real symlinks, which Windows only allows with
+# Developer Mode, so those tests skip there and the critical-path gate (D-51)
+# would fail on a standard Windows machine. These reach the same refusal code
+# on every OS by making the containment check say "outside" for one file.
+
+def leads_outside(monkeypatch, *names):
+    """Treat files with these names as resolving outside the workspace."""
+    from jobforge.workspace import Workspace
+    inside = Workspace.contains
+    monkeypatch.setattr(Workspace, "contains",
+                        lambda self, path: path.name not in names and inside(self, path))
+
+
+def test_check_inside_refuses_a_file_that_leads_outside(ws, monkeypatch):
+    leads_outside(monkeypatch, "profile.toml")
+    with pytest.raises(JobforgeError, match="profile/profile.toml links outside this workspace"):
+        ws.check_inside(ws.profile_dir / "profile.toml")
+
+
+def test_check_inside_names_a_path_outside_the_workspace_in_full(ws, outside, monkeypatch):
+    stray = outside / "notes.toml"
+    stray.write_text("", encoding="utf-8")
+    leads_outside(monkeypatch, "notes.toml")
+    with pytest.raises(JobforgeError) as exc:
+        ws.check_inside(stray)
+    assert str(stray) in exc.value.message
+
+
+def test_check_inside_allows_a_file_that_does_not_exist_yet(ws, monkeypatch):
+    leads_outside(monkeypatch, "new.toml")
+    ws.check_inside(ws.atoms_dir / "new.toml")  # nothing to follow yet
+
+
+def test_confirm_refuses_a_drafted_file_that_leads_outside(ws, monkeypatch):
+    add_atoms(ws, '[[skill]]\nid = "skills.x"\nlabel = "Tools"\nitems = ["Excel"]\n',
+              "away.toml", pending=True)
+    leads_outside(monkeypatch, "away.toml")
+    with pytest.raises(JobforgeError) as exc:
+        run_confirm(ws, ask=lambda q: "k", say=lambda s: None)
+    assert any("away.toml links outside this workspace" in d for d in exc.value.details)
+    assert not (ws.atoms_dir / CONFIRMED_FILE).exists()  # nothing was kept

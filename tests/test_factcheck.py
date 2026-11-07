@@ -600,3 +600,37 @@ def test_vocabulary_includes_skills_credentials_and_never_claim(ws):
     vocab = vocabulary(load_inventory(ws), load_profile(ws))
     for term in ("Manhattan WMS", "Excel", "OSHA 10-Hour General Industry", "SAP"):
         assert term in vocab
+
+
+# Issue #49: the remaining fact-check branches, each with the behavior it guards.
+def test_without_a_job_the_letter_cannot_quote_posting_figures(ws, john_plan):
+    # No job.json to trust: a figure only the posting states is not a fact.
+    letter_body(john_plan, "Your 6 cross-dock facilities sound like my work.")
+    expect(check(ws, john_plan, job=None), "the figure 6 is not in the facts")
+
+
+def test_a_plan_without_a_letter_gets_no_letter_errors(ws, john_plan):
+    from dataclasses import replace
+    from jobforge.factcheck import Report, check_letter
+    inv = load_inventory(ws)
+    resolved, errors, _ = resolve(john_plan, inv)
+    rep = Report()
+    check_letter(replace(resolved, letter=None), inv, load_profile(ws), [], rep, JOB)
+    assert errors == [] and rep.errors == [] and rep.warnings == []
+
+
+def test_bullet_whose_project_is_missing_counts_only_its_own_text(ws):
+    # The loader refuses a dangling project reference; the check still must
+    # not crash or borrow facts if it ever meets one.
+    from pathlib import Path
+    from jobforge.atoms import Atom, Inventory
+    from jobforge.factcheck import Report, _pool_text, check_letter
+    from jobforge.plan import Letter, ResolvedPlan
+    bullet = Atom("bullet", "x.b", {"id": "x.b", "project": "gone", "text": "Saved 12 hours",
+                                    "basis": "records"}, Path("x.toml"))
+    inv = Inventory({"x.b": bullet})
+    assert _pool_text([bullet], inv).strip() == "Saved 12 hours"
+    rep = Report()
+    plan = ResolvedPlan(letter=Letter("I saved 12 hours.", "", "", [bullet]))
+    check_letter(plan, inv, load_profile(ws), [], rep, None)
+    assert rep.errors == []

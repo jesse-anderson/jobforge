@@ -256,3 +256,21 @@ def test_listing_is_fast_at_hundreds_of_jobs(ws):
     rows = list_jobs(ws, today=TODAY)
     assert len(rows) == 300
     assert time.perf_counter() - start < 2.0
+
+
+def test_no_jobs_folder_lists_nothing(tmp_path):
+    # #49: a workspace whose jobs/ folder was deleted lists no jobs, no crash.
+    from jobforge.ledger import job_folders
+    from jobforge.workspace import init_workspace
+    ws = init_workspace(tmp_path / "w")
+    ws.jobs_dir.rmdir()
+    assert job_folders(ws) == [] and list_jobs(ws, today=TODAY) == []
+
+
+def test_append_to_a_hand_edited_ledger_ending_in_a_blank_line(job_folder):
+    # #49: no extra blank lines pile up, and every event still reads back.
+    path = job_folder / "ledger.toml"
+    path.write_text(path.read_text(encoding="utf-8").rstrip("\n") + "\n\n", encoding="utf-8")
+    append_event(job_folder, "applied", TODAY)
+    assert "\n\n\n" not in path.read_text(encoding="utf-8")
+    assert [e.stage for e in read_events(job_folder)] == ["prepared", "applied"]

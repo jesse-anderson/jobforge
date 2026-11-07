@@ -43,7 +43,10 @@ These are the rules the maintainers already follow (`docs/MAINTAINING.md`):
   ```
   python -m coverage run -m pytest -q
   python -m coverage report --fail-under=95
+  python tools/critical_coverage.py
   ```
+  The last line holds the critical-path files (listed in `pyproject.toml`)
+  to 100%.
 - **Tests never touch the network.** Stub the fetch (see
   `tests/test_intake.py`).
 - **Standard library only** at runtime. No new dependencies (D-13).

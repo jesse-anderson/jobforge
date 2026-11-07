@@ -45,6 +45,7 @@ jobs:
           fi
           python -m coverage run -m pytest -q -rs
           python -m coverage report --fail-under=95
+          python tools/critical_coverage.py
 
   # Coverage badge (#48), the same shields.io endpoint file as linreg-core,
   # published to GitHub Pages instead of committed (D-48), with no token.

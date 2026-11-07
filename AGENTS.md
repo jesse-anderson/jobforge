@@ -14,8 +14,9 @@ Every change ships with tests, written in the same change. No exceptions for
 
 - Run: `python -m pytest` (works without installing; pytest finds `src/`).
 - Coverage: `python -m coverage run -m pytest && python -m coverage report`.
-  CI fails under 95%. Code on a D-30 critical path is held to 100%; mark its
-  tests `@pytest.mark.critical`.
+  CI fails under 95%. Code on a critical path (D-30, D-51; listed in
+  `pyproject.toml`) is held to 100% by `python tools/critical_coverage.py`;
+  mark its tests `@pytest.mark.critical`.
 - Tests never touch the network. Stub the fetch (see `tests/test_intake.py`).
 - A bug fix starts with a test that fails without the fix.
 - New fact-check rules get a planted-violation test and a clean-passes test.
@@ -29,10 +30,12 @@ and paste the result into the PR description:
 ```
 python -m coverage run -m pytest -q
 python -m coverage report --fail-under=95
+python tools/critical_coverage.py
 ```
 
 Paste the pytest summary line (passed, skipped, failed) and the coverage
-TOTAL line. Do not push a branch with a failing test or coverage under 95%.
+TOTAL line. Do not push a branch with a failing test, coverage under 95%, or
+a critical-path file under 100% (the list is in `pyproject.toml`).
 CI runs Ubuntu only while the repo is private, so this local run is the only
 Windows check a change gets.
 

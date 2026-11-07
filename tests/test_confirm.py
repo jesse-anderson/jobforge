@@ -243,3 +243,26 @@ def test_review_shows_every_schema_field(kind):
             continue
         shown = value[0] if isinstance(value, list) else value
         assert shown in text, (key, text)
+
+
+def test_keeping_into_a_file_ending_in_a_blank_line(ws):
+    # #49: appending adds no extra blank lines.
+    live = ws.atoms_dir / CONFIRMED_FILE
+    live.write_text("# Facts you confirmed.\n\n", encoding="utf-8")
+    add_atoms(ws, '[[skill]]\nid = "skill.extra"\nlabel = "Extra"\nitems = ["Excel"]\n',
+              "d.toml", pending=True)
+    run_confirm(ws, ask=script("k"), say=quiet)
+    assert "\n\n\n" not in live.read_text(encoding="utf-8")
+    assert load_inventory(ws).get("skill.extra") is not None
+
+
+def test_refused_project_gets_no_bullet_advice(ws):
+    # #49: a project whose context role does not exist is refused; the
+    # "keep the role first" hint is only for bullets.
+    add_atoms(ws, '[[project]]\nid = "ghost.tool"\ntitle = "Tool"\ncontext = "ghost"\n',
+              "d.toml", pending=True)
+    said = []
+    out = run_confirm(ws, ask=script("k"), say=said.append)
+    shown = "\n".join(said)
+    assert out.refused == ["ghost.tool"] and "Cannot keep this yet" in shown
+    assert "Keep or add the role it belongs to first" not in shown

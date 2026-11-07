@@ -49,3 +49,16 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
+
+# Critical paths (D-30, D-51): held to 100% line and branch coverage by
+# `python tools/critical_coverage.py`, in CI and before every push.
+[tool.jobforge]
+critical = [
+    "workspace.py", "profile.py", "agent/__init__.py",   # setup
+    "extract.py", "prepare.py",                          # job intake
+    "plan.py",                                           # plan validation
+    "render.py", "docx.py",                              # rendering
+    "scan.py", "factcheck.py", "facts.py", "apply.py",   # safety
+    "ledger.py", "importer.py",                          # ledger
+    "confirm.py",                                        # facts going live
+]

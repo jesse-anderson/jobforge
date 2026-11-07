@@ -43,17 +43,16 @@ class Report:
         self.warnings.extend(other.warnings)
 
 
-def _pool_text(atoms: list[Atom], inv: Inventory, *, with_owner_role: bool = True) -> str:
+def _pool_text(atoms: list[Atom], inv: Inventory) -> str:
     """All text the cited atoms state, plus the role each belongs to (a bullet
     may mention its own employer, title, and dates)."""
     texts: list[str] = []
     seen: set[str] = set()
     for atom in atoms:
         chain = [atom]
-        if with_owner_role:
-            role = inv.owner_role(atom)
-            if role:
-                chain.append(role)
+        role = inv.owner_role(atom)
+        if role:
+            chain.append(role)
         if atom.kind == "bullet" and atom.get("project"):
             proj = inv.get(atom.get("project"))
             if proj:

@@ -111,3 +111,34 @@ def test_letter_paragraphs_join_wrapped_lines(ws, john_plan):
     john_plan["cover_letter"]["body"] = "Line one\ncontinues here.\n\nSecond para."
     out, errors, _ = run(ws, john_plan)
     assert out.letter.paragraphs()[1:3] == ["Line one continues here.", "Second para."]
+
+
+# Issue #49: the remaining plan branches, each with the behavior it guards.
+def test_letter_paragraphs_skip_blank_ones():
+    from jobforge.plan import Letter
+    letter = Letter("Hook.\n\n\n\nMore hook.", "Body.", "Close.", [])
+    assert letter.paragraphs() == ["Hook.", "More hook.", "Body.", "Close."]
+
+
+def test_unknown_summary_atom_is_an_error_and_no_summary(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.nope"}
+    resolved, errors, _ = resolve(john_plan, load_inventory(ws))
+    assert any("summary.atom" in e and "summary.nope" in e for e in errors), errors
+    assert resolved.summary is None
+
+
+def test_fit_is_optional(ws, john_plan):
+    del john_plan["fit"]
+    resolved, errors, _ = resolve(john_plan, load_inventory(ws))
+    assert errors == [] and not resolved.fit
+
+
+def test_binding_error_names_a_missing_owner():
+    # A dangling owner (refused by the loader) still yields a readable message.
+    from pathlib import Path
+    from jobforge.atoms import Atom, Inventory
+    from jobforge.plan import _binding_error
+    bullet = Atom("bullet", "x.b", {"id": "x.b", "role": "gone"}, Path("x.toml"))
+    head = Atom("role", "acme", {"id": "acme", "employer": "Acme"}, Path("x.toml"))
+    msg = _binding_error("experience[0]", bullet, head, Inventory({"x.b": bullet, "acme": head}))
+    assert "belongs to nothing, not role 'acme' (Acme)" in msg
