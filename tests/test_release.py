@@ -76,3 +76,15 @@ def test_a_pre_release_reaches_pypi_only_after_testpypi():
     assert "needs.build.outputs.target == 'pypi'" in pypi  # finals skip TestPyPI
     testpypi = WORKFLOW.split("\n  testpypi:\n", 1)[1].split("steps:", 1)[0]
     assert "'both'" in testpypi and "'testpypi'" in testpypi
+
+
+def test_maintaining_says_how_to_release():
+    # #54: the release steps are written down for maintainers.
+    text = (REPO / "docs" / "MAINTAINING.md").read_text(encoding="utf-8")
+    steps = " ".join(text.split("## Releasing", 1)[1].split("\n## ", 1)[0].split())
+    for needle in ("git push origin vX.Y.Z", "tools/release_check.py", "TestPyPI",
+                   "can never be reused", "pip install jobforge==X.Y.Z",
+                   "pipx install jobforge==X.Y.Z"):
+        assert needle in steps, needle
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    assert "not on PyPI yet" not in readme  # a candidate is there (#54)

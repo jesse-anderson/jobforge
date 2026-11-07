@@ -220,7 +220,7 @@ def test_summary_names_each_employer_with_its_own_figures(ws, john_plan):
 def test_summary_sentence_naming_no_employer_uses_all_its_cites(ws, john_plan):
     john_plan["summary"] = {
         "atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
-        "text": "I work at Northwind Distribution. I reduced produce shrink 18%."}
+        "text": "I reduced produce shrink 18%. I work at Northwind Distribution."}
     assert check(ws, john_plan).ok
 
 
@@ -352,6 +352,57 @@ def test_letter_two_employers_warning_quotes_the_sentence(ws, john_plan):
     rep = check(ws, john_plan)
     assert any(w.startswith('cover_letter body, "I worked at Lakeside Grocery Co-op...": '
                             "names 2 employers") for w in rep.warnings), rep.warnings
+
+
+# Issue #83 item 3 (audit A11): a sentence that names no employer carries the
+# last one named earlier in its paragraph, so "There I also..." cannot take
+# another employer's fact.
+def test_letter_sentence_carries_the_employer_named_before_it(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At Northwind Distribution I lead 14 associates. "
+                           "There I also reduced produce shrink 18%.")
+    expect(check(ws, john_plan), 'cover_letter body, "There I also reduced produce shrink..." '
+                                 "(follows 'Northwind Distribution'): the figure 18%")
+
+
+def test_carried_sentence_may_use_facts_that_belong_to_no_employer(ws, john_plan):
+    # Skills, credentials, and personal projects are no employer's: the nurse
+    # persona's "I chart in Epic" after a hospital sentence must pass.
+    letter_body(john_plan, "At Northwind Distribution I lead 14 associates. "
+                           "I also built a shift scheduling template that 40 small "
+                           "businesses use (example.com/shift-scheduler).", keep_project=True)
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+@pytest.mark.parametrize("text", [
+    # A new paragraph starts fresh.
+    "At Northwind Distribution I lead 14 associates.\n\nI also reduced produce shrink 18%.",
+    # Naming the other employer again is the fix the agent makes.
+    "At Northwind Distribution I lead 14 associates. "
+    "At Lakeside Grocery Co-op I reduced produce shrink 18%.",
+    # Two employers in one sentence: nothing single to carry.
+    "I worked at Lakeside Grocery Co-op and then Northwind Distribution. "
+    "I reduced produce shrink 18%.",
+])
+def test_letter_carry_forward_stops_where_it_should(ws, john_plan, text):
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, text)
+    rep = check(ws, john_plan)
+    assert rep.ok, rep.errors
+
+
+def test_letter_sentence_about_the_employer_carries_nothing(ws, john_plan):
+    letter_body(john_plan, "At Northwind Distribution I lead 14 associates. "
+                           "Your team of 20 needs a steady second shift.")
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+def test_summary_sentence_carries_the_employer_named_before_it(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside.shrink", "northwind.accuracy"],
+        "text": "At Northwind Distribution I raised pick accuracy to 99.6%. "
+                "I also reduced produce shrink 18%."}
+    expect(check(ws, john_plan), "(follows 'Northwind Distribution'): the figure 18%")
 
 
 def test_meters_written_short_match_the_atom(ws, john_plan):
@@ -668,11 +719,12 @@ def test_letter_dashes_allowed_when_profile_says_so(ws, john_plan):
 
 # Issue #88 (audit A12): the dash ban caught only the em and en dash.
 OTHER_DASHES = [("‒", "figure dash"), ("―", "horizontal bar"),
-                ("−", "minus sign"), ("⸺", "two-em dash"),
+                ("⸺", "two-em dash"),
                 ("⸻", "three-em dash"), ("﹘", "small em dash"),
                 ("︱", "presentation form for vertical em dash")]
 UNICODE_HYPHENS = [("‐", "hyphen"), ("‑", "non-breaking hyphen"),
-                   ("－", "fullwidth hyphen-minus"), ("﹣", "small hyphen-minus")]
+                   ("－", "fullwidth hyphen-minus"), ("﹣", "small hyphen-minus"),
+                   ("−", "minus sign")]  # #114: "−20%" wants a hyphen, not a comma
 
 
 def dash_bullet(john_plan, ch):
@@ -865,3 +917,12 @@ def test_hidden_character_cannot_slip_a_never_claim_term_past_check(ws, john_pla
     john_plan["experience"][0]["bullets"][2] = {
         "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using S​AP"}
     expect(check(ws, john_plan), "hidden character: zero-width space")
+
+
+def test_a_minus_sign_in_a_figure_asks_for_a_plain_hyphen(ws, john_plan):
+    # #114: "Use a comma, colon, or period" is wrong advice for "−5°C".
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime \u221225% by rebuilding the shift schedule"}
+    rep = check(ws, john_plan)
+    expect(rep, "contains a minus sign (\u2212, U+2212). Type a plain hyphen (-) instead.")
+    assert not any("comma" in e for e in rep.errors if "U+2212" in e)

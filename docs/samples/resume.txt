@@ -1,0 +1,24 @@
+John Smith
+john.smith@example.com | 555-0100 | Springfield, IL | example.com/johnsmith
+Summary
+Warehouse supervisor with 9 years in distribution and grocery operations, focused on accuracy, safety, and schedules that fit the work.
+Experience
+Warehouse Supervisor | Northwind Distribution | Springfield, IL | Apr 2020 to Present
+• Raised order pick accuracy from 97.2% to 99.6% by introducing scan-to-confirm on every pick
+• Lead 14 associates across two shifts in receiving, picking, and shipping
+• Cut weekly overtime 25% by rebuilding the shift schedule around inbound truck times
+• Ran 2 years without a recordable injury after starting weekly 10-minute safety huddles
+Shift Lead | Lakeside Grocery Co-op | Springfield, IL | Jun 2016 to Mar 2020
+• Reduced produce shrink 18% by moving to twice-daily rotation checks
+• Trained 30 new cashiers and stockers on opening and closing procedures
+Projects
+Shift Scheduler | example.com/shift-scheduler | A free spreadsheet template for building fair rotating shift schedules
+• Built a shift scheduling spreadsheet in Google Sheets now used by 40 small businesses
+Skills
+Warehouse: Manhattan WMS, RF scanners, Cycle counting, Forklift
+Office: Excel, Google Sheets
+Credentials
+• Forklift Operator Certification | 2020
+• OSHA 10-Hour General Industry | OSHA Training Institute | 2021
+Education
+Harper Community College | Associate of Applied Science, Business Management | Palatine, IL | 2016

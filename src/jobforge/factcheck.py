@@ -180,7 +180,8 @@ def check_voice(text: str, profile: Profile, where: str, rep: Report) -> None:
         for ch in sorted(set(text) & _DASHES.keys(), key=text.index):
             name = _DASHES[ch]
             article = "an" if name[0] in "aeiou" else "a"
-            fix = ("Type a plain hyphen (-) instead." if "hyphen" in name
+            # A minus sign stands for a hyphen-minus ("-20%"), not a pause (#114).
+            fix = ("Type a plain hyphen (-) instead." if "hyphen" in name or "minus" in name
                    else "Use a comma, colon, or period.")
             rep.errors.append(f"{where}: contains {article} {name} "
                               f"({ch}, U+{ord(ch):04X}). {fix}")
@@ -229,19 +230,29 @@ def live_url(atom: Atom) -> str | None:
 
 def check_sentence(sentence: str, figures: str, cites: list[Atom], pool: str,
                    inv: Inventory, profile: Profile, vocab: list[str], where: str,
-                   rep: Report, posting: str = "", company: str = "") -> None:
+                   rep: Report, posting: str = "", company: str = "",
+                   carried: dict[str, str] | None = None) -> dict[str, str]:
     """A sentence that names one employer may use only that employer's facts
-    (D-40). One that names none may use any of `pool`, and the posting's
-    figures and tools only when it is about the employer (#83 item 1)."""
+    (D-40). One that names none carries `carried`, the employer the paragraph
+    named last (#83 item 3), unless it is about the employer it applies to:
+    it may not use another employer's facts, but skills, credentials, and
+    personal or volunteer work, which belong to no employer, stay allowed.
+    Otherwise it may use any of `pool`, and the posting's figures and tools
+    only when it is about the employer (#83 item 1). Returns what the next
+    sentence carries."""
     named = employers_named(sentence, inv)
+    how = "names"
+    if not named and carried and not about_the_employer(sentence, company):
+        named, how = carried, "follows"
     if len(named) == 1:
         (employer, written), = named.items()
-        bound = [a for a in cites if inv.employer_of(a) == employer]
+        allowed = {employer, None} if how == "follows" else {employer}
+        bound = [a for a in cites if inv.employer_of(a) in allowed]
         bound += inv.employers()[employer]
         scoped = _pool_text(bound, inv)
-        check_figures(figures, scoped, f"{where} (names {written!r})", rep)
-        check_terms(sentence, scoped, vocab, profile, f"{where} (names {written!r})", rep)
-        return
+        check_figures(figures, scoped, f"{where} ({how} {written!r})", rep)
+        check_terms(sentence, scoped, vocab, profile, f"{where} ({how} {written!r})", rep)
+        return named
     if len(named) > 1:
         rep.warnings.append(f"{where}: names {len(named)} employers "
                             f"({', '.join(named.values())}); check each figure is "
@@ -264,6 +275,9 @@ def check_sentence(sentence: str, figures: str, cites: list[Atom], pool: str,
     # What is left is checked as before; the posting no longer hides it twice.
     check_figures(figures, pool, where, rep, extra_pool=posting)
     check_terms(sentence, "\n".join([pool, posting]), vocab, profile, where, rep)
+    # Two employers in one sentence: nothing single to carry. A sentence about
+    # the employer keeps what came before it.
+    return {} if named else (carried or {})
 
 
 _ME = {"i", "i'm", "i've", "i'd", "i'll", "me", "my", "mine", "myself",
@@ -293,9 +307,11 @@ def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
     if line.where == "summary" and not own_words:
         # A reworded summary is prose: each sentence is scoped to the
         # employer it names, as in the letter (#90).
+        carried: dict[str, str] = {}
         for sentence in split_sentences(line.text):
-            check_sentence(sentence, sentence, line.cites, pool, inv, profile, vocab,
-                           f"{line.where}, \"{_opening(sentence)}\"", rep)
+            carried = check_sentence(sentence, sentence, line.cites, pool, inv, profile,
+                                     vocab, f"{line.where}, \"{_opening(sentence)}\"", rep,
+                                     carried=carried)
     else:
         check_figures(line.text, pool, line.where, rep)
         check_terms(line.text, pool, vocab, profile, line.where, rep)
@@ -309,11 +325,10 @@ def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
         check_voice(line.text, profile, line.where, rep)
 
 
-def _letter_sentences(letter) -> list[tuple[str, str]]:
-    """Each sentence with the part it is in, split within its own paragraph."""
-    return [(part, sentence) for part in ("hook", "body", "close")
-            for para in letter.part_paragraphs(part)
-            for sentence in split_sentences(para)]
+def _letter_sentences(letter) -> list[tuple[str, list[str]]]:
+    """Each paragraph's sentences with the part it is in."""
+    return [(part, split_sentences(para)) for part in ("hook", "body", "close")
+            for para in letter.part_paragraphs(part)]
 
 
 def _opening(sentence: str, words: int = 6) -> str:
@@ -369,10 +384,13 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
                           f"{profile.cover_letter_max_words} (profile setting "
                           f"cover_letter_max_words). Cut it down.")
 
-    for part, sentence in _letter_sentences(letter):
-        check_sentence(sentence, _strip_contact(sentence, profile), cites, pool, inv,
-                       profile, vocab, f"{where} {part}, \"{_opening(sentence)}\"", rep,
-                       posting, company)
+    for part, sentences in _letter_sentences(letter):
+        carried: dict[str, str] = {}  # a new paragraph starts fresh
+        for sentence in sentences:
+            carried = check_sentence(
+                sentence, _strip_contact(sentence, profile), cites, pool, inv, profile,
+                vocab, f"{where} {part}, \"{_opening(sentence)}\"", rep, posting, company,
+                carried)
 
     figures = number_tokens(_strip_contact(text, profile))
     own = set(number_tokens(facts))
