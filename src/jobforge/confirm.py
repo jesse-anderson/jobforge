@@ -11,6 +11,7 @@ kept (D-40).
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -22,6 +23,11 @@ from .errors import JobforgeError
 from .workspace import Workspace
 
 CONFIRMED_FILE = "confirmed.toml"
+
+NO_TERMINAL = ("`jobforge confirm` asks you about each drafted fact, so it needs a "
+               "terminal you can type in, and this one cannot take answers. An agent's "
+               "shell, or a `!` command inside an agent, cannot answer for you. Open a "
+               "terminal window yourself and run:\n\n  cd \"{root}\"\n  jobforge confirm")
 
 
 @dataclass
@@ -89,6 +95,7 @@ def _rewrite_pending(path: Path, remaining: list[Atom]) -> None:
 
 def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
                 say: Callable[[str], None] | None = None) -> Outcome:
+    interactive = ask is not None or (sys.stdin is not None and sys.stdin.isatty())
     ask = ask or input
     say = say or print
     confirmed = load_inventory(ws)  # raises if confirmed atoms are broken
@@ -111,6 +118,8 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
                           f"confirmed atom. Rename one of them.")
     if errors:
         raise JobforgeError("Cannot confirm:", errors)
+    if not interactive:
+        raise JobforgeError(NO_TERMINAL.format(root=ws.root))
 
     order = sorted(pending, key=lambda a: CONFIRM_ORDER.index(a.kind))
     live = dict(confirmed.atoms)
@@ -135,7 +144,12 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
             say("")
             continue
         while True:
-            answer = ask("  Keep this fact? [k/d/s/q] ").strip().lower()[:1]
+            try:
+                answer = ask("  Keep this fact? [k/d/s/q] ").strip().lower()[:1]
+            except EOFError:
+                say("\n  Input ended, so confirm stopped here. Your answers so far are "
+                    "saved; the rest stay in profile/pending/.")
+                answer = "q"
             if answer in ("k", "d", "s", "q"):
                 break
             say("  Please answer k, d, s, or q.")
