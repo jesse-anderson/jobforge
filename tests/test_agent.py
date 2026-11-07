@@ -151,6 +151,12 @@ def test_instructions_say_the_check_misses_unknown_tools():
     assert "cannot catch one it has never seen" in source_text()
 
 
+def test_instructions_explain_posting_figures():
+    # Issue #16: the agent knows what the refusal and the warning mean.
+    text = source_text()
+    assert "saved as the whole page: `check`" in text and "show the user" in text
+
+
 def test_instructions_say_units_are_never_converted():
     # Issue #10: the check catches a swapped unit; the agent is told first.
     assert "units included: never convert" in source_text()
