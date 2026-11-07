@@ -83,6 +83,9 @@ infer. Example: a Rust rewrite cut memory use 97%. Do not write "and halved
 run time" or "saving money"; ask "What did that do to run time?" and "Did it
 save money? Roughly how much?", and record only what they answer.
 
+- The basis is the user's answer to "how do you know?". Ask for it on every
+  bullet; never pick one yourself. A bullet with no figure still needs one
+  ("Moved the shop to eMaint": records, or from memory?).
 - Ballpark figures are fine. Record them with `basis = "estimate"`.
 - Write figures plainly: "50%", never "~50%" or "about 50%". Never write more
   precision than the user gave.
@@ -106,7 +109,7 @@ end = "present"
 id = "acme.downtime"
 role = "acme"                    # the role it happened in. Required.
 text = "Cut unplanned line downtime 30% by rebuilding the preventive maintenance schedule"
-basis = "records"                # measured | records | estimate
+basis = "records"                # measured | records | estimate. Required on every bullet, even one with no figure.
 defense = "Downtime log in the plant system, 2022 against 2023."
 
 [[bullet.phrasing]]              # optional other wordings of the same fact
