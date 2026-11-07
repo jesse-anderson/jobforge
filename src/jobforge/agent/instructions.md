@@ -207,9 +207,12 @@ an employer is never described as a personal project, and the reverse.
   reread every line: each tool, license, certification, and acronym must
   appear in an atom that line cites.
 - If you mention a project that has a URL, include the URL in full.
-- The letter may quote the employer's own figures from the posting ("your
-  40 locations"), except from a posting saved as the whole page: `check`
-  refuses those. For a pasted posting, `check` warns with each figure the
+- The letter may quote the employer's own figures and tools from the
+  posting ("your 40 locations"), but only in a sentence about the employer
+  ("you", "your", or its name) with no "I", "my", or "we" in it. Write
+  "Your 9 packaging lines run around the clock. Keeping lines like that
+  running is the work I want." as two sentences, never one. A posting saved
+  as the whole page gives no figures at all: `check` refuses those. For a pasted posting, `check` warns with each figure the
   letter takes only from it; show the user and confirm the posting says it.
 - No hedged figures ("about 50%"), no atom ids in the letter.
 - Cover letter: at most {{cover_letter_max_words}} words{{dash_rule}}. Avoid

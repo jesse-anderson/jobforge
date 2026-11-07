@@ -113,6 +113,10 @@ All of it is code. None of it depends on the agent behaving.
 - A bullet renders only under its own role. A sentence in the cover letter
   that names an employer carries only facts from that employer's atoms or the
   profile (D-40).
+- The posting's figures and tools appear in the letter only in a sentence
+  about the employer ("you", "your", or its name) with no "I", "my", or
+  "we": "Your 6 sites" passes, "I bring 20 years" does not when only the
+  posting says 20 (#83).
 - No hedged figures ("~50%", "about 50%", "roughly") and no precision beyond
   the basis ("49.7%" from an estimate of "half") (D-37).
 - Nothing on the profile's never-claim list.
@@ -148,8 +152,10 @@ deliverable still matter.
 - **Pronouns.** A sentence that refers back to an employer without naming it
   ("There I also...") is checked against every cited fact, not only that
   employer's (#83, #90).
-- **The posting's figures in the letter.** A letter sentence that names no
-  employer may use the posting's figures and tools (#83).
+- **The posting's figures in the letter.** A sentence about the employer
+  that also claims something for the user without "I", "my", or "we"
+  ("Your team of 20 would get a lead with 20 years on the floor") may still
+  quote the posting (#83).
 - **Some hedges pass:** "close to 25%", "25%+" (#91).
 
 ### What the ledger records
