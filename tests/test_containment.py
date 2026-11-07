@@ -310,3 +310,48 @@ def test_init_refresh_refuses_an_agent_file_that_leads_outside(ws, monkeypatch):
     with pytest.raises(JobforgeError, match="AGENTS.md links outside this workspace"):
         refresh_workspace(ws.root)
     assert (ws.root / "AGENTS.md").read_bytes() == before
+
+
+# --- #100: an import rerun reuses an empty leftover folder (#78), never one
+# that links out ------------------------------------------------------------
+
+IMPORT_ROW = "company,title,applied\nAcme,Clerk,2026-09-10\n"
+
+
+def first_folder(ws):
+    from jobforge.importer import plan_import
+    return plan_import(ws, IMPORT_ROW, today=TODAY).rows[0].folder
+
+
+def test_import_never_reuses_an_empty_folder_linked_out(ws, outside):
+    from jobforge.importer import import_csv
+    name = first_folder(ws)
+    ws.jobs_dir.mkdir(exist_ok=True)
+    link(outside, ws.jobs_dir / name)  # empty, like a leftover, but outside
+    plan = import_csv(ws, IMPORT_ROW, write=True, today=TODAY)
+    assert list(outside.iterdir()) == []
+    assert plan.rows[0].folder == f"{name}__2"
+    assert (ws.jobs_dir / f"{name}__2" / "job.json").exists()
+
+
+def test_import_treats_a_folder_leading_outside_as_taken(ws, monkeypatch):
+    from jobforge.importer import import_csv
+    name = first_folder(ws)
+    (ws.jobs_dir / name).mkdir(parents=True)
+    leads_outside(monkeypatch, name)
+    plan = import_csv(ws, IMPORT_ROW, write=True, today=TODAY)
+    assert plan.rows[0].folder == f"{name}__2"
+    assert list((ws.jobs_dir / name).iterdir()) == []
+
+
+def test_import_checks_every_folder_before_writing_any(ws, monkeypatch):
+    # A folder that becomes a link out between plan and write stops the
+    # whole import before anything is written.
+    from jobforge.importer import plan_import, write_import
+    plan = plan_import(ws, IMPORT_ROW, today=TODAY)
+    name = plan.rows[0].folder
+    (ws.jobs_dir / name).mkdir(parents=True)
+    leads_outside(monkeypatch, name)
+    with pytest.raises(JobforgeError, match=f"{name} links outside this workspace"):
+        write_import(ws, plan)
+    assert list((ws.jobs_dir / name).iterdir()) == []

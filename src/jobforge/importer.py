@@ -150,8 +150,11 @@ def plan_import(ws: Workspace, text: str, *,
     by_key: dict[tuple, str] = {}
     imported: dict[str, Path] = {}  # "jobs/<name>" -> folder, for jobs an import made
     # A folder holding anything is taken. One an interrupted import left with
-    # nothing in it (or only an empty job.json) may be used again (#78).
-    taken = ({p.name for p in ws.jobs_dir.iterdir() if p.is_dir() and not _leftover(p)}
+    # nothing in it (or only an empty job.json) may be used again (#78), but
+    # never one that links out of the workspace: it is not looked into, and
+    # stays taken (#65).
+    taken = ({p.name for p in ws.jobs_dir.iterdir()
+              if p.is_dir() and not (ws.contains(p) and _leftover(p))}
              if ws.jobs_dir.is_dir() else set())
     for folder in job_folders(ws):
         if _leftover(folder):
@@ -249,6 +252,11 @@ def write_import(ws: Workspace, plan: ImportPlan) -> list[str]:
             f"them, then run the import again:",
             [f"line {r.line}: {r.message}" for r in errors])
     ws.check_inside(ws.jobs_dir)  # never create job folders through a link (#65)
+    # Nor write into one: a folder reused or finished here may have become a
+    # link out since the plan. Every one is checked before anything is written.
+    for row in plan.rows:
+        if row.action in ("new", "finish"):
+            ws.check_inside(ws.jobs_dir / row.folder)
     written = []
     for row in plan.rows:
         if row.action == "finish":  # an earlier import was cut short (#78)

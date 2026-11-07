@@ -399,3 +399,11 @@ def test_rerun_leaves_a_job_whose_ledger_it_cannot_read(ws):
     row = next(r for r in plan.rows if r.company == "Prairie Freight Co.")
     assert row.action == "duplicate"
     assert (folder / "ledger.toml").read_text(encoding="utf-8") == "[[event\n"
+
+
+def test_readme_says_a_rerun_finishes_and_adds_new_statuses():
+    # #100: FINISH also appears when a tracker row gained a status since the
+    # last import, not only after an interrupted run; the README says so.
+    readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
+    assert "finishes an import that was stopped partway" in readme
+    assert "adds a status a row has gained in your tracker since" in readme
