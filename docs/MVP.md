@@ -106,9 +106,10 @@ maintainer can do all of it on Windows or Linux from the README alone.
 
 All of it is code. None of it depends on the agent behaving.
 
-- Every number, percentage, money figure, date, duration, employer, title,
-  credential, and tool in a deliverable appears in a confirmed atom the plan
-  cites (D-32).
+- Every number, percentage, money figure, date, and duration written in
+  digits, and every employer, credential, and tool the inventory knows,
+  appears in a confirmed atom the plan cites (D-32). What this leaves out is
+  under "Known limits of the fact check" below.
 - A bullet renders only under its own role. A sentence in the cover letter
   that names an employer carries only facts from that employer's atoms or the
   profile (D-40).
@@ -126,6 +127,30 @@ All of it is code. None of it depends on the agent behaving.
   not block the render (FINDINGS F21).
 - Resume page fill is estimated against the profile's page limit and
   **warns**; it does not block until PDF gives a real page count.
+
+### Known limits of the fact check
+
+Found in the audit (#1), rechecked 2026-11-07. These pass `jobforge check`
+today, so the agent's instructions and the user's own read of each
+deliverable still matter.
+
+- **Figures written in words** ("thirty-five percent", "a team of forty",
+  "tripled") are not read as figures (#84).
+- **Job titles are not checked.** A line can carry another role's title or
+  an invented one (#89).
+- **Unknown names.** An employer, credential, or tool that appears nowhere in
+  the inventory or the never-claim list cannot be told apart from an ordinary
+  word, so it is not caught. Only names Jobforge already knows are checked.
+- **Short names and synonyms.** An employer written by a short name or an
+  abbreviation binds to its role only when recorded as an alias on the role
+  (#22). A synonym of a known term ("Postgres" for "PostgreSQL") is a
+  different term; hyphen and spacing variants are #92.
+- **Pronouns.** A sentence that refers back to an employer without naming it
+  ("There I also...") is checked against every cited fact, not only that
+  employer's (#83, #90).
+- **The posting's figures in the letter.** A letter sentence that names no
+  employer may use the posting's figures and tools (#83).
+- **Some hedges pass:** "close to 25%", "25%+" (#91).
 
 ### What the ledger records
 
