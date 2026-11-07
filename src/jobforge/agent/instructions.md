@@ -32,7 +32,7 @@ fix the plan or ask the user to fix a fact, then run `jobforge apply` again.
 | Command | What it does |
 |---|---|
 | `jobforge inventory` | Print every confirmed fact, with ids. Read this before writing a plan. |
-| `jobforge confirm` | The user reviews drafted facts (interactive; ask the user to run it). |
+| `jobforge confirm` | The user reviews drafted facts, one question each. The user runs it in their own terminal; never you. |
 | `jobforge prepare --from-url <url>` | Capture a posting into a new job folder. |
 | `jobforge prepare --from-text <file or -> --company "..." --title "..."` | Same, from pasted text. |
 | `jobforge check <job>` | Validate plan.json and run the fact check. Writes only check.json. |
@@ -54,7 +54,15 @@ fix the plan or ask the user to fix a fact, then run `jobforge apply` again.
    held, and one `[[bullet]]` per achievement, each naming its role.
 4. Where an old resume is unclear about which job something happened at (a
    skills list, a summary, merged roles), **ask**. Never guess an employer.
-5. Ask the user to run `jobforge confirm`.
+5. **A skills list is claims too.** Do not copy it over as it stands. Ask
+   which items the user would be comfortable being questioned on in an
+   interview, and what any broad item covers ("Electrical": wiring outlets,
+   or troubleshooting motor controls?). Narrow or drop what they cannot
+   back up, and offer to add it to `never_claim`.
+6. Ask the user to run `jobforge confirm` **in a terminal window of their
+   own**. It asks a question about every fact and needs typed answers, so it
+   cannot run through your shell, and a `!` command inside your session
+   cannot answer it either. Never suggest the `!` prefix for it.
 
 ## Asking for facts
 
@@ -154,6 +162,8 @@ an employer is never described as a personal project, and the reverse.
   "gaps": ["Requirements the atoms do not cover, for the user's eyes only"]
 }
 ```
+
+   `fit.score` is one of `strong`, `moderate`, `stretch`, or `wrong_shape`.
 
 3. `jobforge check <job>`. Fix every error it lists, and run it again until
    it passes.
