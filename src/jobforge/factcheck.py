@@ -22,7 +22,8 @@ import re
 from dataclasses import dataclass, field
 
 from .atoms import Atom, Inventory
-from .facts import find_hedges, number_tokens, split_sentences, term_in, word_count
+from .facts import (find_hedges, number_tokens, split_sentences, term_in, unit_figures,
+                    word_count)
 from .plan import Line, ResolvedPlan
 from .profile import Profile, display_url
 from .scan import find_mixed_script
@@ -92,7 +93,7 @@ def check_figures(text: str, pool: str, where: str, rep: Report, extra_pool: str
     # Each figure -> its most precise written form in the facts.
     have: dict = {}
     for tok in number_tokens(pool + "\n" + extra_pool):
-        if tok not in have or tok.places > have[tok].places:
+        if tok not in have or tok.step < have[tok].step:
             have[tok] = tok
     for tok in number_tokens(text):
         if tok not in have:
@@ -100,12 +101,24 @@ def check_figures(text: str, pool: str, where: str, rep: Report, extra_pool: str
                 f"{where}: the figure {tok} is not in the facts this line cites. "
                 f"Use a figure the atom states, or add the fact (with `jobforge "
                 f"confirm`) before using it.")
-        elif tok.places > have[tok].places:
-            # "76.00%" for a confirmed "76.0%" claims exactness the user never
-            # stated (D-37, #11). Fewer places ("76%") claims less, so passes.
+        elif tok.step < have[tok].step:
+            # "76.00%" for a confirmed "76.0%", or "$1,200,000" for "$1.2M",
+            # claims exactness the user never stated (D-37, #11). A coarser
+            # figure ("76%", "$1.2M" for "$1,200,000") claims less, so passes.
             rep.errors.append(
                 f"{where}: the figure {tok.shown} is more precise than the facts "
                 f"({have[tok].shown}). Write it as the atom does (D-37).")
+    # Same figure, other unit: "650,000 km" for an atom's "650,000 miles" is a
+    # different fact. Only units both sides write are compared (#10).
+    pool_units: dict[str, list] = {}
+    for uf in unit_figures(pool + "\n" + extra_pool):
+        pool_units.setdefault(uf.value, []).append(uf)
+    for uf in unit_figures(text):
+        stated = pool_units.get(uf.value, [])
+        if stated and uf.unit not in {s.unit for s in stated}:
+            rep.errors.append(
+                f"{where}: {uf.shown} changes the unit; the facts say {stated[0].shown}. "
+                f"Keep the unit the atom uses; never convert one unit to another.")
     for hedge in find_hedges(text):
         rep.errors.append(f"{where}: hedged figure {hedge!r}. State figures plainly "
                           f"('50%', not 'about 50%') (D-37).")

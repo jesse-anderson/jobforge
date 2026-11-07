@@ -298,6 +298,17 @@ def test_returning_planted_gap_explanation_is_refused(tmp_path):
     assert banned and all(p in banned[0] for p in ("career break", "caregiving", "return to work"))
 
 
+def test_engineer_short_unit_is_not_read_as_million(tmp_path):
+    """Issue #10: "0.003 m" used to read as 3,000 and match the fixture's
+    3,000 psi. A figure with a unit is now taken as written."""
+    ws, folder = setup(tmp_path, "engineer")
+    edit_plan(folder, lambda p: p["cover_letter"].update(
+        body="At Northfield I held a 0.003 m clearance on a pressure test fixture.",
+        cites=p["cover_letter"]["cites"] + ["northfield.fixture"]))
+    result = run_check(ws, folder)
+    assert any("the figure 0.003 is not in the facts" in e for e in result.errors), result.errors
+
+
 @pytest.mark.parametrize("name", ["Delta", "DPW", "Delta Pump Works"])
 def test_engineer_letter_short_employer_name_is_bound(tmp_path, name):
     """Issue #9 repro: Northfield's figures credited to Delta by its short
@@ -308,3 +319,22 @@ def test_engineer_letter_short_employer_name_is_bound(tmp_path, name):
         cites=p["cover_letter"]["cites"] + ["northfield.fixture"]))
     result = run_check(ws, folder)
     assert any(f"(names {name!r})" in e and "40" in e for e in result.errors), result.errors
+
+
+@pytest.mark.parametrize("text,ok", [
+    ("Drove 650,000 km in 48 states hauling dry van and reefer freight", False),
+    ("Drove 650,000 accident-free kilometers in 48 states", False),
+    ("Drove 650,000 miles in 48 states hauling dry van and reefer freight", True),
+    ("Drove 650,000 mi in 48 states without an accident", True),
+])
+def test_driver_miles_stay_miles(tmp_path, text, ok):
+    """Issue #10 repro: "650,000 miles" reworded as "650,000 km" used to pass."""
+    ws, folder = setup(tmp_path, "driver")
+    edit_plan(folder, lambda p: p["experience"][0]["bullets"].__setitem__(
+        0, {"atom": "redline.miles", "text": text}))
+    result = run_check(ws, folder)
+    if ok:
+        assert result.ok, result.errors
+    else:
+        assert any("changes the unit; the facts say 650,000 accident-free miles" in e
+                   for e in result.errors), result.errors

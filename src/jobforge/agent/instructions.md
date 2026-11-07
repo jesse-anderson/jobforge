@@ -186,7 +186,8 @@ an employer is never described as a personal project, and the reverse.
 ### Rules the check enforces
 
 - Every figure in a line must appear in an atom the line cites. A reworded
-  bullet keeps its atom's figures exactly.
+  bullet keeps its atom's figures exactly, units included: never convert or
+  swap a unit ("650,000 miles" stays miles, not km).
 - A bullet goes only under its own role. A cover-letter sentence that names
   an employer, by its full name or an alias, may only use that employer's
   facts.
