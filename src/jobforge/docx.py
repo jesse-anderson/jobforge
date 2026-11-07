@@ -30,6 +30,10 @@ class Block:
     kind: str  # "title" | "heading" | "para" | "bullet"
     runs: list[Run] = field(default_factory=list)
     align: str = "left"  # "left" | "center"
+    # Extra space in twentieths of a point. Normal has none, which keeps a
+    # resume tight; a letter's paragraphs need a line between them (#102).
+    space_before: int = 0
+    space_after: int = 0
 
     def text(self) -> str:
         return "".join(r.text for r in self.runs)
@@ -93,7 +97,12 @@ def _para_xml(block: Block, rels: list[tuple[str, str]]) -> str:
              "title": '<w:pStyle w:val="Title"/>'}.get(block.kind, "")
     ind = '<w:ind w:left="360" w:hanging="180"/>' if block.kind == "bullet" else ""
     align = '<w:jc w:val="center"/>' if block.align == "center" else ""
-    ppr = f"<w:pPr>{style}{align}{ind}</w:pPr>" if (style or ind or align) else ""
+    gap = ""
+    if block.space_before or block.space_after:
+        gap = (f'<w:spacing w:before="{block.space_before}" '
+               f'w:after="{block.space_after}"/>')
+    ppr = (f"<w:pPr>{style}{gap}{align}{ind}</w:pPr>"
+           if (style or gap or ind or align) else "")
 
     body = []
     if block.kind == "bullet":

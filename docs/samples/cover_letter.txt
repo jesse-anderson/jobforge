@@ -1,0 +1,11 @@
+John Smith
+john.smith@example.com | 555-0100 | Springfield, IL | example.com/johnsmith
+Nov 20, 2026
+Re: Operations Supervisor | Prairie Freight Co.
+Dear Prairie Freight Co. Hiring Team,
+Prairie Freight is hiring a second-shift supervisor to own accuracy and on-time dispatch, which is the job I do now at Northwind Distribution.
+At Northwind Distribution I lead 14 associates across receiving, picking, and shipping. I brought our pick accuracy from 97.2% to 99.6% by making every pick scan-to-confirm, and I cut weekly overtime 25% by building the schedule around inbound truck times.
+Safety is part of the routine for me. My team has gone 2 years without a recordable injury since we started weekly safety huddles. I also built a shift scheduling template that 40 small businesses use (example.com/shift-scheduler).
+I would like to talk about how your Springfield second shift runs today and where it needs to go.
+Sincerely,
+John Smith

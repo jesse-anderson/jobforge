@@ -1,7 +1,7 @@
 # Jobforge
 
 [![tests](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml/badge.svg)](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml)
-[![coverage](https://img.shields.io/endpoint?url=https://jesse-anderson.github.io/jobforge/coverage-badge.json)](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml)
+[![coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml)
 [![python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![license](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](https://github.com/jesse-anderson/jobforge/blob/main/LICENSE)
 [![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-lightgrey)](https://github.com/jesse-anderson/jobforge#what-you-need)
@@ -11,20 +11,35 @@ Turn your real work history into a resume and cover letter tailored to one
 job posting, on your own computer, for free, without the tool ever stating a
 fact you did not give it.
 
-**Status: pre-release.** It works end to end, but it is not on PyPI yet.
+**Status: pre-release.** It works end to end. A release candidate is on
+PyPI; the first full release, 0.1.0, comes with the public launch.
 
 - **Free and local.** Nothing runs on a server. Your AI coding agent (Claude
   Code first; Codex, Gemini CLI and others also work) does the writing, and
   Jobforge does everything else.
-- **No invented facts.** Every number, employer, tool, and credential in your
-  documents is checked against facts you confirmed. If your agent invents
-  one, Jobforge refuses to write the document.
+- **No invented facts.** Every number written in digits, and every employer,
+  tool, and credential Jobforge knows, is checked against facts you
+  confirmed. If your agent invents one, Jobforge refuses to write the
+  document. It does not catch everything yet, so read what it writes; see
+  the [known limits](https://github.com/jesse-anderson/jobforge/blob/main/docs/MVP.md#known-limits-of-the-fact-check).
 - **Built for applicant tracking systems.** It writes `.docx` files with no
   tables, columns, or hidden characters, then reads them back to prove what a
   parser will see.
 
 Source-available under [PolyForm Noncommercial 1.0.0](https://github.com/jesse-anderson/jobforge/blob/main/LICENSE): free for personal use
 and for nonprofits, schools, and public institutions. Not for commercial use.
+
+## What you get
+
+A one-page resume and cover letter for one posting, as `.docx` files. These
+are for John Smith, a made-up warehouse supervisor applying to a made-up
+operations job, built from the [sample data](https://github.com/jesse-anderson/jobforge/tree/main/fixtures/personas/john_smith)
+and shown as Word opens them. Every figure in them comes from a fact he
+confirmed.
+
+| Resume | Cover letter |
+|---|---|
+| [![John Smith's sample resume](https://github.com/jesse-anderson/jobforge/raw/main/docs/samples/resume.png)](https://github.com/jesse-anderson/jobforge/blob/main/docs/samples/resume.png) | [![John Smith's sample cover letter](https://github.com/jesse-anderson/jobforge/raw/main/docs/samples/cover_letter.png)](https://github.com/jesse-anderson/jobforge/blob/main/docs/samples/cover_letter.png) |
 
 ## What you need
 

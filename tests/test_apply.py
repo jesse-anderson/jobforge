@@ -84,7 +84,7 @@ def test_postings_own_en_dash_does_not_block(ws, job_folder):
 
 def test_hidden_character_in_an_atom_blocks_apply(ws, job_folder):
     add_atoms(ws, '[[bullet]]\nid = "northwind.zw"\nrole = "northwind"\n'
-                  'text = "Ran cycle​counts weekly"\nbasis = "records"\n')
+                  'text = "Ran cycle\u200bcounts weekly"\nbasis = "records"\n')
     edit_plan(job_folder, lambda p: p["experience"][0]["bullets"].append("northwind.zw"))
     with pytest.raises(JobforgeError) as exc:
         apply(ws, job_folder, today=TODAY)
@@ -172,7 +172,7 @@ def test_readback_failure_blocks_and_cleans_up(ws, job_folder, monkeypatch):
 
 
 def test_verify_readback_reports_missing_url_and_hidden():
-    rep = verify_readback("Line one here", ["Line one here", "Line two"],
+    rep = verify_readback("Line one\u00a0here", ["Line one here", "Line two"],
                           ["https://example.com/a"], "doc")
     assert any("non-breaking space" in e for e in rep.errors)
     assert any("Line two" in e for e in rep.errors)
@@ -249,6 +249,101 @@ def test_ctrl_c_during_the_swap_loses_nothing(ws, job_folder, monkeypatch, nth):
     assert not [p for p in job_folder.iterdir() if p.name.startswith(".jobforge-")]
 
 
+# Issue #64: if the rollback itself fails, the old documents must survive in
+# the temp folder, and the message must say where they are.
+def failing_swap(monkeypatch, folder, fail_place, fail_back=(), first=PermissionError):
+    """Placing new file `fail_place` raises `first`; moving any of `fail_back`
+    back from previous/ raises PermissionError (a scanner holding it)."""
+    real = apply_mod._move
+
+    def move(src, dst):
+        if dst == folder / fail_place and src.parent.name.startswith(".jobforge-"):
+            raise first(13, "Access is denied") if first is PermissionError else first()
+        if src.parent.name == "previous" and src.name in fail_back:
+            raise PermissionError(13, "Access is denied", str(src))
+        real(src, dst)
+    monkeypatch.setattr(apply_mod, "_move", move)
+
+
+def leftovers(folder):
+    return [p for p in folder.iterdir() if p.name.startswith(".jobforge-")]
+
+
+@pytest.mark.parametrize("first", [PermissionError, KeyboardInterrupt])
+def test_failed_rollback_keeps_the_old_documents_and_says_where(ws, job_folder,
+                                                                monkeypatch, first):
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    edit_plan(job_folder, lambda p: p["experience"][1].update(bullets=["lakeside.shrink"]))
+    resume, letter = "John_Smith_Resume.docx", "John_Smith_Cover_Letter.docx"
+    failing_swap(monkeypatch, job_folder, letter, fail_back={resume}, first=first)
+    with pytest.raises(JobforgeError) as exc:
+        apply(ws, job_folder, today=TODAY)
+    [tmp] = leftovers(job_folder)
+    previous = tmp / "previous"
+    # The old resume could not go back: it is still on disk, unchanged.
+    assert (previous / resume).read_bytes() == before[resume]
+    # Every other step was still tried: the other old files are back.
+    assert (job_folder / letter).read_bytes() == before[letter]
+    assert (job_folder / COVER_MD_NAME).read_bytes() == before[COVER_MD_NAME]
+    text = exc.value.render()
+    assert f"jobs/{job_folder.name}/{tmp.name}/previous" in text and resume in text
+    assert "Nothing was changed" not in text
+
+
+def test_failed_rollback_of_every_file_keeps_them_all(ws, job_folder, monkeypatch):
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    failing_swap(monkeypatch, job_folder, COVER_MD_NAME, fail_back=set(DELIVERABLES))
+    with pytest.raises(JobforgeError) as exc:
+        apply(ws, job_folder, today=TODAY)
+    assert "move them back" in exc.value.render()
+    [tmp] = leftovers(job_folder)
+    assert {n: (tmp / "previous" / n).read_bytes() for n in DELIVERABLES} == before
+
+
+def test_new_file_that_cannot_be_removed_is_reported(ws, job_folder, monkeypatch):
+    # First apply: no old files to protect. A new file placed before the
+    # failure cannot be taken out again; say so instead of "Nothing was changed".
+    resume, letter = "John_Smith_Resume.docx", "John_Smith_Cover_Letter.docx"
+    failing_swap(monkeypatch, job_folder, letter)
+    real_unlink = type(job_folder).unlink
+
+    def unlink(self, missing_ok=False):
+        if self == job_folder / resume:
+            raise PermissionError(13, "Access is denied", str(self))
+        real_unlink(self, missing_ok=missing_ok)
+    monkeypatch.setattr(type(job_folder), "unlink", unlink)
+    with pytest.raises(JobforgeError) as exc:
+        apply(ws, job_folder, today=TODAY)
+    text = exc.value.render()
+    assert resume in text and "Nothing was changed" not in text
+    assert (job_folder / resume).exists() and not (job_folder / letter).exists()
+    assert not leftovers(job_folder)  # nothing old to keep, so tmp is cleaned up
+
+
+def test_new_file_that_cannot_be_removed_is_replaced_by_the_old_one(ws, job_folder,
+                                                                     monkeypatch):
+    # Re-apply: the new resume cannot be deleted, but the old resume moving
+    # back replaces it, so the rollback is still clean.
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    edit_plan(job_folder, lambda p: p["experience"][1].update(bullets=["lakeside.shrink"]))
+    resume = "John_Smith_Resume.docx"
+    failing_swap(monkeypatch, job_folder, "John_Smith_Cover_Letter.docx")
+    real_unlink = type(job_folder).unlink
+
+    def unlink(self, missing_ok=False):
+        if self == job_folder / resume:
+            raise PermissionError(13, "Access is denied", str(self))
+        real_unlink(self, missing_ok=missing_ok)
+    monkeypatch.setattr(type(job_folder), "unlink", unlink)
+    with pytest.raises(JobforgeError, match="Nothing was changed"):
+        apply(ws, job_folder, today=TODAY)
+    assert snapshot(job_folder) == before
+    assert not leftovers(job_folder)
+
+
 @pytest.mark.skipif(__import__("sys").platform != "win32", reason="needs a real Windows lock")
 def test_real_windows_lock_changes_nothing(ws, job_folder):
     apply(ws, job_folder, today=TODAY)
@@ -273,3 +368,40 @@ def test_other_file_errors_roll_back_and_are_not_called_a_lock(ws, job_folder, m
     with pytest.raises(OSError, match="No space"):
         apply(ws, job_folder, today=TODAY)
     assert snapshot(job_folder) == before
+
+
+# Issue #102: the letter's paragraphs ran together with no space between
+# them (Normal has spacing after = 0, right for the resume, not a letter).
+def _paragraphs(docx_path):
+    import re
+    import zipfile
+    with zipfile.ZipFile(docx_path) as z:
+        xml = z.read("word/document.xml").decode("utf-8")
+    out = []
+    for p in re.findall(r"<w:p>(.*?)</w:p>", xml, re.S):
+        text = "".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", p))
+        after = re.search(r'<w:spacing[^>]*w:after="(\d+)"', p)
+        before = re.search(r'<w:spacing[^>]*w:before="(\d+)"', p)
+        out.append((text, int(after.group(1)) if after else 0,
+                    int(before.group(1)) if before else 0))
+    return out
+
+
+def test_letter_paragraphs_have_space_between_them(ws, job_folder):
+    apply(ws, job_folder, today=TODAY)
+    paras = _paragraphs(job_folder / "John_Smith_Cover_Letter.docx")
+    texts = [t for t, _, _ in paras]
+    start = texts.index("Nov 20, 2026")
+    body = paras[start:]
+    # Date, Re:, greeting, each paragraph, and "Sincerely," are followed by a
+    # line of space; the signed name is the end of the letter.
+    assert all(after > 0 for _, after, _ in body[:-1]), body
+    assert body[-1][0] == "John Smith" and body[-1][1] == 0
+    assert body[0][2] > 0  # the date stands apart from the contact header
+    assert len(body) >= 7  # date, Re, greeting, 3+ paragraphs, sign-off, name
+
+
+def test_resume_spacing_is_unchanged(ws, job_folder):
+    apply(ws, job_folder, today=TODAY)
+    paras = _paragraphs(job_folder / "John_Smith_Resume.docx")
+    assert paras and all(after == 0 and before == 0 for _, after, before in paras)

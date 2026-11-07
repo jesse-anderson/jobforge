@@ -1,4 +1,5 @@
 """The CLI end to end, the way a user (or their agent) runs it."""
+import codecs
 import datetime as _dt
 import json
 import shutil
@@ -87,7 +88,27 @@ def test_full_flow(run, ws):
     code, out, _ = run("jobs")
     assert code == 0 and "Prairie Freight Co." in out
     code, out, _ = run("search", "--status", "prepared")
-    assert "No jobs yet" in out
+    assert "No jobs match" in out  # #86: was "No jobs yet", with a job listed above
+
+
+# Issue #86 (audit A16): a status typo, or a filter that matches nothing, told
+# a user with jobs that they had none.
+def test_jobs_rejects_an_unknown_status_and_names_the_valid_ones(run, capsys):
+    prepare_john(run)
+    with pytest.raises(SystemExit) as exc:
+        main(["jobs", "--status", "aplied"])
+    err = capsys.readouterr().err
+    assert exc.value.code == 2 and "invalid choice: 'aplied'" in err
+    for status in ("applied", "ghosted", "unknown", "unreadable"):
+        assert status in err
+
+
+@pytest.mark.parametrize("args", [("--status", "offer"), ("--company", "Nowhere"),
+                                  ("forklift-free text that matches nothing",)])
+def test_jobs_says_no_jobs_match_when_a_filter_empties_the_list(run, args):
+    prepare_john(run)
+    code, out, _ = run("jobs", *args)
+    assert code == 0 and "No jobs match" in out and "No jobs yet" not in out
 
 
 def test_apply_with_a_locked_docx_exits_1_without_a_traceback(run, ws, monkeypatch):
@@ -205,6 +226,21 @@ def test_jobs_warns_about_a_broken_ledger_and_lists_the_rest(run, ws):
     assert f"warning: {folders[0].name}/ledger.toml is not valid TOML" in err
     assert all(f.name in out for f in folders)
     assert err.count("warning:") == 1
+
+
+# #72: a broken job.json is a warning naming the file, the same as a broken
+# ledger, and the job stays listed as unreadable.
+def test_jobs_warns_about_a_broken_job_json_and_lists_the_rest(run, ws):
+    run("import", str(SAMPLE_CSV), "--write")
+    folders = sorted(ws.jobs_dir.iterdir())
+    (folders[0] / "job.json").write_bytes(b'{"company": "Caf\xe9"}')
+    code, out, err = run("jobs")
+    assert code == 0
+    assert f"warning: {folders[0].name}/job.json is not UTF-8 text" in err
+    assert all(f.name in out for f in folders)
+    assert err.count("warning:") == 1
+    code, out, _ = run("jobs", "--status", "unreadable")
+    assert code == 0 and folders[0].name in out and folders[1].name not in out
 
 
 def test_jobs_works_with_a_starter_profile(tmp_path, monkeypatch, capsys):
@@ -326,6 +362,74 @@ def test_import_refuses_undecodable_bytes(run, tmp_path):
     csv_file.write_bytes(b"company,title,applied\n\x81\x8d,Clerk,2026-09-10\n")
     code, _, err = run("import", str(csv_file))
     assert code == 1 and "CSV UTF-8" in err
+
+
+# Issue #87 (audit A19): a posting file saved as Windows-1252 (older Notepad)
+# was read with U+FFFD in place of every accent, curly quote, and dash.
+POSTING_1252 = ("Café Rouge is hiring a “shift lead” – nights. " * 12)
+
+
+def prepare_from(run, ws, path):
+    code, out, err = run("prepare", "--from-text", str(path), "--company", "Café Rouge",
+                         "--title", "Shift Lead")
+    folder = next(ws.jobs_dir.iterdir(), None)
+    desc = json.loads((folder / "job.json").read_text(encoding="utf-8"))["description"] \
+        if folder else ""
+    return code, err, desc
+
+
+def test_prepare_reads_a_windows_1252_posting(run, ws, tmp_path):
+    posting = tmp_path / "posting.txt"
+    posting.write_bytes(POSTING_1252.encode("cp1252"))
+    code, err, desc = prepare_from(run, ws, posting)
+    assert code == 0, err
+    assert "�" not in desc
+    assert "Café Rouge" in desc and "“shift lead”" in desc and "–" in desc
+    assert "not UTF-8; read it as Windows-1252" in err
+
+
+def test_prepare_reads_a_utf8_posting_without_a_warning(run, ws, tmp_path):
+    posting = tmp_path / "posting.txt"
+    posting.write_bytes(POSTING_1252.encode("utf-8"))
+    code, err, desc = prepare_from(run, ws, posting)
+    assert code == 0 and "warning" not in err
+    assert "Café Rouge" in desc and "�" not in desc
+
+
+# Windows PowerShell 5.1's `>` and Notepad's "Unicode" save UTF-16 with a
+# byte order mark; read as Windows-1252 it came out as "ÿþ" plus noise.
+@pytest.mark.parametrize("encoding", ["utf-16", "utf-16-le", "utf-16-be"])
+def test_prepare_reads_a_utf16_posting(run, ws, tmp_path, encoding):
+    posting = tmp_path / "posting.txt"
+    bom = "\ufeff" if encoding != "utf-16" else ""  # "utf-16" writes its own
+    posting.write_bytes((bom + POSTING_1252).encode(encoding))
+    code, err, desc = prepare_from(run, ws, posting)
+    assert code == 0 and "warning" not in err, err
+    assert desc.startswith("Café Rouge") and "“shift lead”" in desc
+    assert "\x00" not in desc and "ÿþ" not in desc
+
+
+def test_import_reads_a_utf16_csv(run, tmp_path):
+    csv_file = tmp_path / "tracker.csv"
+    csv_file.write_bytes("company,title,applied\nCafé Rouge,Clerk,2026-09-10\n"
+                         .encode("utf-16"))
+    code, out, err = run("import", str(csv_file))
+    assert code == 0 and "Café Rouge" in out and err == ""
+
+
+@pytest.mark.parametrize("data,message", [
+    (codecs.BOM_UTF16_LE + b"C\x00a\x00\x00\xd8", "starts like UTF-16 text but is damaged"),
+    ("Café Rouge is hiring. ".encode("utf-16-le") * 20,  # UTF-16 with no mark
+     "is not UTF-8 or Windows-1252 text"),
+    (b"\x81\x8d\x8f" * 100, "is not UTF-8 or Windows-1252 text"),
+])
+def test_prepare_refuses_a_posting_that_is_not_text(run, ws, tmp_path, data, message):
+    posting = tmp_path / "posting.txt"
+    posting.write_bytes(data)
+    code, err, _ = prepare_from(run, ws, posting)
+    assert code == 1 and message in err
+    assert "--from-text -" in err  # pasting is the way out
+    assert not any(ws.jobs_dir.iterdir())
 
 
 def test_import_missing_file(run):

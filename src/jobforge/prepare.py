@@ -29,12 +29,16 @@ def read_job(folder: Path) -> dict:
     if not path.exists():
         raise JobforgeError(f"{folder.name} has no job.json. Run `jobforge prepare` first.")
     try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))
+        job = json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
         raise JobforgeError(f"{folder.name}/job.json is not valid JSON: {exc}") from exc
     except UnicodeDecodeError:  # #28, F6
         raise JobforgeError(f"{folder.name}/job.json is not UTF-8 text. Save it as UTF-8, "
                             f"or capture the posting again with `jobforge prepare`.") from None
+    if not isinstance(job, dict):  # #72: a list or a number has no fields to read
+        raise JobforgeError(f"{folder.name}/job.json must be a JSON object, the "
+                            f"{{...}} that `jobforge prepare` writes.")
+    return job
 
 
 def similar_jobs(ws: Workspace, job: Job, exclude: Path | None = None) -> list[str]:
@@ -82,7 +86,9 @@ def prepare(ws: Workspace, job: Job, *, force: bool = False,
     today = today or _dt.date.today()
     base = name = folder_name(job, today)
     n = 1
+    ws.check_inside(ws.jobs_dir)  # never create job folders through a link (#65)
     while (ws.jobs_dir / name / "job.json").exists():
+        ws.check_inside(ws.jobs_dir / name)  # before reading its job.json
         if same_posting(read_job(ws.jobs_dir / name), job):
             if not force:
                 raise JobforgeError(f"jobs/{name}/job.json already holds this same "
@@ -91,6 +97,7 @@ def prepare(ws: Workspace, job: Job, *, force: bool = False,
         n += 1
         name = f"{base}__{n}"
     folder = ws.jobs_dir / name
+    ws.check_inside(folder)  # --force writes into an existing folder
     warnings = []
     earlier = similar_jobs(ws, job, exclude=folder)
     if earlier:

@@ -145,6 +145,15 @@ def test_never_claim_with_a_look_alike_letter(ws, john_plan):
     expect(rep, "mixes Latin and Cyrillic")
 
 
+@pytest.mark.parametrize("written", ["Six Sigma Black-Belt", "Six Sigma Black/Belt",
+                                     "Six Sigma  Black Belt", "Six-Sigma Black Belt"])
+def test_never_claim_matches_hyphen_slash_and_spacing_variants(ws, john_plan, written):
+    # Issue #92 (audit A9): a hyphen or extra space made a different string.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": f"Cut weekly overtime 25% as a {written}"}
+    expect(check(ws, john_plan), "claims 'Six Sigma Black Belt'")
+
+
 def test_never_claim_written_all_in_cyrillic(ws, john_plan):
     john_plan["experience"][0]["bullets"][2] = {
         "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using \u0405\u0410\u0420"}
@@ -188,6 +197,50 @@ def test_summary_may_cite_extra_atoms(ws, john_plan):
     john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind.accuracy"],
                             "text": "Warehouse supervisor with 9 years in distribution; raised pick accuracy to 99.6%."}
     assert check(ws, john_plan).ok
+
+
+# Issue #90: the summary was checked as one line against all its cites, so a
+# sentence could credit one employer with another's figure (D-40).
+def test_summary_credits_employer_a_with_employer_bs_figure(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
+                            "text": "At Northwind Distribution, reduced produce shrink 18%."}
+    expect(check(ws, john_plan),
+           'summary, "At Northwind Distribution, reduced produce shrink..." '
+           "(names 'Northwind Distribution'): the figure 18% is not in the facts")
+
+
+def test_summary_names_each_employer_with_its_own_figures(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside.shrink", "northwind.accuracy"],
+        "text": "At Northwind Distribution I raised pick accuracy to 99.6%. "
+                "At Lakeside Grocery Co-op I reduced produce shrink 18%."}
+    assert check(ws, john_plan).ok
+
+
+def test_summary_sentence_naming_no_employer_uses_all_its_cites(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
+        "text": "I reduced produce shrink 18%. I work at Northwind Distribution."}
+    assert check(ws, john_plan).ok
+
+
+def test_summary_two_employers_in_one_sentence_warns(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside", "northwind"],
+        "text": "Supervisor at Lakeside Grocery Co-op and then Northwind Distribution."}
+    rep = check(ws, john_plan)
+    assert any(w.startswith('summary, "Supervisor at Lakeside Grocery Co-op and...": '
+                            "names 2 employers") for w in rep.warnings), rep.warnings
+
+
+def test_summary_in_the_users_own_words_is_not_scoped(ws, john_plan):
+    # The user confirmed this summary as written; 9 years spans both jobs.
+    add_atoms(ws, '[[summary]]\nid = "summary.own"\n'
+                  'text = "Supervisor at Northwind Distribution with 9 years in operations."\n')
+    john_plan["summary"] = {"atom": "summary.own", "cites": ["northwind"]}
+    assert check(ws, john_plan).ok
+    john_plan["summary"]["text"] = "Supervisor at Northwind Distribution for 9 years."
+    expect(check(ws, john_plan), "(names 'Northwind Distribution'): the figure 9")
 
 
 def test_voice_rules_apply_to_rewordings_only(ws, john_plan):
@@ -263,6 +316,93 @@ def test_letter_two_employers_in_one_sentence_warns(ws, john_plan):
     letter_body(john_plan, "I worked at Lakeside Grocery Co-op and then Northwind Distribution.")
     rep = check(ws, john_plan)
     assert any("names 2 employers" in w for w in rep.warnings)
+
+
+# Issue #93: letter errors numbered sentences across hook, body, and close
+# together ("cover_letter sentence 2"). They name the part and quote the start.
+def test_letter_error_names_the_part_and_quotes_the_sentence(ws, john_plan):
+    letter_body(john_plan, "I lead a team of 14. I cut overtime 40% at my current job.")
+    rep = check(ws, john_plan)
+    expect(rep, 'cover_letter body, "I cut overtime 40% at my...": '
+                "the figure 40% is not in the facts")
+    assert not any("sentence" in e for e in rep.errors), rep.errors
+
+
+@pytest.mark.parametrize("part", ["hook", "close"])
+def test_letter_error_in_hook_or_close_names_that_part(ws, john_plan, part):
+    john_plan["cover_letter"][part] = "I saved $1M."
+    expect(check(ws, john_plan), f'cover_letter {part}, "I saved $1M.": the figure')
+
+
+def test_letter_error_counts_sentences_within_its_own_paragraph(ws, john_plan):
+    # A paragraph that ends without a stop is still its own sentence.
+    letter_body(john_plan, "Hello there\n\nI saved $1M.")
+    expect(check(ws, john_plan), 'cover_letter body, "I saved $1M.": the figure')
+
+
+def test_letter_employer_error_quotes_the_sentence(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At Northwind Distribution I reduced shrink 18% with rotation checks.")
+    expect(check(ws, john_plan), 'cover_letter body, "At Northwind Distribution I reduced '
+                                 "shrink...\" (names 'Northwind Distribution')")
+
+
+def test_letter_two_employers_warning_quotes_the_sentence(ws, john_plan):
+    letter_body(john_plan, "I worked at Lakeside Grocery Co-op and then Northwind Distribution.")
+    rep = check(ws, john_plan)
+    assert any(w.startswith('cover_letter body, "I worked at Lakeside Grocery Co-op...": '
+                            "names 2 employers") for w in rep.warnings), rep.warnings
+
+
+# Issue #83 item 3 (audit A11): a sentence that names no employer carries the
+# last one named earlier in its paragraph, so "There I also..." cannot take
+# another employer's fact.
+def test_letter_sentence_carries_the_employer_named_before_it(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At Northwind Distribution I lead 14 associates. "
+                           "There I also reduced produce shrink 18%.")
+    expect(check(ws, john_plan), 'cover_letter body, "There I also reduced produce shrink..." '
+                                 "(follows 'Northwind Distribution'): the figure 18%")
+
+
+def test_carried_sentence_may_use_facts_that_belong_to_no_employer(ws, john_plan):
+    # Skills, credentials, and personal projects are no employer's: the nurse
+    # persona's "I chart in Epic" after a hospital sentence must pass.
+    letter_body(john_plan, "At Northwind Distribution I lead 14 associates. "
+                           "I also built a shift scheduling template that 40 small "
+                           "businesses use (example.com/shift-scheduler).", keep_project=True)
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+@pytest.mark.parametrize("text", [
+    # A new paragraph starts fresh.
+    "At Northwind Distribution I lead 14 associates.\n\nI also reduced produce shrink 18%.",
+    # Naming the other employer again is the fix the agent makes.
+    "At Northwind Distribution I lead 14 associates. "
+    "At Lakeside Grocery Co-op I reduced produce shrink 18%.",
+    # Two employers in one sentence: nothing single to carry.
+    "I worked at Lakeside Grocery Co-op and then Northwind Distribution. "
+    "I reduced produce shrink 18%.",
+])
+def test_letter_carry_forward_stops_where_it_should(ws, john_plan, text):
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, text)
+    rep = check(ws, john_plan)
+    assert rep.ok, rep.errors
+
+
+def test_letter_sentence_about_the_employer_carries_nothing(ws, john_plan):
+    letter_body(john_plan, "At Northwind Distribution I lead 14 associates. "
+                           "Your team of 20 needs a steady second shift.")
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+def test_summary_sentence_carries_the_employer_named_before_it(ws, john_plan):
+    john_plan["summary"] = {
+        "atom": "summary.main", "cites": ["lakeside.shrink", "northwind.accuracy"],
+        "text": "At Northwind Distribution I raised pick accuracy to 99.6%. "
+                "I also reduced produce shrink 18%."}
+    expect(check(ws, john_plan), "(follows 'Northwind Distribution'): the figure 18%")
 
 
 def test_meters_written_short_match_the_atom(ws, john_plan):
@@ -450,8 +590,52 @@ def test_precision_counts_the_multiplier(ws, john_plan, atom, line, ok):
 
 def test_letter_may_quote_the_postings_figures(ws, john_plan):
     letter_body(john_plan, "Your 6 cross-dock facilities and a second-shift team of 20 "
-                           "sound like the work I do now.")
+                           "need steady leadership.")
     assert check(ws, john_plan).ok
+
+
+# Issue #83 item 1 (audit A4): the posting's figures and tools are about the
+# employer. A sentence may use them only when it is about the employer ("you",
+# "your", or the company's name) and not about the user ("I", "my", "we").
+@pytest.mark.parametrize("text,needle", [
+    ("I bring 20 years of supervising warehouse teams.", "the figure 20"),
+    ("Your team of 20 is the size I lead now.", "the figure 20"),
+    ("My last team was 20 people.", "the figure 20"),
+    ("We ran 6 cross-dock facilities.", "the figure 6"),
+])
+def test_letter_sentence_about_the_user_cannot_take_the_postings_figures(
+        ws, john_plan, text, needle):
+    letter_body(john_plan, text)
+    expect(check(ws, john_plan), f'{needle} is in the posting, not your facts')
+
+
+@pytest.mark.parametrize("text", [
+    "Your 6 cross-dock facilities need a steady second shift.",
+    "Prairie Freight runs 6 cross-dock facilities.",
+    "Prairie Freight Co. needs a lead for a team of 20.",
+])
+def test_letter_sentence_about_the_employer_may_quote_the_posting(ws, john_plan, text):
+    letter_body(john_plan, text)
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+EXCEL_JOB = {**JOB, "description": JOB["description"] + " Schedules are kept in Excel."}
+
+
+def with_excel_skill(ws):
+    add_atoms(ws, '[[skill]]\nid = "skills.office"\nlabel = "Office"\nitems = ["Excel"]\n')
+
+
+def test_letter_cannot_claim_a_tool_only_the_posting_names(ws, john_plan):
+    with_excel_skill(ws)
+    letter_body(john_plan, "I keep every schedule in Excel.")
+    expect(check(ws, john_plan, EXCEL_JOB), "'Excel' is in the posting, not your facts")
+
+
+def test_letter_may_name_the_postings_tool_about_the_employer(ws, john_plan):
+    with_excel_skill(ws)
+    letter_body(john_plan, "Your schedules live in Excel.")
+    assert check(ws, john_plan, EXCEL_JOB).ok
 
 
 def test_letter_never_claim(ws, john_plan):
@@ -483,7 +667,7 @@ def test_letter_banned_word_phrase_dash(ws, john_plan):
 # captured. Structured data (json-ld) is the posting itself; a whole-page
 # capture (page-text) may hold other listings; a paste is whatever the user
 # selected.
-POSTING_FIGURES = "Your 6 cross-dock facilities and a second-shift team of 20 sound like my work."
+POSTING_FIGURES = "Your 6 cross-dock facilities and a second-shift team of 20 need a steady lead."
 OWN_FIGURE = "I lead a team of 14 associates across two shifts."
 
 
@@ -531,6 +715,58 @@ def test_letter_dashes_allowed_when_profile_says_so(ws, john_plan):
     ws.profile_path.write_text(text, encoding="utf-8")
     letter_body(john_plan, "Safety matters — a lot.")
     assert check(ws, john_plan).ok
+
+
+# Issue #88 (audit A12): the dash ban caught only the em and en dash.
+OTHER_DASHES = [("‒", "figure dash"), ("―", "horizontal bar"),
+                ("⸺", "two-em dash"),
+                ("⸻", "three-em dash"), ("﹘", "small em dash"),
+                ("︱", "presentation form for vertical em dash")]
+UNICODE_HYPHENS = [("‐", "hyphen"), ("‑", "non-breaking hyphen"),
+                   ("－", "fullwidth hyphen-minus"), ("﹣", "small hyphen-minus"),
+                   ("−", "minus sign")]  # #114: "−20%" wants a hyphen, not a comma
+
+
+def dash_bullet(john_plan, ch):
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime",
+        "text": f"Cut weekly overtime 25% {ch} by rebuilding the shift schedule"}
+
+
+@pytest.mark.parametrize("ch,name", OTHER_DASHES)
+def test_every_dash_is_banned(ws, john_plan, ch, name):
+    dash_bullet(john_plan, ch)
+    rep = check(ws, john_plan)
+    expect(rep, f"contains a {name} ({ch}, U+{ord(ch):04X}). Use a comma, colon, or period.")
+
+
+@pytest.mark.parametrize("ch,name", UNICODE_HYPHENS)
+def test_a_unicode_hyphen_asks_for_a_plain_one(ws, john_plan, ch, name):
+    # They look like a hyphen but an ATS will not match "scan<U+2011>to" as
+    # "scan-to"; the advice is to retype it, not to restructure the sentence.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime",
+        "text": f"Cut weekly overtime 25% by rebuilding the shift{ch}schedule"}
+    expect(check(ws, john_plan), f"({ch}, U+{ord(ch):04X}). Type a plain hyphen (-) instead.")
+
+
+@pytest.mark.parametrize("ch", [c for c, _ in OTHER_DASHES + UNICODE_HYPHENS])
+def test_other_dashes_allowed_when_profile_says_so(ws, john_plan, ch):
+    text = ws.profile_path.read_text(encoding="utf-8").replace("ban_dashes = true",
+                                                               "ban_dashes = false")
+    ws.profile_path.write_text(text, encoding="utf-8")
+    dash_bullet(john_plan, ch)
+    assert check(ws, john_plan).ok
+
+
+@pytest.mark.parametrize("word", ["scan-to-confirm",          # ASCII hyphen
+                                  "בית־ספר",  # Hebrew maqaf
+                                  "հայ֊երեն"])
+def test_plain_and_script_hyphens_are_not_dashes(ws, john_plan, word):
+    # A word in Hebrew or Armenian is joined with its own script's hyphen.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": f"Cut weekly overtime 25% with {word} checks"}
+    assert not [e for e in check(ws, john_plan).errors if "U+" in e and "contains" in e]
 
 
 def test_letter_word_limit_comes_from_profile(ws, john_plan):
@@ -605,8 +841,53 @@ def test_vocabulary_includes_skills_credentials_and_never_claim(ws):
 # Issue #49: the remaining fact-check branches, each with the behavior it guards.
 def test_without_a_job_the_letter_cannot_quote_posting_figures(ws, john_plan):
     # No job.json to trust: a figure only the posting states is not a fact.
-    letter_body(john_plan, "Your 6 cross-dock facilities sound like my work.")
+    letter_body(john_plan, "Your 6 cross-dock facilities need a steady lead.")
     expect(check(ws, john_plan, job=None), "the figure 6 is not in the facts")
+
+
+# Issue #122: a career-wide figure in a sentence that names an employer fails
+# (the check cannot tell "with 9 years" from "for 9 years"), but the message
+# said the figure was not in the line's facts when it was.
+CAREER = "the figure 9 is not in Northwind Distribution's facts. If it is about your whole career"
+
+
+def test_summary_career_figure_next_to_an_employer_says_what_to_do(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind"],
+                            "text": "Warehouse supervisor at Northwind Distribution with 9 "
+                                    "years in distribution."}
+    rep = check(ws, john_plan)
+    expect(rep, CAREER)
+    assert not any("is not in the facts this line cites" in e for e in rep.errors), rep.errors
+
+
+def test_summary_career_figure_in_its_own_sentence_passes(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind"],
+                            "text": "Warehouse supervisor with 9 years in distribution. "
+                                    "Currently at Northwind Distribution."}
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+def test_letter_career_figure_next_to_an_employer_says_what_to_do(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("summary.main")
+    letter_body(john_plan, "At Northwind Distribution I bring 9 years in distribution.")
+    expect(check(ws, john_plan), CAREER)
+
+
+def test_another_employers_figure_keeps_the_d40_message(ws, john_plan):
+    # Not career-wide: Lakeside's 18% credited to Northwind stays the D-40
+    # error, with no advice to move it.
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
+                            "text": "At Northwind Distribution, reduced produce shrink 18%."}
+    rep = check(ws, john_plan)
+    expect(rep, "(names 'Northwind Distribution'): the figure 18% is not in the facts")
+    assert not any("whole career" in e for e in rep.errors), rep.errors
+
+
+def test_a_figure_in_no_cited_fact_keeps_the_plain_message(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind"],
+                            "text": "Warehouse supervisor at Northwind Distribution with 11 "
+                                    "years in distribution."}
+    expect(check(ws, john_plan), "the figure 11 is not in the facts this line cites")
 
 
 def test_a_plan_without_a_letter_gets_no_letter_errors(ws, john_plan):
@@ -634,3 +915,59 @@ def test_bullet_whose_project_is_missing_counts_only_its_own_text(ws):
     plan = ResolvedPlan(letter=Letter("I saved 12 hours.", "", "", [bullet]))
     check_letter(plan, inv, load_profile(ws), [], rep, None)
     assert rep.errors == []
+
+
+# Issue #85 (audit A13): a hidden character fails `check`, not only `apply`'s
+# read-back, so the agent's check loop catches it a round earlier.
+HIDDEN = [("\u200b", "zero-width space"), ("\u202e", "text direction control"),
+          ("\u00ad", "soft hyphen")]
+
+
+def plant(plan, where, ch):
+    if where == "bullet":
+        plan["experience"][0]["bullets"][2] = {
+            "atom": "northwind.overtime",
+            "text": f"Cut weekly over{ch}time 25% by rebuilding the shift schedule"}
+    elif where == "summary":
+        plan["summary"] = {"atom": "summary.main",
+                           "text": f"Warehouse super{ch}visor with 9 years in distribution."}
+    else:  # a part of the letter: hook, body, or close
+        part = where.split(".")[1]
+        plan["cover_letter"][part] = plan["cover_letter"][part].replace(
+            "second", f"sec{ch}ond", 1)
+
+
+@pytest.mark.parametrize("ch,name", HIDDEN)
+@pytest.mark.parametrize("where,label", [
+    ("bullet", "experience[0].bullets[2]"), ("summary", "summary"),
+    ("cover_letter.hook", "cover_letter hook"), ("cover_letter.close", "cover_letter close"),
+])
+def test_hidden_character_fails_check(ws, john_plan, ch, name, where, label):
+    plant(john_plan, where, ch)
+    rep = check(ws, john_plan)
+    hits = [e for e in rep.errors if "hidden character" in e]
+    assert len(hits) == 1, rep.errors
+    assert hits[0].startswith(label) and name in hits[0]
+    assert "Remove it from the atom or plan text it came from" in hits[0]
+
+
+def test_hidden_character_in_the_letter_body_fails_check(ws, john_plan):
+    john_plan["cover_letter"]["body"] = john_plan["cover_letter"]["body"].replace(
+        "associates", "asso\u200bciates", 1)
+    expect(check(ws, john_plan), "cover_letter body: hidden character: zero-width space")
+
+
+def test_hidden_character_cannot_slip_a_never_claim_term_past_check(ws, john_plan):
+    # "S<U+200B>AP" was invisible to never-claim; now the character itself fails.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using S\u200bAP"}
+    expect(check(ws, john_plan), "hidden character: zero-width space")
+
+
+def test_a_minus_sign_in_a_figure_asks_for_a_plain_hyphen(ws, john_plan):
+    # #114: "Use a comma, colon, or period" is wrong advice for "−5°C".
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime \u221225% by rebuilding the shift schedule"}
+    rep = check(ws, john_plan)
+    expect(rep, "contains a minus sign (\u2212, U+2212). Type a plain hyphen (-) instead.")
+    assert not any("comma" in e for e in rep.errors if "U+2212" in e)

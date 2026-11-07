@@ -19,9 +19,16 @@ pytestmark = pytest.mark.critical
 
 
 def link(target, at):
+    """A symlink at `at` to `target`. On Windows without the symlink
+    privilege, a folder gets a junction instead, which any user can make and
+    which leads out the same way (#65); a file link still has to skip."""
     try:
         os.symlink(target, at)
-    except (OSError, NotImplementedError):  # Windows without the privilege
+    except (OSError, NotImplementedError):
+        if os.name == "nt" and os.path.isdir(target):  # pragma: no cover (Windows)
+            import _winapi
+            _winapi.CreateJunction(str(target), str(at))
+            return
         pytest.skip("cannot create symlinks here")
 
 
@@ -200,3 +207,106 @@ def test_confirm_refuses_a_drafted_file_that_leads_outside(ws, monkeypatch):
         run_confirm(ws, ask=lambda q: "k", say=lambda s: None)
     assert any("away.toml links outside this workspace" in d for d in exc.value.details)
     assert not (ws.atoms_dir / CONFIRMED_FILE).exists()  # nothing was kept
+
+
+# --- #65: the writes that still followed a link out ----------------------
+
+POSTING = "Posting text. " * 30
+
+
+def new_job(company="Bolt Works"):
+    from jobforge.extract import from_text
+    return from_text(POSTING, company=company, title="Painter")[0]
+
+
+def relink_jobs(ws, outside):
+    """Replace jobs/ with a link to `outside` (a junction on Windows)."""
+    shutil.rmtree(ws.jobs_dir)
+    link(outside, ws.jobs_dir)
+
+
+def test_prepare_will_not_write_through_a_linked_jobs_folder(ws, outside):
+    from jobforge.prepare import prepare
+    relink_jobs(ws, outside)
+    with pytest.raises(JobforgeError, match="jobs links outside this workspace"):
+        prepare(ws, new_job(), today=TODAY)
+    assert list(outside.iterdir()) == []
+
+
+@pytest.mark.parametrize("same", [True, False])
+def test_prepare_will_not_read_or_write_a_job_folder_linked_out(ws, outside, same):
+    # Refused before its job.json is even read, whether or not it holds the
+    # same posting (same: --force would have replaced it through the link).
+    import json
+    from jobforge.prepare import folder_name, prepare
+    job = new_job()
+    data = job.to_dict() if same else {"company": "Elsewhere"}
+    (outside / "job.json").write_text(json.dumps(data), encoding="utf-8")
+    before = (outside / "job.json").read_bytes()
+    link(outside, ws.jobs_dir / folder_name(job, TODAY))
+    with pytest.raises(JobforgeError, match="links outside this workspace"):
+        prepare(ws, job, today=TODAY, force=True)
+    assert sorted(p.name for p in outside.iterdir()) == ["job.json"]
+    assert (outside / "job.json").read_bytes() == before
+
+
+def test_import_will_not_write_through_a_linked_jobs_folder(ws, outside):
+    from jobforge.importer import import_csv
+    relink_jobs(ws, outside)
+    csv = (JOHN.parent.parent / "import" / "sample_tracker.csv").read_text(encoding="utf-8")
+    with pytest.raises(JobforgeError, match="jobs links outside this workspace"):
+        import_csv(ws, csv, write=True, today=TODAY)
+    assert list(outside.iterdir()) == []
+
+
+@pytest.mark.parametrize("name", ["CLAUDE.md", "AGENTS.md"])
+def test_init_refresh_will_not_write_through_a_linked_agent_file(ws, tmp_path, name):
+    from jobforge.workspace import refresh_workspace
+    victim = tmp_path / "victim.md"
+    victim.write_text("not yours\n", encoding="utf-8")
+    (ws.root / name).unlink()
+    link(victim, ws.root / name)
+    with pytest.raises(JobforgeError, match=f"{name} links outside this workspace"):
+        refresh_workspace(ws.root)
+    assert victim.read_text(encoding="utf-8") == "not yours\n"
+
+
+# The same refusals on any OS, through the portable check (see above).
+
+def test_prepare_refuses_a_jobs_folder_that_leads_outside(ws, monkeypatch):
+    from jobforge.prepare import prepare
+    ws.jobs_dir.mkdir(exist_ok=True)
+    leads_outside(monkeypatch, "jobs")
+    with pytest.raises(JobforgeError, match="jobs links outside this workspace"):
+        prepare(ws, new_job(), today=TODAY)
+    assert list(ws.jobs_dir.iterdir()) == []
+
+
+def test_prepare_refuses_a_job_folder_that_leads_outside(ws, monkeypatch):
+    from jobforge.prepare import folder_name, prepare
+    job = new_job()
+    name = folder_name(job, TODAY)
+    (ws.jobs_dir / name).mkdir(parents=True)
+    leads_outside(monkeypatch, name)
+    with pytest.raises(JobforgeError, match=f"{name} links outside this workspace"):
+        prepare(ws, job, today=TODAY)
+    assert list((ws.jobs_dir / name).iterdir()) == []
+
+
+def test_import_refuses_a_jobs_folder_that_leads_outside(ws, monkeypatch):
+    from jobforge.importer import import_csv
+    ws.jobs_dir.mkdir(exist_ok=True)
+    leads_outside(monkeypatch, "jobs")
+    csv = (JOHN.parent.parent / "import" / "sample_tracker.csv").read_text(encoding="utf-8")
+    with pytest.raises(JobforgeError, match="jobs links outside this workspace"):
+        import_csv(ws, csv, write=True, today=TODAY)
+    assert list(ws.jobs_dir.iterdir()) == []
+
+
+def test_init_refresh_refuses_an_agent_file_that_leads_outside(ws, monkeypatch):
+    from jobforge.workspace import refresh_workspace
+    before = (ws.root / "AGENTS.md").read_bytes()
+    leads_outside(monkeypatch, "AGENTS.md")
+    with pytest.raises(JobforgeError, match="AGENTS.md links outside this workspace"):
+        refresh_workspace(ws.root)
+    assert (ws.root / "AGENTS.md").read_bytes() == before

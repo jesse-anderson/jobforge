@@ -3,12 +3,13 @@ it calls (D-13)."""
 from __future__ import annotations
 
 import argparse
+import codecs
 import sys
 from pathlib import Path
 
 from . import __version__
 from .errors import JobforgeError
-from .ledger import RECORDABLE
+from .ledger import LIST_STATUSES, RECORDABLE
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -65,7 +66,8 @@ def _parser() -> argparse.ArgumentParser:
     for name in ("jobs", "search"):
         s = sub.add_parser(name, help="list your jobs" + (" (same as jobs)" if name == "search" else ""))
         s.add_argument("text", nargs="?", help="only jobs whose company, title, or posting mention this")
-        s.add_argument("--status", help="only jobs with this status (including 'ghosted')")
+        s.add_argument("--status", choices=LIST_STATUSES, metavar="STATUS",
+                       help="only jobs with this status: " + ", ".join(LIST_STATUSES))
         s.add_argument("--company")
     return p
 
@@ -222,37 +224,56 @@ def _run(args) -> int:
         for r in rows:
             if r.problem:
                 print(f"warning: {r.problem}", file=sys.stderr)
-        print(format_table(rows))
+        filtered = bool(args.status or args.company or args.text)
+        print(format_table(rows, filtered=filtered))
         return 0
 
     raise AssertionError(f"unhandled command {cmd}")  # pragma: no cover
 
 
-def _read_csv(path: str) -> str:
-    """A spreadsheet export as text. UTF-8 first (with or without Excel's
-    BOM); older Windows Excel saves "CSV" as Windows-1252, so try that next
-    and say so. Never replace undecodable bytes with U+FFFD: a mangled
-    company name would land in job.json silently."""
+def _decode_file(path: str, fix: str, check: str) -> str:
+    """A file the user saved, as text. UTF-16 when it starts with its byte
+    order mark, else UTF-8 (with or without a BOM);
+    older Windows programs (Excel's "CSV", Notepad) save Windows-1252, so try
+    that next and say so. Never replace undecodable bytes with U+FFFD: a
+    mangled name would land in job.json, or in a letter, silently (#87)."""
     p = Path(path)
     if not p.is_file():
         raise JobforgeError(f"{path} does not exist.")
     data = p.read_bytes()
+    # Windows PowerShell 5.1's `>` and Notepad's "Unicode" save UTF-16 with a
+    # byte order mark. As Windows-1252 that reads as "ÿþ" and a NUL after
+    # every letter, so take the mark at its word.
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        try:
+            return data.decode("utf-16")
+        except UnicodeDecodeError:
+            raise JobforgeError(f"{path} starts like UTF-16 text but is damaged. "
+                                f"{fix}") from None
     try:
         return data.decode("utf-8-sig")
     except UnicodeDecodeError:
         pass
+    # No saved text file holds a NUL. UTF-16 without its mark is the likely
+    # cause, and Windows-1252 would read it as noise.
+    if b"\x00" in data:
+        raise JobforgeError(f"{path} is not UTF-8 or Windows-1252 text. {fix}")
     try:
         text = data.decode("cp1252")
     except UnicodeDecodeError:
-        raise JobforgeError(f"{path} is not UTF-8 or Windows-1252 text. In your "
-                            f"spreadsheet, save it as \"CSV UTF-8\" and try again.") from None
-    print(f"warning: {path} is not UTF-8; read it as Windows-1252. Check accented "
-          f"names in the preview.", file=sys.stderr)
+        raise JobforgeError(f"{path} is not UTF-8 or Windows-1252 text. {fix}") from None
+    print(f"warning: {path} is not UTF-8; read it as Windows-1252. {check}", file=sys.stderr)
     return text
 
 
+def _read_csv(path: str) -> str:
+    """A spreadsheet export as text."""
+    return _decode_file(path, "In your spreadsheet, save it as \"CSV UTF-8\" and try "
+                              "again.", "Check accented names in the preview.")
+
+
 def _read_text(path: str) -> str:
-    p = Path(path)
-    if not p.exists():
-        raise JobforgeError(f"{path} does not exist.")
-    return p.read_text(encoding="utf-8", errors="replace")
+    """A posting saved as a text file."""
+    return _decode_file(path, "Save it as UTF-8 text and try again, or paste the "
+                              "posting with `--from-text -`.",
+                        "Check accented letters and quotes in the job's job.json.")

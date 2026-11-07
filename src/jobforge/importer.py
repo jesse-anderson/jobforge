@@ -130,7 +130,7 @@ def plan_import(ws: Workspace, text: str, *,
                 today: _dt.date | None = None) -> ImportPlan:
     """Read a tracker CSV and decide what each row becomes. Writes nothing."""
     today = today or _dt.date.today()
-    reader = csv.reader(io.StringIO(text.lstrip("﻿")))
+    reader = csv.reader(io.StringIO(text.lstrip("\ufeff")))
     header = next(reader, None)
     if not header:
         raise JobforgeError("The file is empty or has no header row. The first "
@@ -248,6 +248,7 @@ def write_import(ws: Workspace, plan: ImportPlan) -> list[str]:
             f"Nothing imported: {len(errors)} row(s) have problems. Fix or delete "
             f"them, then run the import again:",
             [f"line {r.line}: {r.message}" for r in errors])
+    ws.check_inside(ws.jobs_dir)  # never create job folders through a link (#65)
     written = []
     for row in plan.rows:
         if row.action == "finish":  # an earlier import was cut short (#78)

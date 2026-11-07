@@ -93,6 +93,45 @@ def test_bullet_with_no_role_at_all_is_refused(ws):
     assert out.refused == ["x.a"]
 
 
+# Issue #127: a defense note is asked for where it matters, never required.
+# #124 made confirm refuse a bullet without one, which cost a question per
+# bullet at setup ("I worked in X" needs no defense; "$1.5M saved" does).
+@pytest.mark.parametrize("defense", ["", 'defense = ""\n', 'defense = "   "\n'])
+def test_bullet_without_a_defense_note_is_kept(ws, defense):
+    add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\n'
+                  f'text = "Cut dock wait 3 hours"\nbasis = "records"\n{defense}',
+              "d.toml", pending=True)
+    said = []
+    out = run_confirm(ws, ask=script("k"), say=said.append)
+    assert out.kept == ["northwind.new"] and not out.refused
+    assert "no defense note" not in "\n".join(said)
+
+
+def test_twenty_plain_duties_cost_one_answer_each_and_no_warnings(ws):
+    # #127's measure: a 20-bullet resume of plain duties gets no extra
+    # questions and no warnings.
+    duties = "".join(f'[[bullet]]\nid = "northwind.duty{n}"\nrole = "northwind"\n'
+                     f'text = "Ran the {w} dock check"\nbasis = "records"\n\n'
+                     for n, w in enumerate(["morning", "evening", "weekend", "inbound", "outbound"] * 4))
+    add_atoms(ws, duties, "d.toml", pending=True)
+    prompts = []
+
+    def ask(prompt):
+        prompts.append(prompt)
+        return "k"
+    out = run_confirm(ws, ask=ask, say=quiet)
+    assert len(out.kept) == 20 and len(prompts) == 20
+    assert not [w for w in load_inventory(ws).warnings if "defense" in w]
+
+
+def test_bullet_with_a_defense_note_is_kept(ws):
+    add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\n'
+                  'text = "Cut dock wait 3 hours"\nbasis = "records"\n'
+                  'defense = "Dock log, March against May."\n', "d.toml", pending=True)
+    out = run_confirm(ws, ask=script("k"), say=quiet)
+    assert out.kept == ["northwind.new"]
+
+
 def test_malformed_pending_file_is_reported(ws):
     add_atoms(ws, '[[bullet]]\nid = "x.a"\ntext = "t"\nbasis = "records"\n', "d.toml", pending=True)
     with pytest.raises(JobforgeError, match="malformed") as exc:
@@ -124,7 +163,7 @@ def test_bad_answers_are_asked_again(ws):
     said = []
     out = run_confirm(ws, ask=script("maybe", "", "K"), say=said.append)
     assert out.kept == ["skill.new"]
-    assert said.count("  Please answer k, d, s, or q.") == 2
+    assert said.count("  Please answer k, e, d, s, or q.") == 2
 
 
 def test_confirmed_file_is_append_only(ws):
@@ -197,6 +236,88 @@ def test_input_ending_mid_review_keeps_earlier_answers(ws):
     assert load_inventory(ws).get("acme") is not None
 
 
+# Issue #77: Ctrl+C at a prompt left kept facts in pending/ as well, and the
+# next confirm refused ("same id as a confirmed atom") until hand-edited.
+def pending_ids(ws):
+    from jobforge.atoms import parse_file, read_files
+    return sorted(a.id for p in read_files(ws.pending_dir) for a in parse_file(p, "", []))
+
+
+@pytest.mark.parametrize("at", [1, 2, 3])
+def test_ctrl_c_at_a_prompt_keeps_earlier_answers(ws, at):
+    # Order is role, skill, bullet; answers keep, drop, keep. Ctrl+C at question `at`.
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    answers = iter(["k", "d", "k"][:at - 1])
+
+    def ask(_prompt):
+        try:
+            return next(answers)
+        except StopIteration:
+            raise KeyboardInterrupt from None
+
+    said = []
+    out = run_confirm(ws, ask=ask, say=said.append)
+    decided = ["acme", "skill.plc", "acme.uptime"][:at - 1]
+    assert out.kept + out.dropped == decided
+    assert any("Stopped" in s and "saved" in s for s in said)
+    # Every fact is in exactly one place: confirmed, dropped, or still pending.
+    still = pending_ids(ws)
+    assert not set(still) & set(decided)
+    assert sorted(still + decided) == ["acme", "acme.uptime", "skill.plc"]
+    # And the next confirm runs, finishing the rest.
+    rest = run_confirm(ws, ask=lambda _: "k", say=quiet)
+    assert sorted(rest.kept) == still and pending_ids(ws) == []
+
+
+def test_a_fact_already_confirmed_is_cleared_from_pending(ws):
+    # Ctrl+C between keeping a fact and rewriting pending/ (not at a prompt)
+    # leaves it in both places. The next run sees the identical copy, clears
+    # it from pending/, and goes on, instead of refusing.
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    run_confirm(ws, ask=lambda _: "k", say=quiet)  # all three kept
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)  # the stale copy
+    said = []
+    out = run_confirm(ws, ask=script(), say=said.append)
+    assert out.kept == [] and pending_ids(ws) == []
+    assert any("already confirmed" in s and "acme" in s for s in said)
+
+
+def test_already_confirmed_copy_is_cleared_and_the_rest_reviewed(ws):
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    run_confirm(ws, ask=script("k", "d", "d"), say=quiet)  # keep acme only
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    out = run_confirm(ws, ask=script("k", "k"), say=quiet)  # skill, bullet
+    assert out.kept == ["skill.plc", "acme.uptime"] and pending_ids(ws) == []
+
+
+def test_clearing_a_stale_copy_leaves_other_pending_files_untouched(ws):
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    run_confirm(ws, ask=lambda _: "k", say=quiet)
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)  # the stale copy
+    other = add_atoms(ws, '[[skill]]\nid = "skill.forklift"\nlabel = "Equipment"\n'
+                          'items = ["Reach truck"]\n', "other.toml", pending=True)
+    before = other.read_bytes()
+    out = run_confirm(ws, ask=script("s"), say=quiet)
+    assert out.skipped == ["skill.forklift"] and other.read_bytes() == before
+    assert not (ws.pending_dir / "draft.toml").exists()
+
+
+def test_ctrl_c_while_rewriting_pending_loses_nothing(ws, monkeypatch):
+    # The rewrite goes through a temp file, so the pending file is never
+    # left empty or half-written.
+    import jobforge.confirm as confirm_mod
+    path = add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    before = path.read_bytes()
+
+    def interrupted(src, dst):
+        raise KeyboardInterrupt
+    monkeypatch.setattr(confirm_mod.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        run_confirm(ws, ask=script("d", "s", "s"), say=quiet)
+    assert path.read_bytes() == before
+    assert sorted(p.name for p in ws.pending_dir.iterdir()) == ["draft.toml"]
+
+
 def test_review_shows_dates_and_details_the_user_is_confirming():
     """Issue #2 run: a credential's date and a degree's field and date were
     confirmed without ever being shown."""
@@ -266,3 +387,155 @@ def test_refused_project_gets_no_bullet_advice(ws):
     shown = "\n".join(said)
     assert out.refused == ["ghost.tool"] and "Cannot keep this yet" in shown
     assert "Keep or add the role it belongs to first" not in shown
+
+
+# --- Inline edit (#83 item 4) -------------------------------------------------
+# "The user comes first": a fact that is nearly right is fixed in place, not
+# skipped and hand-edited in profile/pending/ for another run.
+
+NEW_BULLET = ('[[bullet]]\nid = "northwind.dock"\nrole = "northwind"\n'
+              'text = "Cut dock wait time 40%"\nbasis = "estimate"\n'
+              'defense = "Dock log, March against May."\n')
+
+
+def editor(*changes):
+    """Stands in for the user's editor: each call applies the next change to
+    the file's text."""
+    it = iter(changes)
+    calls = []
+
+    def edit(path):
+        calls.append(path)
+        path.write_text(next(it)(path.read_text(encoding="utf-8")), encoding="utf-8")
+    edit.calls = calls
+    return edit
+
+
+def test_edit_then_keep_saves_the_edited_fact(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    said = []
+    edit = editor(lambda t: t.replace("40%", "30%"))
+    out = run_confirm(ws, ask=script("e", "k"), say=said.append, edit=edit)
+    assert out.kept == ["northwind.dock"]
+    assert load_inventory(ws).get("northwind.dock").get("text") == "Cut dock wait time 30%"
+    shown = "\n".join(said)
+    assert shown.count("Text: Cut dock wait time") == 2 and "30%" in shown  # shown again
+    assert not edit.calls[0].exists()  # the scratch copy is cleaned up
+    assert not ws.contains(edit.calls[0]) or edit.calls[0].parent != ws.pending_dir
+
+
+def test_edit_then_skip_keeps_the_edit_in_pending(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    out = run_confirm(ws, ask=script("e", "s"), say=quiet,
+                      edit=editor(lambda t: t.replace("40%", "30%")))
+    assert out.skipped == ["northwind.dock"]
+    assert "30%" in (ws.pending_dir / "d.toml").read_text(encoding="utf-8")
+    assert load_inventory(ws).get("northwind.dock") is None
+
+
+def test_edit_then_quit_keeps_the_edit_in_pending(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    run_confirm(ws, ask=script("e", "q"), say=quiet,
+                edit=editor(lambda t: t.replace("40%", "30%")))
+    assert "30%" in (ws.pending_dir / "d.toml").read_text(encoding="utf-8")
+
+
+def test_edit_leaves_the_other_drafts_in_the_file_alone(ws):
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    # role: keep; skill: edit then skip; bullet: skip
+    run_confirm(ws, ask=script("k", "e", "s", "s"), say=quiet,
+                edit=editor(lambda t: t.replace("PLC ladder logic", "PLC troubleshooting")))
+    left = (ws.pending_dir / "draft.toml").read_text(encoding="utf-8")
+    assert "PLC troubleshooting" in left and "acme.uptime" in left
+    assert 'id = "acme"\n' not in left
+
+
+@pytest.mark.parametrize("change,needle", [
+    (lambda t: t.replace('basis = "estimate"', 'basis = "memory"'), "basis must be one of"),
+    (lambda t: t.replace('id = "northwind.dock"', 'id = "northwind.other"'), "keep its id"),
+    (lambda t: t.replace("[[bullet]]", "[[skill]]"), "can't be used yet"),
+    (lambda t: t + '\n[[bullet]]\nid = "x.b"\nrole = "northwind"\ntext = "t"\nbasis = "records"\n',
+     "one fact"),
+    (lambda t: "not toml [[[", "not valid TOML"),
+    (lambda t: t.replace('role = "northwind"', 'role = "nowhere"'), "can't be kept"),
+])
+def test_a_broken_edit_is_explained_and_can_be_edited_again(ws, change, needle):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    said = []
+    edit = editor(change, lambda t: NEW_BULLET.replace("40%", "35%"))
+    out = run_confirm(ws, ask=script("e", "e", "k"), say=said.append, edit=edit)
+    shown = "\n".join(said)
+    assert needle in shown, shown
+    assert out.kept == ["northwind.dock"]
+    assert load_inventory(ws).get("northwind.dock").get("text") == "Cut dock wait time 35%"
+
+
+def test_a_broken_edit_reopens_with_what_the_user_typed(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    seen = []
+
+    def edit(path):
+        text = path.read_text(encoding="utf-8")
+        seen.append(text)
+        path.write_text(text.replace("estimate", "memory") if len(seen) == 1
+                        else text.replace("memory", "records"), encoding="utf-8")
+    run_confirm(ws, ask=script("e", "e", "k"), say=quiet, edit=edit)
+    assert 'basis = "memory"' in seen[1]  # their typing was not thrown away
+    assert load_inventory(ws).get("northwind.dock").get("basis") == "records"
+
+
+def test_a_broken_edit_then_skip_leaves_the_draft_as_it_was(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    run_confirm(ws, ask=script("e", "s"), say=quiet,
+                edit=editor(lambda t: t.replace("estimate", "memory")))
+    assert 'basis = "estimate"' in (ws.pending_dir / "d.toml").read_text(encoding="utf-8")
+
+
+def test_no_editor_says_what_to_do_instead(ws, monkeypatch):
+    from jobforge import confirm
+    monkeypatch.setattr(confirm, "find_editor", lambda: None)
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    said = []
+    out = run_confirm(ws, ask=script("e", "s"), say=said.append)
+    assert "No text editor found" in "\n".join(said) and "EDITOR" in "\n".join(said)
+    assert out.skipped == ["northwind.dock"]
+
+
+def test_an_editor_that_fails_to_start_is_reported(ws, monkeypatch):
+    from jobforge import confirm
+    monkeypatch.setattr(confirm, "find_editor", lambda: ["no-such-editor-jf"])
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    said = []
+    run_confirm(ws, ask=script("e", "s"), say=said.append)
+    assert "Could not start no-such-editor-jf" in "\n".join(said)
+
+
+@pytest.mark.parametrize("env,platform,which,expect", [
+    ({"VISUAL": "code --wait"}, "linux", {}, ["code", "--wait"]),
+    ({"EDITOR": "nano"}, "linux", {}, ["nano"]),
+    ({}, "win32", {}, ["notepad"]),
+    ({}, "linux", {"nano": "/usr/bin/nano"}, ["/usr/bin/nano"]),
+    ({}, "linux", {"vi": "/usr/bin/vi"}, ["/usr/bin/vi"]),
+    ({}, "linux", {}, None),
+])
+def test_find_editor(monkeypatch, env, platform, which, expect):
+    from jobforge import confirm
+    for key in ("VISUAL", "EDITOR"):
+        monkeypatch.delenv(key, raising=False)
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(confirm.sys, "platform", platform)
+    monkeypatch.setattr(confirm.shutil, "which", lambda name: which.get(name))
+    assert confirm.find_editor() == expect
+
+
+def test_the_prompt_offers_edit(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    prompts, said = [], []
+
+    def ask(prompt):
+        prompts.append(prompt)
+        return "s"
+    run_confirm(ws, ask=ask, say=said.append)
+    assert prompts == ["  Keep this fact? [k/e/d/s/q] "]
+    assert "[e]dit" in said[0]

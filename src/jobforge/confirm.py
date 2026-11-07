@@ -11,7 +11,12 @@ kept (D-40).
 """
 from __future__ import annotations
 
+import os
+import shlex
+import shutil
+import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -107,15 +112,92 @@ def _rewrite_pending(path: Path, remaining: list[Atom]) -> None:
         return
     header = ("# Drafted facts waiting for `jobforge confirm`. Nothing here is used "
               "until you keep it.\n\n")
-    path.write_text(header + "\n".join(serialize(a) for a in remaining),
-                    encoding="utf-8", newline="\n")
+    # Write beside it, then replace: a Ctrl+C mid-write never leaves the
+    # drafts still waiting there empty or half-written (#77).
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        tmp.write_text(header + "\n".join(serialize(a) for a in remaining),
+                       encoding="utf-8", newline="\n")
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def find_editor() -> list[str] | None:
+    """The user's editor: $VISUAL, then $EDITOR, then Notepad on Windows, or
+    nano or vi elsewhere. None when there is none."""
+    for var in ("VISUAL", "EDITOR"):
+        value = os.environ.get(var, "").strip()
+        if value:
+            return shlex.split(value, posix=sys.platform != "win32")
+    if sys.platform == "win32":
+        return ["notepad"]
+    for name in ("nano", "vi"):
+        found = shutil.which(name)
+        if found:
+            return [found]
+    return None
+
+
+def open_in_editor(path: Path) -> None:
+    """Open `path` in the user's editor and wait for it to close. Raises
+    JobforgeError when no editor can be started."""
+    command = find_editor()
+    if command is None:
+        raise JobforgeError("No text editor found. Set EDITOR to the one you use "
+                            "(for example `export EDITOR=nano`), or skip this fact and "
+                            "edit its file in profile/pending/.")
+    try:
+        subprocess.run([*command, str(path)], check=False)
+    except OSError as exc:
+        raise JobforgeError(f"Could not start {command[0]}: {exc.strerror or exc}. Set "
+                            f"EDITOR to the editor you use, or skip this fact and edit "
+                            f"its file in profile/pending/.") from None
+
+
+def _edit(atom: Atom, draft: str, edit: Callable[[Path], None],
+          say: Callable[[str], None]) -> tuple[Atom | None, str]:
+    """One round in the editor (#83 item 4). Returns the edited atom, or None
+    with the problems said, plus the text to reopen next time, so a broken
+    edit is never thrown away."""
+    fd, name = tempfile.mkstemp(prefix=f"jobforge-{atom.id}-", suffix=".toml")
+    path = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(draft)
+        try:
+            edit(path)
+        except JobforgeError as exc:
+            say(f"  {exc.message}")
+            return None, draft
+        text = path.read_text(encoding="utf-8-sig")
+        problems: list[str] = []
+        found = parse_file(path, "your edit", problems)
+        if not problems and len(found) != 1:
+            problems.append("your edit: the file must hold one fact, the one being reviewed")
+        elif not problems and (found[0].kind, found[0].id) != (atom.kind, atom.id):
+            problems.append(f"your edit: it must keep its id ({atom.id}) and stay a "
+                            f"{atom.kind}. To add a different fact, ask your agent to "
+                            f"draft it.")
+        if problems:
+            say("  That edit can't be used yet:\n" + "\n".join(f"    {p}" for p in problems)
+                + "\n  Edit again to fix it, or skip to leave the fact as it was.")
+            return None, text
+        edited = found[0]
+        edited.source = atom.source
+        return edited, text
+    finally:
+        path.unlink(missing_ok=True)
 
 
 def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
-                say: Callable[[str], None] | None = None) -> Outcome:
+                say: Callable[[str], None] | None = None,
+                edit: Callable[[Path], None] | None = None) -> Outcome:
     interactive = ask is not None or (sys.stdin is not None and sys.stdin.isatty())
     ask = ask or input
     say = say or print
+    edit = edit or open_in_editor
     confirmed = load_inventory(ws)  # raises if confirmed atoms are broken
     ws.check_inside(ws.atoms_dir / CONFIRMED_FILE)  # confirm appends to it (#28)
 
@@ -129,6 +211,16 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
     if errors:
         raise JobforgeError("Some drafted facts in profile/pending/ are malformed. "
                             "Fix or delete them first:", errors)
+    # A pending fact identical to a confirmed one was already kept: an earlier
+    # run was stopped before it cleared pending/ (#77). Clear it now.
+    already = {a.id for atoms in per_file.values() for a in atoms
+               if (c := confirmed.atoms.get(a.id)) and (c.kind, c.fields) == (a.kind, a.fields)}
+    if already:
+        for path, atoms in per_file.items():
+            if any(a.id in already for a in atoms):
+                per_file[path] = [a for a in atoms if a.id not in already]
+                _rewrite_pending(path, per_file[path])
+        say(f"Cleared from profile/pending/, already confirmed: {', '.join(sorted(already))}.")
     pending = [a for atoms in per_file.values() for a in atoms]
     if not pending:
         say("Nothing to confirm: profile/pending/ is empty.")
@@ -148,33 +240,62 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
     out = Outcome([], [], [], [])
     decided: set[str] = set()
     target = ws.atoms_dir / CONFIRMED_FILE
-    say(f"{len(order)} drafted fact(s) to review. For each: [k]eep, [d]rop, "
-        f"[s]kip (decide later; edit the file in profile/pending/), [q]uit.\n")
+    say(f"{len(order)} drafted fact(s) to review. For each: [k]eep, [e]dit (opens it "
+        f"in your text editor), [d]rop, [s]kip (decide later), [q]uit.\n")
+
+    def replace(old: Atom, new: Atom) -> None:
+        """Save an edit into its pending file now, so skip or quit keeps it."""
+        atoms = per_file[old.source]
+        atoms[atoms.index(old)] = new
+        _rewrite_pending(old.source, atoms)
+
+    def blockers(atom: Atom) -> tuple[list[str], bool]:
+        """What stops this fact being kept, and whether it is a missing role."""
+        problems: list[str] = []
+        check_references({**live, atom.id: atom}, ws.rel, problems, only={atom.id})
+        # A missing defense note never blocks: it is asked for where it
+        # matters, and `check` names figures without one (#127).
+        return problems, bool(problems)
 
     for atom in order:
-        problems: list[str] = []
-        trial = dict(live)
-        trial[atom.id] = atom
-        check_references(trial, ws.rel, problems, only={atom.id})
-        owner = Inventory(trial).owner_role(atom)
+        problems, missing_role = blockers(atom)
+        owner = Inventory({**live, atom.id: atom}).owner_role(atom)
         say(describe(atom, owner))
         if problems:
             say("  Cannot keep this yet:\n" + "\n".join(f"    {p}" for p in problems))
-            if atom.kind == "bullet":
+            if atom.kind == "bullet" and missing_role:
                 say("  (Keep or add the role it belongs to first, then run confirm again.)")
             out.refused.append(atom.id)
             say("")
             continue
+        draft = serialize(atom)
         while True:
             try:
-                answer = ask("  Keep this fact? [k/d/s/q] ").strip().lower()[:1]
+                answer = ask("  Keep this fact? [k/e/d/s/q] ").strip().lower()[:1]
             except EOFError:
                 say("\n  Input ended, so confirm stopped here. Your answers so far are "
                     "saved; the rest stay in profile/pending/.")
                 answer = "q"
+            except KeyboardInterrupt:  # Ctrl+C: the natural way to quit (#77)
+                say("\n  Stopped. Your answers so far are saved; the rest stay in "
+                    "profile/pending/.")
+                answer = "q"
+            if answer == "e":
+                edited, draft = _edit(atom, draft, edit, say)
+                if edited is not None and blockers(edited)[0]:
+                    say("  That edit can't be kept:\n"
+                        + "\n".join(f"    {p}" for p in blockers(edited)[0])
+                        + "\n  Edit again to fix it, or skip to leave the fact as it was.")
+                    edited = None
+                if edited is not None:
+                    replace(atom, edited)
+                    atom = edited
+                    say("")
+                    say(describe(atom, Inventory({**live, atom.id: atom}).owner_role(atom)))
+                continue
             if answer in ("k", "d", "s", "q"):
                 break
-            say("  Please answer k, d, s, or q.")
+            say("  Please answer k, e, d, s, or q.")
         say("")
         if answer == "q":
             out.skipped.extend(a.id for a in order if a.id not in decided

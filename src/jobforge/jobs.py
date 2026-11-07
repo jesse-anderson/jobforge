@@ -7,11 +7,11 @@ comes with 1.0, with a performance test to prove when it is needed.
 from __future__ import annotations
 
 import datetime as _dt
-import json
 from dataclasses import dataclass
 
 from .errors import JobforgeError
 from .ledger import current_status, job_folders, read_events
+from .prepare import read_job
 from .workspace import Workspace
 
 UNREADABLE = "unreadable"
@@ -25,7 +25,7 @@ class JobRow:
     status: str
     last_date: str
     url: str
-    problem: str = ""  # why the ledger could not be read, if it could not
+    problem: str = ""  # why job.json or the ledger could not be read
 
 
 def list_jobs(ws: Workspace, *, today: _dt.date | None = None, ghost_after_days: int = 30,
@@ -34,16 +34,17 @@ def list_jobs(ws: Workspace, *, today: _dt.date | None = None, ghost_after_days:
     today = today or _dt.date.today()
     rows = []
     for folder in job_folders(ws):
+        # A broken job.json or ledger keeps the job in the list, marked, so
+        # one bad hand edit never hides a job (#28, #72). job.json is read
+        # first, so it still names the company when only the ledger is broken.
+        job, events, problem = {}, [], ""
         try:
-            job = json.loads((folder / "job.json").read_text(encoding="utf-8-sig"))
-        except (OSError, ValueError):  # bad JSON or not UTF-8 (#28): skip it
-            continue
-        # A broken ledger keeps the job in the list, marked, so one bad
-        # hand edit never hides the rest (#28).
-        try:
-            events, problem = read_events(folder), ""
+            job = read_job(folder)
+            events = read_events(folder)
         except JobforgeError as exc:
-            events, problem = [], str(exc)
+            problem = str(exc)
+        except OSError as exc:  # unreadable on disk, e.g. no permission
+            problem = f"{folder.name}: {exc.strerror or exc}"
         row = JobRow(
             folder=folder.name,
             company=str(job.get("company", "")),
@@ -71,7 +72,9 @@ def _fit(text: str, cap: int | None) -> str:
     return text[:cap - 1].rstrip() + "…"
 
 
-def format_table(rows: list[JobRow]) -> str:
+def format_table(rows: list[JobRow], *, filtered: bool = False) -> str:
+    if not rows and filtered:  # #86: jobs exist, the filter matched none
+        return "No jobs match. Run `jobforge jobs` with no filter to see them all."
     if not rows:
         return "No jobs yet. Add one with `jobforge prepare --from-url <url>`."
     headers = ("STATUS", "DATE", "COMPANY", "TITLE", "FOLDER")

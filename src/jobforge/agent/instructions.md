@@ -21,8 +21,8 @@ it; tell the user it is there.
 ## What you may write
 
 - New facts go in `profile/pending/*.toml`, never in `profile/atoms/`. The
-  user runs `jobforge confirm` to keep or drop each one. Only confirmed facts
-  can be used.
+  user runs `jobforge confirm` to keep, edit, or drop each one. Edit opens
+  the fact in their text editor. Only confirmed facts can be used.
 - For each job, you write `jobs/<folder>/plan.json`.
 - You may fill in `profile/profile.toml` with the user's name and contact
   details during setup.
@@ -83,12 +83,21 @@ infer. Example: a Rust rewrite cut memory use 97%. Do not write "and halved
 run time" or "saving money"; ask "What did that do to run time?" and "Did it
 save money? Roughly how much?", and record only what they answer.
 
+- The basis is the user's answer to "how do you know?". Ask for it on every
+  bullet; never pick one yourself. Offer the three answers it can be, in
+  plain words: "I measured or timed it" (`measured`), "it is on record: a
+  report, a log, a document" (`records`), or "it is my best guess"
+  (`estimate`). A bullet with no figure still needs one: a plain fact about
+  the job ("Moved the shop to eMaint") is usually `records`, but ask.
 - Ballpark figures are fine. Record them with `basis = "estimate"`.
 - Write figures plainly: "50%", never "~50%" or "about 50%". Never write more
   precision than the user gave.
-- For any big or surprising claim, ask how they know, and record the answer
-  as `defense`. If they cannot explain it, leave it out. Nothing on a resume
-  should make them stumble in an interview.
+- For a bullet with a figure or a big claim, ask how they know, and record
+  their answer in their words as `defense`. Where they already explained it
+  while you drafted, write that in yourself; they see it at `confirm`. A
+  plain duty needs no defense, and never ask for one bullet by bullet. If
+  they cannot explain a figure, leave it out. Nothing on a resume should
+  make them stumble in an interview.
 
 ## Atom format
 
@@ -106,8 +115,8 @@ end = "present"
 id = "acme.downtime"
 role = "acme"                    # the role it happened in. Required.
 text = "Cut unplanned line downtime 30% by rebuilding the preventive maintenance schedule"
-basis = "records"                # measured | records | estimate
-defense = "Downtime log in the plant system, 2022 against 2023."
+basis = "records"                # measured | records | estimate. Required on every bullet, even one with no figure.
+defense = "Downtime log in the plant system, 2022 against 2023."  # how they know, their words. For a figure or big claim.
 
 [[bullet.phrasing]]              # optional other wordings of the same fact
 use = "cover"                    # resume | cover | email | any
@@ -198,18 +207,28 @@ an employer is never described as a personal project, and the reverse.
 - Every figure in a line must appear in an atom the line cites. A reworded
   bullet keeps its atom's figures exactly, units included: never convert or
   swap a unit ("650,000 miles" stays miles, not km).
-- A bullet goes only under its own role. A cover-letter sentence that names
-  an employer, by its full name or an alias, may only use that employer's
-  facts.
+- A bullet goes only under its own role. A cover-letter or summary sentence
+  that names an employer, by its full name or an alias, may only use that
+  employer's facts. A sentence after it in the same paragraph that names no
+  employer is read as the same employer's, so it may not use another
+  employer's facts: name the other employer again, start a new paragraph,
+  or write the sentence in general terms ("I have run cycle counts", not
+  "There I ran cycle counts"). A career-wide figure (years of experience,
+  totals) goes in a sentence that names no employer, before any that does:
+  "Warehouse supervisor with 9 years in distribution. Currently at
+  Northwind Distribution."
 - Nothing from the never-claim list, and no tool the cited atoms do not show.
   The check only knows the tools and credentials named somewhere in the
   user's facts, so it cannot catch one it has never seen. Before `check`,
   reread every line: each tool, license, certification, and acronym must
   appear in an atom that line cites.
 - If you mention a project that has a URL, include the URL in full.
-- The letter may quote the employer's own figures from the posting ("your
-  40 locations"), except from a posting saved as the whole page: `check`
-  refuses those. For a pasted posting, `check` warns with each figure the
+- The letter may quote the employer's own figures and tools from the
+  posting ("your 40 locations"), but only in a sentence about the employer
+  ("you", "your", or its name) with no "I", "my", or "we" in it. Write
+  "Your 9 packaging lines run around the clock. Keeping lines like that
+  running is the work I want." as two sentences, never one. A posting saved
+  as the whole page gives no figures at all: `check` refuses those. For a pasted posting, `check` warns with each figure the
   letter takes only from it; show the user and confirm the posting says it.
 - No hedged figures ("about 50%"), no atom ids in the letter.
 - Cover letter: at most {{cover_letter_max_words}} words{{dash_rule}}. Avoid

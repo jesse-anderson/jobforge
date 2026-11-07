@@ -246,16 +246,27 @@ def fold(text: str) -> str:
     return unicodedata.normalize("NFKC", text).translate(_LOOKALIKES)
 
 
+# Hyphens (any dash), slashes, and runs of whitespace all read as one space
+# when matching a term, so "Black-Belt", "Black/Belt", and "Black  Belt" are
+# "Black Belt" (#92).
+_TERM_GAPS = re.compile(r"[\s/\-‐-―−]+")
+
+
+def _term_form(text: str) -> str:
+    return _TERM_GAPS.sub(" ", fold(text)).strip()
+
+
 def term_in(term: str, text: str) -> bool:
     """Whole-word, case-insensitive match. Terms of two characters or fewer
     ("Go", "C", "R") match case-sensitively, so "go" in prose is not the Go
-    language. Look-alike letters count as the letter they imitate."""
-    term = fold(term.strip())
+    language. Look-alike letters count as the letter they imitate, and
+    hyphens, slashes, and spacing do not matter."""
+    term = _term_form(term)
     if not term:
         return False
     flags = 0 if len(term) <= 2 else re.IGNORECASE
     pattern = r"(?<![\w+#])" + re.escape(term) + r"(?![\w+#])"
-    return re.search(pattern, fold(text), flags) is not None
+    return re.search(pattern, _term_form(text), flags) is not None
 
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*")

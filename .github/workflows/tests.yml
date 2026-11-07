@@ -46,39 +46,12 @@ jobs:
           python -m coverage run -m pytest -q -rs
           python -m coverage report --fail-under=95
           python tools/critical_coverage.py
-
-  # Coverage badge (#48), the same shields.io endpoint file as linreg-core,
-  # published to GitHub Pages instead of committed (D-48), with no token.
-  # Runs on main once the repo is public: Pages is off while it is private,
-  # and badges do not render for visitors before the flip anyway. At the
-  # flip, set Settings > Pages > Source to "GitHub Actions".
-  badge:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.repository.private
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Install
-        run: python -m pip install -e ".[dev]"
-      - name: Measure coverage and write the badge
+      # The README's coverage badge is a static number (#101). This fails when
+      # it is not the measured one; the message gives the badge to paste.
+      # One Python only, so a rounding difference between versions cannot
+      # make the two jobs disagree.
+      - name: Check the README coverage badge
+        if: matrix.python == '3.13'
         run: |
-          python -m coverage run -m pytest -q
           python -m coverage json -o coverage.json
-          python tools/coverage_badge.py coverage.json _site/coverage-badge.json
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-      - id: deploy
-        uses: actions/deploy-pages@v4
+          python tools/coverage_badge.py coverage.json README.md
