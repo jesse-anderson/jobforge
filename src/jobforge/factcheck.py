@@ -25,6 +25,7 @@ from .atoms import Atom, Inventory
 from .facts import find_hedges, number_tokens, split_sentences, term_in, word_count
 from .plan import Line, ResolvedPlan
 from .profile import Profile, display_url
+from .scan import find_mixed_script
 
 
 @dataclass
@@ -142,6 +143,12 @@ def check_voice(text: str, profile: Profile, where: str, rep: Report) -> None:
         rep.errors.append(f"{where}: uses banned phrase(s) {phrase_hits}.")
 
 
+def check_scripts(text: str, where: str, rep: Report) -> None:
+    for m in find_mixed_script(text):
+        rep.errors.append(f"{where}: {m}. Retype the word in plain letters; an "
+                          f"ATS will not match it as written.")
+
+
 def check_atom_ids(text: str, inv: Inventory, where: str, rep: Report) -> None:
     leaked = sorted(a for a in inv.atoms if "." in a and re.search(
         r"(?<![\w.])" + re.escape(a) + r"(?![\w])", text))
@@ -168,6 +175,7 @@ def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
     check_terms(line.text, pool, vocab, profile, line.where, rep)
     check_employers(line.text, line.cites, inv, line.where, rep)
     check_atom_ids(line.text, inv, line.where, rep)
+    check_scripts(line.text, line.where, rep)
     # Voice rules are for text the agent wrote. An atom rendered as the user
     # wrote it is their own wording and is not second-guessed.
     if line.owner is None or line.text != (line.owner.get("text") or "").strip():
@@ -192,6 +200,7 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
 
     check_voice(text, profile, where, rep)
     check_atom_ids(text, inv, where, rep)
+    check_scripts(text, where, rep)
     for term in profile.never_claim:
         if term_in(term, text):
             rep.errors.append(f"{where}: claims {term!r}, which your profile says "

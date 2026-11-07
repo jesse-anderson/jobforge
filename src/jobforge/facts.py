@@ -103,16 +103,32 @@ def find_hedges(text: str) -> list[str]:
     return [m.group(0) for m in HEDGE_RE.finditer(text)]
 
 
+# Cyrillic and Greek letters that look like Latin ones. Folded before terms
+# are matched, so "SАP" with a Cyrillic А is still SAP (issue #1).
+_LOOKALIKES = str.maketrans(
+    "АВЕКМНОРСТХУЅаеорсухіјѕԁԛԝ"   # Cyrillic
+    "ΑΒΕΖΗΙΚΜΝΟΡΤΥΧοιν",          # Greek
+    "ABEKMHOPCTXYSaeopcyxijsdqw"
+    "ABEZHIKMNOPTYXoiv",
+)
+
+
+def fold(text: str) -> str:
+    """Text with compatibility forms (fullwidth letters) and look-alike
+    letters mapped to plain Latin, for matching only."""
+    return unicodedata.normalize("NFKC", text).translate(_LOOKALIKES)
+
+
 def term_in(term: str, text: str) -> bool:
     """Whole-word, case-insensitive match. Terms of two characters or fewer
     ("Go", "C", "R") match case-sensitively, so "go" in prose is not the Go
-    language."""
-    term = term.strip()
+    language. Look-alike letters count as the letter they imitate."""
+    term = fold(term.strip())
     if not term:
         return False
     flags = 0 if len(term) <= 2 else re.IGNORECASE
     pattern = r"(?<![\w+#])" + re.escape(term) + r"(?![\w+#])"
-    return re.search(pattern, text, flags) is not None
+    return re.search(pattern, fold(text), flags) is not None
 
 
 WORD_RE = re.compile(r"[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*")

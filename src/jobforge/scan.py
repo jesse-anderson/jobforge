@@ -7,6 +7,7 @@ problem. `apply` runs this over the text read back from every document.
 """
 from __future__ import annotations
 
+import re
 import unicodedata
 from dataclasses import dataclass
 
@@ -62,6 +63,42 @@ def find_hidden(text: str) -> list[Hidden]:
             lo, hi = max(0, i - 20), min(len(text), i + 20)
             ctx = "".join(c if not _name(c) else "?" for c in text[lo:hi])
             found.append(Hidden(ch, name, i, " ".join(ctx.split())))
+    return found
+
+
+_LOOKALIKE_SCRIPTS = ("CYRILLIC", "GREEK")
+
+
+@dataclass(frozen=True)
+class MixedScript:
+    word: str
+    script: str  # "Cyrillic" or "Greek"
+
+    def __str__(self) -> str:
+        odd = ", ".join(f"U+{ord(c):04X}" for c in self.word
+                        if unicodedata.name(c, "").startswith(self.script.upper()))
+        return (f"the word {self.word!r} mixes Latin and {self.script} letters "
+                f"({odd}) that look alike")
+
+
+def _script(ch: str) -> str | None:
+    if not ch.isalpha():
+        return None
+    return unicodedata.name(ch, "").split(" ", 1)[0] or None
+
+
+def find_mixed_script(text: str) -> list[MixedScript]:
+    """Words that mix Latin letters with Cyrillic or Greek ones. They read
+    as one word and match nothing: not a keyword in an ATS, not a term in
+    the fact check (issue #1). A word wholly in another script is fine."""
+    found = []
+    for word in re.findall(r"\w+", text):
+        scripts = {_script(c) for c in word} - {None}
+        if "LATIN" in scripts:
+            for other in _LOOKALIKE_SCRIPTS:
+                if other in scripts:
+                    found.append(MixedScript(word, other.capitalize()))
+                    break
     return found
 
 

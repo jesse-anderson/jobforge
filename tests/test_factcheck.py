@@ -119,7 +119,7 @@ def test_year_from_role_dates_passes(ws, john_plan):
 
 @pytest.mark.parametrize("claim,figure", [
     ("cut labor cost 14 per cent", "14%"),
-    ("cut labor cost 14％", "14%"),
+    ("cut labor cost 14\uff05", "14%"),
     ("saved €14", "€14"),
     ("saved 14 thousand dollars", "$14000"),
 ])
@@ -134,6 +134,35 @@ def test_never_claim_tool_in_a_bullet(ws, john_plan):
     john_plan["experience"][0]["bullets"][0] = {
         "atom": "northwind.accuracy", "text": "Raised pick accuracy from 97.2% to 99.6% with SAP scanning"}
     expect(check(ws, john_plan), "claims 'SAP'")
+
+
+def test_never_claim_with_a_look_alike_letter(ws, john_plan):
+    # Issue #1: a Cyrillic A makes "SAP" a different string.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using S\u0410P"}
+    rep = check(ws, john_plan)
+    expect(rep, "claims 'SAP'")
+    expect(rep, "mixes Latin and Cyrillic")
+
+
+def test_never_claim_written_all_in_cyrillic(ws, john_plan):
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using \u0405\u0410\u0420"}
+    expect(check(ws, john_plan), "claims 'SAP'")
+
+
+def test_other_employer_with_a_look_alike_letter(ws, john_plan):
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime",
+        "text": "Cut weekly overtime 25%, a method from Lakeside Gr\u043ecery Co-op"}
+    expect(check(ws, john_plan), "names 'Lakeside Grocery Co-op'")
+
+
+def test_all_cyrillic_word_passes(ws, john_plan):
+    john_plan["experience"][0]["bullets"][1] = {
+        "atom": "northwind.team",
+        "text": "Lead 14 associates, including new arrivals from \u041a\u0438\u0457\u0432"}
+    assert check(ws, john_plan).ok
 
 
 def test_known_tool_not_in_cited_atom(ws, john_plan):
@@ -245,6 +274,13 @@ def test_letter_may_quote_the_postings_figures(ws, john_plan):
 def test_letter_never_claim(ws, john_plan):
     letter_body(john_plan, "I have used SAP for inventory.")
     expect(check(ws, john_plan), "claims 'SAP'")
+
+
+def test_letter_never_claim_with_a_look_alike_letter(ws, john_plan):
+    letter_body(john_plan, "I have used S\u0410P for inventory.")
+    rep = check(ws, john_plan)
+    expect(rep, "claims 'SAP'")
+    expect(rep, "mixes Latin and Cyrillic")
 
 
 def test_letter_tool_not_cited(ws, john_plan):
