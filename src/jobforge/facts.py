@@ -170,15 +170,27 @@ _UNIT_ABBR_N = {unicodedata.normalize("NFKC", k): v for k, v in _UNIT_ABBR.items
 
 
 def _alt(words):
-    """Longest first, so "sq ft" wins over "ft"; a space matches any run."""
-    return "|".join(re.escape(w).replace(r"\ ", r"\s+")
+    """Longest first, so "sq ft" wins over "ft"; a space matches any run of
+    spaces or hyphens ("sq-ft")."""
+    return "|".join(re.escape(w).replace(r"\ ", r"[\s-]+")
                     for w in sorted(words, key=len, reverse=True))
 
 
-# A figure, at most two words, then a unit: "650,000 accident-free miles".
+# A multiplier between the figure and the unit: "650k km", "0.65 million km"
+# (#37). Not "m" or "mm", which are units here; "k" only as its own word, so
+# "5 km" stays kilometers.
+_UNIT_MULT = {"k": Decimal(1_000), "K": Decimal(1_000), "thousand": Decimal(1_000),
+              "M": Decimal(1_000_000), "million": Decimal(1_000_000),
+              "bn": Decimal(1_000_000_000), "billion": Decimal(1_000_000_000)}
+
+# A figure, then a unit: right after a multiplier ("650k km", #37), right
+# after a hyphen ("650,000-km", #37), or after at most two words ("650,000
+# accident-free miles"). A multiplier needs its unit next, so "401k match
+# from day one" is not 401,000 days.
 UNIT_RE = re.compile(
     r"(?<![\w.])(?P<int>\d{1,3}(?:,\d{3})+|\d+)(?P<dec>\.\d+)?"
-    r"(?:\s+[A-Za-z][\w-]*){0,2}?\s*(?:(?<=\d)|(?<=\s))"
+    rf"(?:\s?(?P<mult>{_alt(_UNIT_MULT)})(?![\w-])[\s-]*"
+    r"|-|(?:\s+[A-Za-z][\w-]*){0,2}?\s*(?:(?<=\d)|(?<=\s)))"
     rf"(?:(?P<abbr>{_alt(_UNIT_ABBR_N)})|(?i:(?P<word>{_alt(_UNIT_WORDS)})s?))(?![\w-])")
 
 
@@ -195,8 +207,10 @@ def unit_figures(text: str) -> list[UnitFigure]:
     out = []
     for m in UNIT_RE.finditer(unicodedata.normalize("NFKC", text)):
         val = Decimal(m.group("int").replace(",", "") + (m.group("dec") or ""))
+        if m.group("mult"):
+            val *= _UNIT_MULT[m.group("mult")]
         written = m.group("abbr") or m.group("word")
-        key = re.sub(r"\s+", " ", written)
+        key = re.sub(r"[\s-]+", " ", written)
         unit = _UNIT_ABBR_N[key] if m.group("abbr") else _UNIT_WORDS[key.lower()]
         out.append(UnitFigure(_norm(val), unit, m.group(0)))
     return out
