@@ -45,3 +45,4 @@ jobs:
           fi
           python -m coverage run -m pytest -q -rs
           python -m coverage report --fail-under=95
+          python tools/critical_coverage.py

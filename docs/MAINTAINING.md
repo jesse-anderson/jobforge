@@ -46,8 +46,9 @@ Every change ships with tests, written in the same change. No exceptions for
 
 - Run: `python -m pytest` (works without installing; pytest finds `src/`).
 - Coverage: `python -m coverage run -m pytest && python -m coverage report`.
-  CI fails under 95%. Code on a D-30 critical path is held to 100%; mark its
-  tests `@pytest.mark.critical`.
+  CI fails under 95%. Code on a critical path (D-30, D-51; the list is in
+  `pyproject.toml`) is held to 100% by `python tools/critical_coverage.py`,
+  in CI and before every push; mark its tests `@pytest.mark.critical`.
 - Tests never touch the network. Stub the fetch (see `tests/test_intake.py`).
 - A bug fix starts with a test that fails without the fix.
 - New fact-check rules get a planted-violation test and a clean-passes test.

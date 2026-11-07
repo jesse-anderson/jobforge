@@ -10,7 +10,8 @@
 
 <!-- Paste the pytest summary line and the coverage TOTAL line from:
      python -m coverage run -m pytest -q
-     python -m coverage report --fail-under=95 -->
+     python -m coverage report --fail-under=95
+     python tools/critical_coverage.py -->
 
 ```
 ```
