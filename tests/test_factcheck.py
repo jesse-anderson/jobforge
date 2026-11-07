@@ -385,6 +385,22 @@ def test_unit_spelled_differently_passes(ws, john_plan):
     assert check(ws, john_plan).ok
 
 
+def test_money_with_added_cents_is_added_precision(ws, john_plan):
+    # Issue #11: "$84,000" confirmed; "$84,000.00" claims an exactness the
+    # user never stated.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.savings"\nrole = "northwind"\n'
+                  'text = "Saved $84,000 a year on pallet rentals"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.savings", "text": "Saved $84,000.00 a year on pallet rentals"})
+    expect(check(ws, john_plan), "the figure $84,000.00 is more precise than the facts ($84,000)")
+
+
+def test_letter_figure_with_added_decimal_is_caught(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "I reduced produce shrink 18.0% with rotation checks.")
+    expect(check(ws, john_plan), "the figure 18.0% is more precise than the facts (18%)")
+
+
 def test_letter_may_quote_the_postings_figures(ws, john_plan):
     letter_body(john_plan, "Your 6 cross-dock facilities and a second-shift team of 20 "
                            "sound like the work I do now.")

@@ -55,5 +55,14 @@ These are the rules the maintainers already follow (`docs/MAINTAINING.md`):
 
 ## License
 
-Contributions are accepted under the same license as the project,
-[PolyForm Noncommercial 1.0.0](LICENSE).
+**By submitting a contribution, you license it under
+[PolyForm Noncommercial 1.0.0](LICENSE), the same terms as the rest of
+Jobforge, and you certify the Developer Certificate of Origin.** You keep
+the copyright in what you wrote. There is no CLA (D-39).
+
+The DCO speaks of "the open source license indicated in the file". In this
+project that means PolyForm Noncommercial 1.0.0, which is source-available
+rather than open source in the OSI sense.
+
+Jobforge's copyright is held jointly by its maintainers, Jesse Anderson and
+Mike Wilson (D-49).

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from decimal import Decimal, InvalidOperation
 
 _MULT = {"k": Decimal(1_000), "thousand": Decimal(1_000),
@@ -49,6 +49,10 @@ class Token:
     kind: str   # "money" | "percent" | "times" | "number"
     value: str  # normalized decimal string
     currency: str = ""  # money only: "" for dollars, else the symbol
+    # As written, for the precision check (#11); not part of equality, so
+    # "76.0%" and "76%" are the same figure.
+    places: int = field(default=0, compare=False)  # decimal places written
+    shown: str = field(default="", compare=False)
 
     def __str__(self) -> str:
         if self.kind == "money":
@@ -92,6 +96,11 @@ def number_tokens(text: str) -> list[Token]:
             out.append(Token("money", _norm(val), currency))
         else:
             out.append(Token("number", _norm(val)))
+        # A multiplier moves the decimal point ("$1.2M"), so places only
+        # count for a figure written in full.
+        dec = m.group("dec") or ""
+        out[-1] = replace(out[-1], places=0 if unit in _MULT else max(len(dec) - 1, 0),
+                          shown=m.group(0).strip())
     return out
 
 
