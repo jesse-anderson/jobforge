@@ -77,3 +77,12 @@ def test_copyright_holders_agree_across_license_contributing_and_decisions():
     decisions = _read("docs/DECISIONS.md")
     assert "| D-49 | Copyright |" in decisions
     assert "**D-49." in decisions
+
+
+def test_ci_hands_the_pii_denylist_secret_to_the_test_step():
+    # #20: the old workflow gated a step on `env.PII_DENYLIST`, which that
+    # step's own env never sets, so T-PII always skipped in CI.
+    wf = _read(".github/workflows/tests.yml")
+    assert "if: ${{ env.PII_DENYLIST" not in wf
+    assert "PII_DENYLIST: ${{ secrets.PII_DENYLIST }}" in wf
+    assert 'export JOBFORGE_PII_DENYLIST="$RUNNER_TEMP/pii_denylist.txt"' in wf

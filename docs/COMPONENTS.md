@@ -271,8 +271,9 @@ test suite that proves the instructions and the engine agree.
 same repo is flipped public at launch. Before the flip: run T-PII over the
 whole history (not just the tip), and if anything turns up, publish a
 squashed fresh history instead. Issues and PRs become public too, so personal
-context goes in `the maintainers' private notes`, and a Jobforge issue links to it there
-("details in ops") rather than repeating it.
+context goes in `the maintainers' private notes`, filed under the issue number. The Jobforge
+issue carries only what a user could follow and never points to a private
+repo.
 
 ### Planned layout of `jobforge`
 
