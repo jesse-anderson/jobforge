@@ -68,6 +68,7 @@ what changed and why. Do not silently edit old answers.
 | D-46 | Report (UI) | Deferred past the MVP. A static page generated locally, showing applied count, velocity, callback rate, and an outcome Sankey. The ledger records what it needs from day one. (2026-11-06) |
 | D-47 | MVP accepted | MVP.md accepted; it is the public launch (0.x preview). Chatbot/Claude Skill path welcome but not gating. Ghost after 30 days. `check` added. Report is plain HTML/CSS/JS, no build step. Job Apps = whole workstream. (2026-11-06) |
 | D-48 | Commits | Only Jesse or Mike commit. AI may propose a commit message, with no AI attribution lines. (2026-11-06) |
+| D-49 | Copyright | Jesse and Mike hold the copyright jointly; a license change needs both. Contributors keep their copyright and license contributions under PolyForm NC by submitting them, with a DCO sign-off. (2026-11-06) |
 
 ---
 
@@ -892,3 +893,25 @@ Answers to the open questions in `docs/MVP.md`, which is now accepted.
 project's repos. At most it proposes a commit message, which carries no
 "Generated with" or "Co-Authored-By" attribution lines. The maintainer
 reviews the change and commits it under their own name.
+
+### Copyright and contributions (stated 2026-11-06)
+> Does the license cover contributors?
+
+Answered: the license covers users, not contributions coming in. Asked to
+make the contribution terms explicit and record who holds the copyright:
+> Make those fixes and put the line in.
+
+**D-49. The maintainers hold the copyright jointly; contributions come in
+under the project license.**
+- Jesse Anderson and Mike Wilson are joint copyright holders of Jobforge,
+  as the `Required Notice` line in `LICENSE` states. Changing the license,
+  or offering the code under any other license, needs both to agree.
+- An outside contributor keeps the copyright in what they write. By
+  submitting it they license it under PolyForm Noncommercial 1.0.0 and
+  certify the DCO with a sign-off (`CONTRIBUTING.md`). There is no CLA
+  (D-39).
+- Consequence: relicensing later needs every contributor's agreement or a
+  rewrite of their code. Settle any commercial plan before outside PRs open
+  (D-19).
+- The DCO's phrase "the open source license indicated in the file" is read
+  as this project's license.
