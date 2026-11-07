@@ -195,6 +195,9 @@ def test_software_dev_project_url_on_resume_and_required_in_letter(tmp_path):
     ("Raised pump efficiency from 72.53% to 76% at 450 gpm", "the figure 72.53%"),
     ("Raised pump efficiency from 72.5% to 77% at 450 gpm", "the figure 77%"),
     ("Raised pump efficiency from 72.5% to about 76% at 450 gpm", "hedged figure"),
+    # Issue #11: trailing zeros the atom does not have are added precision.
+    ("Raised pump efficiency from 72.50% to 76.0% at 450 gpm", "the figure 72.50%"),
+    ("Raised pump efficiency from 72.5% to 76.00% at 450 gpm", "the figure 76.00%"),
 ])
 def test_engineer_precision_is_held_to_the_atom(tmp_path, text, bad):
     """D-37: no added precision, no rounding, no hedging. 76% may stand for
@@ -204,6 +207,20 @@ def test_engineer_precision_is_held_to_the_atom(tmp_path, text, bad):
         0, {"atom": "delta.impeller", "text": text}))
     result = run_check(ws, folder)
     assert any(bad in e for e in result.errors), result.errors
+
+
+@pytest.mark.parametrize("text", [
+    "Raised pump efficiency from 72.5% to 76.0% at 450 gpm",
+    "Raised pump efficiency from 72.5% to 76% at 450 gpm",
+])
+def test_engineer_figures_as_the_atom_states_them_pass(tmp_path, text):
+    """Issue #11: the atom's own figures, 1:1, pass; dropping a trailing zero
+    ("76%" for "76.0%") claims less, not more."""
+    ws, folder = setup(tmp_path, "engineer")
+    edit_plan(folder, lambda p: p["experience"][0]["bullets"].__setitem__(
+        0, {"atom": "delta.impeller", "text": text}))
+    result = run_check(ws, folder)
+    assert result.ok, result.errors
 
 
 def test_educator_resume_runs_past_one_page_within_her_limit_of_two(tmp_path):
