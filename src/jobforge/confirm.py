@@ -11,6 +11,7 @@ kept (D-40).
 """
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -107,8 +108,16 @@ def _rewrite_pending(path: Path, remaining: list[Atom]) -> None:
         return
     header = ("# Drafted facts waiting for `jobforge confirm`. Nothing here is used "
               "until you keep it.\n\n")
-    path.write_text(header + "\n".join(serialize(a) for a in remaining),
-                    encoding="utf-8", newline="\n")
+    # Write beside it, then replace: a Ctrl+C mid-write never leaves the
+    # drafts still waiting there empty or half-written (#77).
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        tmp.write_text(header + "\n".join(serialize(a) for a in remaining),
+                       encoding="utf-8", newline="\n")
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
@@ -129,6 +138,16 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
     if errors:
         raise JobforgeError("Some drafted facts in profile/pending/ are malformed. "
                             "Fix or delete them first:", errors)
+    # A pending fact identical to a confirmed one was already kept: an earlier
+    # run was stopped before it cleared pending/ (#77). Clear it now.
+    already = {a.id for atoms in per_file.values() for a in atoms
+               if (c := confirmed.atoms.get(a.id)) and (c.kind, c.fields) == (a.kind, a.fields)}
+    if already:
+        for path, atoms in per_file.items():
+            if any(a.id in already for a in atoms):
+                per_file[path] = [a for a in atoms if a.id not in already]
+                _rewrite_pending(path, per_file[path])
+        say(f"Cleared from profile/pending/, already confirmed: {', '.join(sorted(already))}.")
     pending = [a for atoms in per_file.values() for a in atoms]
     if not pending:
         say("Nothing to confirm: profile/pending/ is empty.")
@@ -171,6 +190,10 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
             except EOFError:
                 say("\n  Input ended, so confirm stopped here. Your answers so far are "
                     "saved; the rest stay in profile/pending/.")
+                answer = "q"
+            except KeyboardInterrupt:  # Ctrl+C: the natural way to quit (#77)
+                say("\n  Stopped. Your answers so far are saved; the rest stay in "
+                    "profile/pending/.")
                 answer = "q"
             if answer in ("k", "d", "s", "q"):
                 break

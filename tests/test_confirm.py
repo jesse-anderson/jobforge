@@ -197,6 +197,88 @@ def test_input_ending_mid_review_keeps_earlier_answers(ws):
     assert load_inventory(ws).get("acme") is not None
 
 
+# Issue #77: Ctrl+C at a prompt left kept facts in pending/ as well, and the
+# next confirm refused ("same id as a confirmed atom") until hand-edited.
+def pending_ids(ws):
+    from jobforge.atoms import parse_file, read_files
+    return sorted(a.id for p in read_files(ws.pending_dir) for a in parse_file(p, "", []))
+
+
+@pytest.mark.parametrize("at", [1, 2, 3])
+def test_ctrl_c_at_a_prompt_keeps_earlier_answers(ws, at):
+    # Order is role, skill, bullet; answers keep, drop, keep. Ctrl+C at question `at`.
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    answers = iter(["k", "d", "k"][:at - 1])
+
+    def ask(_prompt):
+        try:
+            return next(answers)
+        except StopIteration:
+            raise KeyboardInterrupt from None
+
+    said = []
+    out = run_confirm(ws, ask=ask, say=said.append)
+    decided = ["acme", "skill.plc", "acme.uptime"][:at - 1]
+    assert out.kept + out.dropped == decided
+    assert any("Stopped" in s and "saved" in s for s in said)
+    # Every fact is in exactly one place: confirmed, dropped, or still pending.
+    still = pending_ids(ws)
+    assert not set(still) & set(decided)
+    assert sorted(still + decided) == ["acme", "acme.uptime", "skill.plc"]
+    # And the next confirm runs, finishing the rest.
+    rest = run_confirm(ws, ask=lambda _: "k", say=quiet)
+    assert sorted(rest.kept) == still and pending_ids(ws) == []
+
+
+def test_a_fact_already_confirmed_is_cleared_from_pending(ws):
+    # Ctrl+C between keeping a fact and rewriting pending/ (not at a prompt)
+    # leaves it in both places. The next run sees the identical copy, clears
+    # it from pending/, and goes on, instead of refusing.
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    run_confirm(ws, ask=lambda _: "k", say=quiet)  # all three kept
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)  # the stale copy
+    said = []
+    out = run_confirm(ws, ask=script(), say=said.append)
+    assert out.kept == [] and pending_ids(ws) == []
+    assert any("already confirmed" in s and "acme" in s for s in said)
+
+
+def test_already_confirmed_copy_is_cleared_and_the_rest_reviewed(ws):
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    run_confirm(ws, ask=script("k", "d", "d"), say=quiet)  # keep acme only
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    out = run_confirm(ws, ask=script("k", "k"), say=quiet)  # skill, bullet
+    assert out.kept == ["skill.plc", "acme.uptime"] and pending_ids(ws) == []
+
+
+def test_clearing_a_stale_copy_leaves_other_pending_files_untouched(ws):
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    run_confirm(ws, ask=lambda _: "k", say=quiet)
+    add_atoms(ws, DRAFT, "draft.toml", pending=True)  # the stale copy
+    other = add_atoms(ws, '[[skill]]\nid = "skill.forklift"\nlabel = "Equipment"\n'
+                          'items = ["Reach truck"]\n', "other.toml", pending=True)
+    before = other.read_bytes()
+    out = run_confirm(ws, ask=script("s"), say=quiet)
+    assert out.skipped == ["skill.forklift"] and other.read_bytes() == before
+    assert not (ws.pending_dir / "draft.toml").exists()
+
+
+def test_ctrl_c_while_rewriting_pending_loses_nothing(ws, monkeypatch):
+    # The rewrite goes through a temp file, so the pending file is never
+    # left empty or half-written.
+    import jobforge.confirm as confirm_mod
+    path = add_atoms(ws, DRAFT, "draft.toml", pending=True)
+    before = path.read_bytes()
+
+    def interrupted(src, dst):
+        raise KeyboardInterrupt
+    monkeypatch.setattr(confirm_mod.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        run_confirm(ws, ask=script("d", "s", "s"), say=quiet)
+    assert path.read_bytes() == before
+    assert sorted(p.name for p in ws.pending_dir.iterdir()) == ["draft.toml"]
+
+
 def test_review_shows_dates_and_details_the_user_is_confirming():
     """Issue #2 run: a credential's date and a degree's field and date were
     confirmed without ever being shown."""
