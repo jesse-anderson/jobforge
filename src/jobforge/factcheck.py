@@ -286,7 +286,8 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
             f"{where}: {', '.join(dict.fromkeys(map(str, from_page)))} appear only in the "
             f"posting, which was saved from the whole page and may include other "
             f"listings. To quote the employer's figures, paste just the posting with "
-            f"`jobforge prepare --from-text ... --force`.")
+            f"`jobforge prepare --from-text <file> --url <link> --force`; the link "
+            f"makes it replace this capture instead of making a second folder.")
     elif from_page and source == "manual":
         rep.warnings.append(
             f"{where}: {', '.join(dict.fromkeys(map(str, from_page)))} come only from the "

@@ -477,6 +477,8 @@ def test_letter_figure_only_in_a_page_capture_is_refused(ws, john_plan):
     expect(rep, "the figure 6 is not in the facts")
     expect(rep, "the figure 20 is not in the facts")
     assert any("whole page" in w for w in rep.warnings), rep.warnings
+    # #31: --force replaces only the same posting, so the advice carries --url.
+    assert any("--url <link> --force" in w for w in rep.warnings), rep.warnings
 
 
 def test_letter_without_posting_figures_passes_a_page_capture(ws, john_plan):
