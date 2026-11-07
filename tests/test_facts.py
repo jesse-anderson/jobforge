@@ -169,3 +169,14 @@ def test_every_unit_spelling_is_read():
     for spelling, unit in [*_UNIT_ABBR.items(), *_UNIT_WORDS.items()]:
         found = [(f.value, f.unit) for f in unit_figures(f"reached 12 {spelling} last year")]
         assert found[:1] == [("12", unit)], (spelling, found)
+
+
+@pytest.mark.parametrize("text,step", [
+    # Precision is the smallest amount a figure states (Jesse's review, #24).
+    ("$1.2M", "100000"), ("$1.20M", "10000"), ("$1,200,000", "1"),
+    ("2.5 million", "100000"), ("12k", "1000"), ("76.0%", "0.1"), ("76%", "1"),
+    ("0.05 mm", "0.01"),
+])
+def test_token_step(text, step):
+    from decimal import Decimal
+    assert number_tokens(text)[0].step == Decimal(step)

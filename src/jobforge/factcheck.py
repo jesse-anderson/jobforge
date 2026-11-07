@@ -93,7 +93,7 @@ def check_figures(text: str, pool: str, where: str, rep: Report, extra_pool: str
     # Each figure -> its most precise written form in the facts.
     have: dict = {}
     for tok in number_tokens(pool + "\n" + extra_pool):
-        if tok not in have or tok.places > have[tok].places:
+        if tok not in have or tok.step < have[tok].step:
             have[tok] = tok
     for tok in number_tokens(text):
         if tok not in have:
@@ -101,9 +101,10 @@ def check_figures(text: str, pool: str, where: str, rep: Report, extra_pool: str
                 f"{where}: the figure {tok} is not in the facts this line cites. "
                 f"Use a figure the atom states, or add the fact (with `jobforge "
                 f"confirm`) before using it.")
-        elif tok.places > have[tok].places:
-            # "76.00%" for a confirmed "76.0%" claims exactness the user never
-            # stated (D-37, #11). Fewer places ("76%") claims less, so passes.
+        elif tok.step < have[tok].step:
+            # "76.00%" for a confirmed "76.0%", or "$1,200,000" for "$1.2M",
+            # claims exactness the user never stated (D-37, #11). A coarser
+            # figure ("76%", "$1.2M" for "$1,200,000") claims less, so passes.
             rep.errors.append(
                 f"{where}: the figure {tok.shown} is more precise than the facts "
                 f"({have[tok].shown}). Write it as the atom does (D-37).")

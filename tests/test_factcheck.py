@@ -401,6 +401,31 @@ def test_letter_figure_with_added_decimal_is_caught(ws, john_plan):
     expect(check(ws, john_plan), "the figure 18.0% is more precise than the facts (18%)")
 
 
+@pytest.mark.parametrize("atom,line,ok", [
+    # Jesse's review on #24: precision is the smallest amount a figure states.
+    # "$1.2M" is to the nearest $100,000; "$1.20M" to $10,000; "$1,200,000"
+    # to the dollar. A line may state a figure no more finely than its atom.
+    ("Ran a $1.2M budget", "Ran a $1.20M budget", False),
+    ("Ran a $1.2M budget", "Ran a $1,200,000 budget", False),
+    ("Ran a $1.2M budget", "Ran a $1.2 million budget", True),
+    ("Ran a $1,200,000 budget", "Ran a $1.2M budget", True),
+    ("Ran a $1,200,000 budget", "Ran a $1,200,000 budget", True),
+    ("Served 2.5 million riders", "Served 2.50 million riders", False),
+    ("Served 2.5 million riders", "Served 2,500,000 riders", False),
+    ("Shipped 12,000 orders", "Shipped 12k orders", True),
+    ("Shipped 12k orders", "Shipped 12,000 orders", False),
+])
+def test_precision_counts_the_multiplier(ws, john_plan, atom, line, ok):
+    add_atoms(ws, f'[[bullet]]\nid = "northwind.scale"\nrole = "northwind"\n'
+                  f'text = "{atom}"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append({"atom": "northwind.scale", "text": line})
+    rep = check(ws, john_plan)
+    if ok:
+        assert rep.ok, rep.errors
+    else:
+        expect(rep, "is more precise than the facts")
+
+
 def test_letter_may_quote_the_postings_figures(ws, john_plan):
     letter_body(john_plan, "Your 6 cross-dock facilities and a second-shift team of 20 "
                            "sound like the work I do now.")

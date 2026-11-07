@@ -50,8 +50,9 @@ class Token:
     value: str  # normalized decimal string
     currency: str = ""  # money only: "" for dollars, else the symbol
     # As written, for the precision check (#11); not part of equality, so
-    # "76.0%" and "76%" are the same figure.
-    places: int = field(default=0, compare=False)  # decimal places written
+    # "76.0%" and "76%" are the same figure. `step` is the smallest amount the
+    # figure states: 0.1 for "76.0%", 100000 for "$1.2M", 1 for "$1,200,000".
+    step: Decimal = field(default=Decimal(1), compare=False)
     shown: str = field(default="", compare=False)
 
     def __str__(self) -> str:
@@ -74,6 +75,7 @@ def number_tokens(text: str) -> list[Token]:
     cannot slip past as something else (issue #1)."""
     out: list[Token] = []
     for m in NUMBER_RE.finditer(unicodedata.normalize("NFKC", text)):
+        mult = Decimal(1)
         raw = m.group("int").replace(",", "") + (m.group("dec") or "")
         try:
             val = Decimal(raw)
@@ -89,17 +91,18 @@ def number_tokens(text: str) -> list[Token]:
         elif unit in _MONEY_ONLY and currency is None:
             out.append(Token("number", _norm(val)))
         elif unit in _MULT:
-            val *= _MULT[unit]
+            mult = _MULT[unit]
+            val *= mult
             out.append(Token("number", _norm(val)) if currency is None
                        else Token("money", _norm(val), currency))
         elif currency is not None:
             out.append(Token("money", _norm(val), currency))
         else:
             out.append(Token("number", _norm(val)))
-        # A multiplier moves the decimal point ("$1.2M"), so places only
-        # count for a figure written in full.
-        dec = m.group("dec") or ""
-        out[-1] = replace(out[-1], places=0 if unit in _MULT else max(len(dec) - 1, 0),
+        # "$1.20M" states the figure to $10,000: the last written digit's
+        # place, times the multiplier.
+        places = max(len(m.group("dec") or "") - 1, 0)
+        out[-1] = replace(out[-1], step=Decimal(1).scaleb(-places) * mult,
                           shown=m.group(0).strip())
     return out
 
