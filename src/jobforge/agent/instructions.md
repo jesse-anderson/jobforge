@@ -92,11 +92,12 @@ save money? Roughly how much?", and record only what they answer.
 - Ballpark figures are fine. Record them with `basis = "estimate"`.
 - Write figures plainly: "50%", never "~50%" or "about 50%". Never write more
   precision than the user gave.
-- For every bullet, ask how they know, and record their answer in their
-  words as `defense`. `jobforge confirm` will not keep a new bullet without
-  one, and interview prep is built from these notes. If they cannot explain
-  it, leave it out. Nothing on a resume
-  should make them stumble in an interview.
+- For a bullet with a figure or a big claim, ask how they know, and record
+  their answer in their words as `defense`. Where they already explained it
+  while you drafted, write that in yourself; they see it at `confirm`. A
+  plain duty needs no defense, and never ask for one bullet by bullet. If
+  they cannot explain a figure, leave it out. Nothing on a resume should
+  make them stumble in an interview.
 
 ## Atom format
 
@@ -115,7 +116,7 @@ id = "acme.downtime"
 role = "acme"                    # the role it happened in. Required.
 text = "Cut unplanned line downtime 30% by rebuilding the preventive maintenance schedule"
 basis = "records"                # measured | records | estimate. Required on every bullet, even one with no figure.
-defense = "Downtime log in the plant system, 2022 against 2023."  # how they know, their words. Required.
+defense = "Downtime log in the plant system, 2022 against 2023."  # how they know, their words. For a figure or big claim.
 
 [[bullet.phrasing]]              # optional other wordings of the same fact
 use = "cover"                    # resume | cover | email | any

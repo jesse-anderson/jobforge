@@ -93,21 +93,35 @@ def test_bullet_with_no_role_at_all_is_refused(ws):
     assert out.refused == ["x.a"]
 
 
-# Issue #83 item 5: D-36 says every fact records how the user knows it, and
-# prep sheets are built from those notes (D-38). A new bullet is not kept
-# without one.
+# Issue #127: a defense note is asked for where it matters, never required.
+# #124 made confirm refuse a bullet without one, which cost a question per
+# bullet at setup ("I worked in X" needs no defense; "$1.5M saved" does).
 @pytest.mark.parametrize("defense", ["", 'defense = ""\n', 'defense = "   "\n'])
-def test_bullet_without_a_defense_note_is_refused(ws, defense):
+def test_bullet_without_a_defense_note_is_kept(ws, defense):
     add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\n'
                   f'text = "Cut dock wait 3 hours"\nbasis = "records"\n{defense}',
               "d.toml", pending=True)
     said = []
-    out = run_confirm(ws, ask=script(), say=said.append)
-    assert out.refused == ["northwind.new"]
-    shown = "\n".join(said)
-    assert "no defense note" in shown and 'defense = "' in shown
-    assert "Keep or add the role" not in shown  # that advice is for a missing role
-    assert load_inventory(ws).get("northwind.new") is None
+    out = run_confirm(ws, ask=script("k"), say=said.append)
+    assert out.kept == ["northwind.new"] and not out.refused
+    assert "no defense note" not in "\n".join(said)
+
+
+def test_twenty_plain_duties_cost_one_answer_each_and_no_warnings(ws):
+    # #127's measure: a 20-bullet resume of plain duties gets no extra
+    # questions and no warnings.
+    duties = "".join(f'[[bullet]]\nid = "northwind.duty{n}"\nrole = "northwind"\n'
+                     f'text = "Ran the {w} dock check"\nbasis = "records"\n\n'
+                     for n, w in enumerate(["morning", "evening", "weekend", "inbound", "outbound"] * 4))
+    add_atoms(ws, duties, "d.toml", pending=True)
+    prompts = []
+
+    def ask(prompt):
+        prompts.append(prompt)
+        return "k"
+    out = run_confirm(ws, ask=ask, say=quiet)
+    assert len(out.kept) == 20 and len(prompts) == 20
+    assert not [w for w in load_inventory(ws).warnings if "defense" in w]
 
 
 def test_bullet_with_a_defense_note_is_kept(ws):
@@ -444,7 +458,6 @@ def test_edit_leaves_the_other_drafts_in_the_file_alone(ws):
      "one fact"),
     (lambda t: "not toml [[[", "not valid TOML"),
     (lambda t: t.replace('role = "northwind"', 'role = "nowhere"'), "can't be kept"),
-    (lambda t: t.replace('defense = "Dock log, March against May."', ''), "no defense note"),
 ])
 def test_a_broken_edit_is_explained_and_can_be_edited_again(ws, change, needle):
     add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
