@@ -53,8 +53,10 @@ def test_pyproject_declares_no_runtime_dependencies():
 DEFAULT_DENYLIST = Path.home() / ".config" / "jobforge" / "pii_denylist.txt"
 SCANNED_SUFFIXES = {".py", ".md", ".toml", ".json", ".txt", ".html", ".yml", ".yaml", ".cfg", ".ini"}
 # Maintainer names are allowed in these files (SOW T-PII).
+# CONTRIBUTING.md and the two tests below name the copyright holders (D-49).
 NAME_ALLOWLIST = {"pyproject.toml", "LICENSE", "SOW.md", "DECISIONS.md", "COMPONENTS.md",
-                  "MAINTAINING.md", "MVP.md", "CLAUDE.md", "AGENTS.md"}
+                  "MAINTAINING.md", "MVP.md", "CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md",
+                  "test_license.py", "test_community.py"}
 
 
 def _denylist() -> list[str] | None:

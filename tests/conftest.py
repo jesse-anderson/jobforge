@@ -30,6 +30,19 @@ def make_workspace(root: Path, persona: Path = JOHN) -> Workspace:
     return ws
 
 
+@pytest.fixture(autouse=True)
+def no_network(monkeypatch):
+    """Tests never touch the network (CLAUDE.md). A stub that stops matching
+    the code (#28, F5: fetches moved from urlopen to an opener) would
+    otherwise reach a real site and maybe still pass."""
+    import socket
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("a test tried to open a network connection")
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    monkeypatch.setattr(socket, "create_connection", refuse)
+
+
 @pytest.fixture
 def ws(tmp_path) -> Workspace:
     return make_workspace(tmp_path / "ws")

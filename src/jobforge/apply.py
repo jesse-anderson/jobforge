@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import os
 import shutil
 import tempfile
 from dataclasses import dataclass, field
@@ -108,6 +109,41 @@ def verify_readback(text: str, expected_lines: list[str], urls: list[str],
     return rep
 
 
+def _move(src: Path, dst: Path) -> None:
+    os.replace(src, dst)
+
+
+def _swap_in(tmp: Path, folder: Path, names: list[str]) -> None:
+    """Replace each folder/name with tmp/name, all or nothing (#32).
+
+    The old files are moved aside first, so a file another program holds
+    (Word locks an open .docx on Windows) is found before anything changes.
+    On any failure, Ctrl+C included, the new files are taken out and the old
+    ones put back before tmp is cleaned up."""
+    aside = tmp / "previous"
+    aside.mkdir()
+    moved, placed = [], []
+    current = names[0]
+    try:
+        for current in names:
+            if (folder / current).exists():
+                _move(folder / current, aside / current)
+                moved.append(current)
+        for current in names:
+            _move(tmp / current, folder / current)
+            placed.append(current)
+    except BaseException as exc:  # Ctrl+C too: the old files are in tmp (#28)
+        for name in placed:
+            (folder / name).unlink(missing_ok=True)
+        for name in moved:
+            _move(aside / name, folder / name)
+        if isinstance(exc, PermissionError):
+            raise JobforgeError(
+                f"Close {current} (it is open in another program, such as Word), then "
+                f"run `jobforge apply` again. Nothing was changed.") from None
+        raise
+
+
 def apply(ws: Workspace, folder: Path, *, today: _dt.date | None = None) -> dict:
     result = run_check(ws, folder)
     if not result.ok:
@@ -134,8 +170,7 @@ def apply(ws: Workspace, folder: Path, *, today: _dt.date | None = None) -> dict
             result.write()
             raise result.failure("Apply")
         (tmp / COVER_MD_NAME).write_text(letter_markdown(plan, job), encoding="utf-8")
-        for name in (resume_name, cover_name, COVER_MD_NAME):
-            (tmp / name).replace(folder / name)
+        _swap_in(tmp, folder, [resume_name, cover_name, COVER_MD_NAME])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

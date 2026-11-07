@@ -228,8 +228,9 @@ scrape job boards; every job enters through `prepare`.
 
 ## Recording outcomes
 
-Stages: prepared, applied, skipped, screen, interview, offer, accepted,
-declined, rejected, withdrawn. Record each as it happens, with `--date
+Stages you record: applied, skipped, screen, interview, offer, accepted,
+declined, rejected, withdrawn. (`prepare` records `prepared` itself.) Record
+each as it happens, with `--date
 YYYY-MM-DD` if it was not today and `--note "..."` for context. A job with no
 reply {{ghost_after_days}} days after applying shows as ghosted automatically;
 never record that yourself.

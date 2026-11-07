@@ -1,4 +1,5 @@
 """The CLI end to end, the way a user (or their agent) runs it."""
+import datetime as _dt
 import json
 import shutil
 import subprocess
@@ -80,12 +81,29 @@ def test_full_flow(run, ws):
     assert code == 0 and "Check passed" in out
     code, out, _ = run("apply", "prairie")
     assert code == 0 and "John_Smith_Resume.docx" in out and "do not send" in out
-    code, out, _ = run("applied", "--mark", "prairie", "--status", "applied", "--date", "2026-11-21")
-    assert code == 0 and "applied on 2026-11-21" in out
+    today = _dt.date.today().isoformat()
+    code, out, _ = run("applied", "--mark", "prairie", "--status", "applied", "--date", today)
+    assert code == 0 and f"applied on {today}" in out
     code, out, _ = run("jobs")
     assert code == 0 and "Prairie Freight Co." in out
     code, out, _ = run("search", "--status", "prepared")
     assert "No jobs yet" in out
+
+
+def test_apply_with_a_locked_docx_exits_1_without_a_traceback(run, ws, monkeypatch):
+    # Issue #32: Word holds the resume open on Windows.
+    from jobforge import apply as apply_mod
+    prepare_john(run)
+    folder = next(ws.jobs_dir.iterdir())
+    shutil.copy(JOHN / "plan.json", folder / "plan.json")
+    assert run("apply", "prairie")[0] == 0
+
+    def locked(src, dst):
+        raise PermissionError(13, "Access is denied", str(dst))
+    monkeypatch.setattr(apply_mod, "_move", locked)
+    code, out, err = run("apply", "prairie")
+    assert code == 1 and "Traceback" not in err
+    assert "Close John_Smith_Resume.docx" in err and "Nothing was changed" in err
 
 
 def test_check_failure_exits_1_with_details(run, ws):
@@ -117,7 +135,7 @@ def test_prepare_errors_reach_the_user(run, tmp_path, monkeypatch):
 
     def offline(req, timeout):  # tests never touch the network
         raise urllib.error.URLError("offline")
-    monkeypatch.setattr(extract.urllib.request, "urlopen", offline)
+    monkeypatch.setattr(extract, "_open", offline)
     code, _, err = run("prepare", "--from-url", "https://example.com/x", "--company", "A")
     assert code == 1 and "--from-text" in err
 
@@ -129,9 +147,37 @@ def test_prepare_from_stdin(run, monkeypatch, ws):
     assert code == 0, err
 
 
+def test_applied_future_date_exits_1(run, ws):
+    # Issue #34.
+    prepare_john(run)
+    code, _, err = run("applied", "--mark", "prairie", "--status", "applied", "--date", "2099-01-01")
+    assert code == 1 and "2099-01-01 is in the future" in err
+
+
+def test_applied_before_prepared_warns(run, ws):
+    prepare_john(run)
+    code, out, err = run("applied", "--mark", "prairie", "--status", "applied", "--date", "2020-01-01")
+    assert code == 0 and "applied on 2020-01-01" in out
+    assert "warning:" in err and "before this job was prepared" in err
+
+
 def test_applied_rejects_unknown_stage(run):
+    code, _, err = run("applied", "--mark", "x", "--status", "ghosted")
+    assert code == 1 and "Unknown stage 'ghosted'" in err and "prepared" not in err
+
+
+def test_applied_refuses_prepared(run, ws):
+    # Issue #35.
+    prepare_john(run)
+    code, _, err = run("applied", "--mark", "prairie", "--status", "prepared")
+    assert code == 1 and "recorded by `jobforge prepare`" in err
+
+
+def test_applied_help_lists_no_prepared(capsys):
     with pytest.raises(SystemExit):
-        run("applied", "--mark", "x", "--status", "ghosted")
+        main(["applied", "--help"])
+    help_text = capsys.readouterr().out
+    assert "applied, skipped, screen" in help_text and "prepared" not in help_text
 
 
 class FakeTerminal:
@@ -161,6 +207,56 @@ def test_python_dash_m_entry_point(tmp_path):
     proc = subprocess.run([sys.executable, "-m", "jobforge", "--version"],
                           capture_output=True, text=True, env=env, cwd=tmp_path)
     assert proc.returncode == 0 and __version__ in proc.stdout
+
+
+# Issue #52: on Windows, output to a pipe (how every agent runs jobforge) is
+# encoded with the locale code page, so a non-Latin name crashed the print
+# after the folder was already written. PYTHONIOENCODING=cp1252 reproduces
+# that on Linux; the unset case is what proves the fix on Windows.
+@pytest.mark.parametrize("forced", ["cp1252", None])
+@pytest.mark.parametrize("company", ["Łódź Foods", "株式会社テスト"])
+def test_piped_output_prints_non_latin_names(tmp_path, forced, company):
+    import os
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("PYTHONIOENCODING", "PYTHONUTF8", ENV_VAR)}
+    env["PYTHONPATH"] = str(REPO / "src")
+    if forced:
+        env["PYTHONIOENCODING"] = forced
+
+    def jobforge(*args, cwd):
+        return subprocess.run([sys.executable, "-m", "jobforge", *args], capture_output=True,
+                              env=env, cwd=cwd)
+
+    assert jobforge("init", str(tmp_path / "ws"), cwd=tmp_path).returncode == 0
+    ws = tmp_path / "ws"
+    done = jobforge("prepare", "--from-text", str(JOHN / "posting.txt"), "--company", company,
+                    "--title", "Cook", cwd=ws)
+    assert done.returncode == 0, done.stderr.decode("utf-8", "replace")
+    assert company in done.stdout.decode("utf-8")
+    listed = jobforge("jobs", cwd=ws)
+    assert listed.returncode == 0 and company in listed.stdout.decode("utf-8")
+
+
+def test_utf8_output_falls_back_to_replacing():
+    # A stream that cannot switch encoding still never raises on print.
+    from jobforge.cli import _utf8_output
+
+    class Stubborn:
+        calls = []
+
+        def reconfigure(self, **kw):
+            self.calls.append(kw)
+            if "encoding" in kw:
+                raise ValueError("can't change encoding now")
+    stream = Stubborn()
+    _utf8_output(stream)
+    assert stream.calls == [{"encoding": "utf-8"}, {"errors": "replace"}]
+
+
+def test_utf8_output_leaves_plain_streams_alone():
+    import io
+    from jobforge.cli import _utf8_output
+    _utf8_output(io.StringIO())  # no reconfigure method: nothing to do
 
 
 # --- import (issue #8) -------------------------------------------------------

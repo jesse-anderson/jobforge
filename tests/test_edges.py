@@ -70,7 +70,7 @@ def test_fetch_html_reads_and_decodes(monkeypatch):
         def __exit__(self, *a):
             return False
 
-    monkeypatch.setattr(extract.urllib.request, "urlopen", lambda req, timeout: Resp())
+    monkeypatch.setattr(extract, "_open", lambda req, timeout: Resp())
     assert extract.fetch_html("https://example.com") == "café"
 
 

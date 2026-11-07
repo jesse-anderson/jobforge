@@ -158,6 +158,20 @@ def test_split_sentences_keeps_decimals_and_urls():
     ("rolled out 5G at 3 sites", []),
     ("a 22-stop route", []),
     ("team of 14 at 2 sites", []),
+    # Issue #37: a hyphen between the figure and the unit, and a multiplier
+    # before the unit.
+    ("a 650,000-km record", [("650000", "km")]),
+    ("a 40-hour setup", [("40", "hr")]),
+    ("a 12-month contract", [("12", "mo")]),
+    ("a 5,000-sq-ft cross-dock", [("5000", "ft2")]),
+    ("drove 650k km", [("650000", "km")]),
+    ("drove 650K miles", [("650000", "mi")]),
+    ("drove 0.65 million km", [("650000", "km")]),
+    ("moved 1.2M lbs", [("1200000", "lb")]),
+    ("a 5 km run", [("5", "km")]),       # k is not a multiplier inside "km"
+    ("a 3-year-old truck", []),           # an age, not a duration
+    ("covered 12-15 minutes", [("15", "min")]),
+    ("a 401k match from day one", []),    # a multiplier needs its unit next
 ])
 def test_unit_figures(text, expected):
     assert [(f.value, f.unit) for f in unit_figures(text)] == expected

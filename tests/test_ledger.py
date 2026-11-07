@@ -8,6 +8,7 @@ from jobforge.errors import JobforgeError
 from jobforge.extract import from_text
 from jobforge.jobs import format_table, list_jobs
 from jobforge.ledger import (GHOSTED, STAGES, append_event, current_status, parse_date,
+                             RECORDABLE, record_event,
                              read_events, resolve_job)
 from jobforge.prepare import prepare
 
@@ -115,6 +116,45 @@ def test_list_jobs_status_and_filters(ws):
     assert [r.company for r in list_jobs(ws, today=TODAY, text="painter")] == ["Bolt Works"]
     assert list_jobs(ws, today=TODAY, text="nothing-matches") == []
     assert b.name in format_table(list_jobs(ws, today=TODAY))
+
+
+# Issue #34: `applied` refuses dates that cannot be right, like `import`.
+def test_applied_in_the_future_is_refused(job_folder):
+    with pytest.raises(JobforgeError, match="2099-01-01 is in the future"):
+        record_event(job_folder, "applied", D(2099, 1, 1), today=TODAY)
+    assert [e.stage for e in read_events(job_folder)] == ["prepared"]
+
+
+def test_applied_before_prepared_is_recorded_with_a_warning(job_folder):
+    # Real when someone applied, then made the folder afterwards.
+    ev, warnings = record_event(job_folder, "applied", D(2020, 1, 1), today=TODAY)
+    assert ("applied", D(2020, 1, 1)) in [(e.stage, e.date) for e in read_events(job_folder)]
+    assert len(warnings) == 1 and "before this job was prepared (2026-11-20)" in warnings[0]
+
+
+def test_applied_on_or_after_prepared_is_quiet(job_folder):
+    _, warnings = record_event(job_folder, "applied", TODAY, today=TODAY)
+    assert warnings == []
+
+
+def test_imported_job_has_no_prepared_date_to_compare(ws):
+    from jobforge.importer import import_csv
+    import_csv(ws, "company,title,applied\nCedar Mill Foods,Clerk,2026-09-10\n",
+               write=True, today=TODAY)
+    folder = next(ws.jobs_dir.iterdir())
+    _, warnings = record_event(folder, "rejected", D(2026, 9, 1), today=TODAY)
+    assert warnings == []
+
+
+# Issue #35: "prepared" is recorded by `prepare`, never by the user.
+def test_applied_refuses_prepared(job_folder):
+    with pytest.raises(JobforgeError, match="recorded by `jobforge prepare`"):
+        record_event(job_folder, "prepared", TODAY, today=TODAY)
+    assert [e.stage for e in read_events(job_folder)] == ["prepared"]
+
+
+def test_recordable_stages_are_every_stage_but_prepared():
+    assert RECORDABLE == tuple(s for s in STAGES if s != "prepared")
 
 
 # Issue #39: FOLDER is the name users type back into `applied --mark`,

@@ -22,6 +22,9 @@ from .workspace import Workspace
 
 STAGES = ("prepared", "applied", "skipped", "screen", "interview", "offer",
           "accepted", "declined", "rejected", "withdrawn")
+# What a user records with `applied`. "prepared" is not one: `prepare`
+# records it when it makes the folder (#35).
+RECORDABLE = tuple(s for s in STAGES if s != "prepared")
 # Stages that count as hearing back from the employer, for callback rate.
 RESPONSE_STAGES = frozenset({"screen", "interview", "offer", "accepted", "declined", "rejected"})
 GHOSTED = "ghosted"
@@ -76,6 +79,35 @@ def read_events(folder: Path) -> list[Event]:
     return sorted(events, key=lambda e: e.date)
 
 
+def check_recordable(stage: str) -> None:
+    if stage == "prepared":
+        raise JobforgeError("`prepared` is recorded by `jobforge prepare` when it makes the "
+                            "job folder. Record what happened since: "
+                            + ", ".join(RECORDABLE) + ".")
+    if stage not in RECORDABLE:
+        raise JobforgeError(f"Unknown stage {stage!r}. Use one of: {', '.join(RECORDABLE)}.")
+
+
+def record_event(folder: Path, stage: str, date: _dt.date | None = None, note: str = "",
+                 *, today: _dt.date | None = None) -> tuple[Event, list[str]]:
+    """`jobforge applied`: append what happened, refusing a stage only
+    Jobforge records (#35) or a date that cannot be right (#34). Returns the
+    event and any warnings."""
+    check_recordable(stage)
+    today = today or _dt.date.today()
+    date = date or today
+    if date > today:
+        raise JobforgeError(f"{date.isoformat()} is in the future. Record an event on "
+                            f"or after the day it happens.")
+    warnings = []
+    prepared = [e.date for e in read_events(folder) if e.stage == "prepared"]
+    if prepared and date < prepared[0]:
+        warnings.append(f"{date.isoformat()} is before this job was prepared "
+                        f"({prepared[0].isoformat()}). Recorded anyway: that is right "
+                        f"if you applied before making the folder.")
+    return append_event(folder, stage, date, note), warnings
+
+
 def current_status(events: list[Event], today: _dt.date, ghost_after_days: int) -> str:
     if not events:
         return "unknown"
@@ -98,22 +130,34 @@ def job_folders(ws: Workspace) -> list[Path]:
     if not ws.jobs_dir.exists():
         return []
     return sorted(p for p in ws.jobs_dir.iterdir()
-                  if p.is_dir() and (p / "job.json").exists())
+                  if p.is_dir() and (p / "job.json").exists() and ws.contains(p))
 
 
 def resolve_job(ws: Workspace, ref: str) -> Path:
     """Find a job folder by path, exact name, or a unique piece of its name."""
     candidate = Path(ref)
     if candidate.is_dir() and (candidate / "job.json").exists():
-        return candidate.resolve()
+        # A path is accepted only inside this workspace's jobs/ folder (#28, F2).
+        if not candidate.resolve().is_relative_to(ws.jobs_dir.resolve()):
+            raise JobforgeError(f"{ref} is outside this workspace's jobs/ folder. Jobforge "
+                                f"only works on jobs inside {ws.jobs_dir}.")
+        return _checked(ws, candidate.resolve())
     folders = job_folders(ws)
     exact = [f for f in folders if f.name == ref]
     if exact:
-        return exact[0]
+        return _checked(ws, exact[0])
     hits = [f for f in folders if ref.lower() in f.name.lower()]
     if not hits:
         raise JobforgeError(f"No job folder matches {ref!r}. Run `jobforge jobs` to list them.")
     if len(hits) > 1:
         raise JobforgeError(f"{ref!r} matches more than one job; be more specific:",
                             [h.name for h in hits])
-    return hits[0]
+    return _checked(ws, hits[0])
+
+
+def _checked(ws: Workspace, folder: Path) -> Path:
+    """A job folder whose files all stay inside the workspace: no ledger,
+    plan, or check.json that links out (#28, F3)."""
+    for child in folder.iterdir():
+        ws.check_inside(child)
+    return folder
