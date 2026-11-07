@@ -144,6 +144,8 @@ def test_page_text_capture_tells_the_agent_to_recapture():
     text = source_text()
     assert f'warns "{quoted}"' in text
     assert "direct link" in text and "--force" in text
+    # #31: --force replaces only the same posting, so a paste carries the link.
+    assert "original link with `--url`" in text
 
 
 def test_instructions_say_the_check_misses_unknown_tools():

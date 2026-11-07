@@ -146,8 +146,10 @@ an employer is never described as a personal project, and the reverse.
    whole page: it may hold menus, a login prompt, or other jobs. If it holds
    anything besides this one posting, stop and ask the user for the
    posting's direct link (not a search or list page), or to paste the
-   posting itself. Capture it again with `--force`. Never use a figure or
-   detail from text that is not this posting.
+   posting itself. Capture it again with `--force`; when pasting, pass the
+   original link with `--url` so the new capture replaces the first one
+   instead of making a second folder. Never use a figure or detail from text
+   that is not this posting.
 2. `jobforge inventory`, then write `plan.json` in the job folder:
 
 ```json
