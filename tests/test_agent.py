@@ -107,6 +107,14 @@ def test_example_plan_in_the_instructions_resolves(tmp_path):
     assert errors == []
 
 
+def test_instructions_ask_for_a_defense_on_every_bullet():
+    """#83 item 5: confirm refuses a new bullet with no defense note, so the
+    agent asks for one every time."""
+    text = " ".join(source_text().split())
+    assert "For every bullet, ask how they know" in text
+    assert "will not keep a new bullet without one" in text
+
+
 def test_instructions_send_the_user_to_their_own_terminal_for_confirm():
     """Issue #2 run: the agent suggested `! jobforge confirm`, which cannot
     take typed answers."""

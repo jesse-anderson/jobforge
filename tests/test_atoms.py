@@ -152,6 +152,18 @@ def test_unmarked_reword_warns_and_marked_does_not(ws):
     assert not any("state the same figures" in w for w in load_inventory(ws).warnings)
 
 
+def test_confirmed_bullets_without_a_defense_note_warn_once(ws):
+    # Issue #83 item 5: bullets confirmed before defense was required still
+    # load; one warning names them all.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.a"\nrole = "northwind"\ntext = "Did 3 things"\n'
+                  'basis = "records"\n[[bullet]]\nid = "northwind.b"\nrole = "northwind"\n'
+                  'text = "Did 4 things"\nbasis = "records"\ndefense = " "\n')
+    found = [w for w in load_inventory(ws).warnings if "no defense note" in w]
+    assert len(found) == 1, found
+    assert "northwind.a" in found[0] and "northwind.b" in found[0] and "(D-36)" in found[0]
+    assert "northwind.accuracy" not in found[0]  # John's bullets have notes
+
+
 def test_pending_atoms_are_not_loaded_by_default(ws):
     add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\ntext = "t"\nbasis = "records"\n',
               pending=True)
