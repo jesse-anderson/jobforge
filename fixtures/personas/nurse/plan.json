@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "fit": {"score": "strong", "summary": "Four years in a medical ICU with vents, drips, and precepting, plus med-surg charge experience; no cardiac surgery patients and no CCRN."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "lakeshore", "bullets": ["lakeshore.ratio", "lakeshore.sepsis", "lakeshore.precept", "lakeshore.crrt"]},
+    {"role": "prairie", "bullets": [
+      "prairie.load",
+      {"atom": "prairie.falls", "text": "Charge nurse 1 shift a week; helped cut falls with injury from 9 to 3 in a year with bed alarms and purposeful rounding"}
+    ]}
+  ],
+  "skills": ["skill.clinical", "skill.ehr"],
+  "credentials": ["cred.rn", "cred.acls", "cred.bls"],
+  "education": ["edu.bsn"],
+  "cover_letter": {
+    "hook": "Summit Valley Health's cardiovascular ICU is the next step I have been working toward from a medical ICU, and night shift suits me.",
+    "body": "At Lakeshore Regional Medical Center I care for 2 critically ill patients per shift in a 24-bed medical ICU, including ventilated patients and continuous drips. I joined our sepsis workgroup, which raised on-time bundle completion from 68% to 91% in one year, and I have precepted 7 new graduate nurses through their 12-week orientation.\n\nI started on a 32-bed medical-surgical unit at Prairie View Hospital, where I worked as charge nurse 1 shift a week. I chart in Epic and hold an active Wisconsin RN license with current BLS and ACLS.",
+    "close": "I would like to hear how your unit supports nurses moving from a medical ICU to cardiac surgery patients.",
+    "cites": ["lakeshore.ratio", "lakeshore.sepsis", "lakeshore.precept", "prairie.load", "prairie.falls", "skill.ehr", "cred.rn"]
+  },
+  "gaps": ["CCRN is preferred; Daniel has not sat the exam.", "No cardiac surgery patients yet."]
+}

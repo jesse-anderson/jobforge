@@ -1,0 +1,18 @@
+# Returning-to-work persona (D-09 #13). Fictional. Paid work ended in 2018;
+# a volunteer treasurer role and a 2025 certification since. The letter must
+# never volunteer the gap, so the phrases that would explain it are banned.
+
+[person]
+name = "Laura Bennett"
+email = "laura.bennett@example.com"
+phone = "555-0186"
+location = "Cedar Rapids, IA"
+
+[voice]
+add_banned_phrases = ["career break", "time away", "stepped away", "step away",
+                      "caregiving", "caregiver", "raising my", "stay-at-home",
+                      "back to work", "return to work", "returning to work",
+                      "rejoin the workforce", "re-enter the workforce", "gap in my"]
+
+[claims]
+never_claim = ["CPA", "NetSuite"]

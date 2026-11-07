@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "fit": {"score": "moderate", "summary": "Years of counter and floor work with cash, complaints, and evening shifts; no hotel or PMS experience."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "copperpot", "bullets": ["copperpot.section", "copperpot.regulars"]},
+    {"role": "hillside", "bullets": [
+      "hillside.open",
+      {"atom": "hillside.complaints", "text": "Handled counter complaints and turned most of them into return visits"}
+    ]},
+    {"role": "harbor", "bullets": ["harbor.cash"]},
+    {"role": "tidewater", "bullets": ["tidewater.lines"]}
+  ],
+  "skills": ["skill.service"],
+  "credentials": ["cred.foodhandler"],
+  "education": ["edu.hs"],
+  "cover_letter": {
+    "hook": "A front desk that stays calm on a busy evening is what I have been doing behind counters for 5 years, and I would like to do it at Bluffview Inn & Suites.",
+    "body": "At Hillside Coffee Co. I opened the shop alone 3 mornings a week, from the cash count to the first rush, and handled complaints at the counter. At Copper Pot Bistro I work weekend doubles and train new servers on the menu and POS.\n\nI balanced my register to the penny on every shift as a cashier, and I am used to evenings, weekends, and holidays.",
+    "close": "I would like to hear how your evening desk works with housekeeping on late check-ins.",
+    "cites": ["summary.main", "hillside.open", "hillside.complaints", "copperpot.section", "harbor.cash"]
+  },
+  "gaps": ["No hotel or PMS experience; Opera PMS is a plus and Jasmine has not used it.", "Fresh Fold Laundry left off to keep the page to the four most relevant jobs."]
+}

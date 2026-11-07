@@ -1,0 +1,90 @@
+[[summary]]
+id = "summary.main"
+text = "Class A driver with 10 years behind the wheel and a clean safety record, comfortable with long hauls, tight receiver windows, and reefer loads."
+
+[[role]]
+id = "redline"
+employer = "Redline Carriers"
+title = "OTR Driver, Class A"
+location = "Joplin, MO"
+start = "2019-02"
+end = "present"
+
+[[bullet]]
+id = "redline.miles"
+role = "redline"
+text = "Drove 650,000 accident-free miles in 48 states hauling dry van and reefer freight"
+basis = "records"
+defense = "Carrier safety department mileage and accident report."
+
+[[bullet]]
+id = "redline.ontime"
+role = "redline"
+text = "Kept a 98.5% on-time delivery rate across 2024 and 2025"
+basis = "records"
+defense = "Driver scorecards from dispatch."
+
+[[bullet]]
+id = "redline.inspections"
+role = "redline"
+text = "Passed 14 DOT roadside inspections with zero violations"
+basis = "records"
+defense = "FMCSA inspection reports."
+
+[[bullet]]
+id = "redline.eld"
+role = "redline"
+text = "Log hours of service on Samsara ELDs and plan routes around HOS limits and receiver windows"
+basis = "records"
+
+[[role]]
+id = "valley"
+employer = "Valley Fresh Foods"
+title = "Local Delivery Driver, Class B"
+location = "Carthage, MO"
+start = "2015-05"
+end = "2019-01"
+
+[[bullet]]
+id = "valley.route"
+role = "valley"
+text = "Ran a 22-stop daily grocery route with liftgate and pallet jack deliveries"
+basis = "records"
+
+[[bullet]]
+id = "valley.damage"
+role = "valley"
+text = "Kept product damage claims under 0.5% of cases delivered"
+basis = "records"
+defense = "Monthly claims report."
+
+[[skill]]
+id = "skill.driving"
+label = "Driving"
+items = ["Dry van", "Reefer", "Pre-trip inspections", "Hours of service", "Samsara ELD", "Pallet jack", "Liftgate"]
+
+[[credential]]
+id = "cred.cdl"
+name = "Class A Commercial Driver's License (CDL)"
+issuer = "Missouri Department of Revenue"
+date = "2019"
+expires = "2027"
+
+[[credential]]
+id = "cred.tanker"
+name = "Tanker (N) Endorsement"
+issuer = "Missouri Department of Revenue"
+date = "2021"
+
+[[credential]]
+id = "cred.medical"
+name = "DOT Medical Card"
+date = "2025-03"
+expires = "2027-03"
+
+[[education]]
+id = "edu.cdl"
+school = "Four States Driving Academy"
+credential = "CDL Class A Training Program"
+location = "Joplin, MO"
+date = "2019"

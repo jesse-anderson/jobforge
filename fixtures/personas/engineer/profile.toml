@@ -1,0 +1,13 @@
+# Engineer persona (D-09 #7). Fictional. Technical figures with decimals,
+# tolerances, and money, where precision matters (D-37). An Engineer Intern
+# who must never claim a PE license; a school project with a live URL (D-42).
+
+[person]
+name = "Priya Raman"
+email = "priya.raman@example.com"
+phone = "555-0153"
+location = "Tulsa, OK"
+links = ["https://example.com/priyaraman"]
+
+[claims]
+never_claim = ["PE", "ANSYS Fluent"]

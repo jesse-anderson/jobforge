@@ -1,0 +1,13 @@
+# Software developer persona (D-09 #6). Fictional. Dense tool lists, a
+# personal open-source project with a live URL (D-42), and a work project
+# whose URL is dead and so is not shown.
+
+[person]
+name = "Sam Patel"
+email = "sam.patel@example.com"
+phone = "555-0146"
+location = "Denver, CO"
+links = ["https://example.com/sampatel"]
+
+[claims]
+never_claim = ["Kubernetes", "Rust"]

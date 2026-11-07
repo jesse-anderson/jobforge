@@ -1,0 +1,93 @@
+[[summary]]
+id = "summary.main"
+text = "Staff accountant with 7 years of month-end close, payroll, and payables work, certified in QuickBooks Online."
+
+[[role]]
+id = "whitfield"
+employer = "Whitfield & Grant CPAs"
+title = "Staff Accountant"
+location = "Cedar Rapids, IA"
+start = "2014-01"
+end = "2018-06"
+
+[[bullet]]
+id = "whitfield.close"
+role = "whitfield"
+text = "Ran month-end close for 12 small-business clients, including bank reconciliations and accruals"
+basis = "records"
+
+[[bullet]]
+id = "whitfield.payroll"
+role = "whitfield"
+text = "Processed biweekly payroll for 9 clients with 180 employees in total"
+basis = "records"
+
+[[bullet]]
+id = "whitfield.backlog"
+role = "whitfield"
+text = "Cleared a client's 3-year backlog of unreconciled vendor accounts in 6 weeks"
+basis = "records"
+defense = "Engagement file and the partner's sign-off."
+
+[[role]]
+id = "prairieland"
+employer = "Prairieland Hardware"
+title = "Accounting Clerk"
+location = "Iowa City, IA"
+start = "2011-06"
+end = "2013-12"
+
+[[bullet]]
+id = "prairieland.ap"
+role = "prairieland"
+text = "Entered and paid 400 vendor invoices a month and matched each one to its purchase order"
+basis = "estimate"
+defense = "AP register; 90 to 110 a week."
+
+[[project]]
+id = "proj.pto"
+title = "Westfield Elementary PTO Treasurer"
+context = "volunteer"
+text = "Volunteer treasurer"
+
+[[bullet]]
+id = "pto.books"
+project = "proj.pto"
+text = "Kept the PTO's books in QuickBooks Online and presented a monthly report to the board on a $38,000 annual budget"
+basis = "records"
+
+[[bullet]]
+id = "pto.review"
+project = "proj.pto"
+text = "Passed the district's annual review of the PTO's books with no findings 3 years running"
+basis = "records"
+
+[[skill]]
+id = "skill.accounting"
+label = "Accounting"
+items = ["Month-end close", "Bank reconciliations", "Accounts payable", "Payroll", "Accruals"]
+
+[[skill]]
+id = "skill.software"
+label = "Software"
+items = ["QuickBooks Online", "Excel", "Bill.com"]
+
+[[credential]]
+id = "cred.proadvisor"
+name = "QuickBooks Online ProAdvisor Certification"
+issuer = "Intuit"
+date = "2025"
+
+[[credential]]
+id = "cred.excel"
+name = "Microsoft Office Specialist: Excel Expert"
+issuer = "Microsoft"
+date = "2025"
+
+[[education]]
+id = "edu.bba"
+school = "Cedar Valley College"
+credential = "Bachelor of Business Administration"
+field = "Accounting"
+location = "Cedar Rapids, IA"
+date = "2011"

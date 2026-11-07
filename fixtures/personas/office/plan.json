@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "fit": {"score": "strong", "summary": "Runs billing, files, calendars, and vendors for a small office in the tools the posting names; no property management software."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "hartley", "bullets": ["hartley.billing", "hartley.files", "hartley.calendar", "hartley.vendors"]},
+    {"role": "summit", "bullets": ["summit.schedule", "summit.insurance"]}
+  ],
+  "skills": ["skill.office", "skill.admin"],
+  "credentials": ["cred.mos"],
+  "education": ["edu.cc"],
+  "cover_letter": {
+    "hook": "Keeping payments, files, and the office calendar in order for a small team is what I do every day, and I would like to do it for Cedar Ridge Property Management's main office.",
+    "body": "At Hartley & Moss Insurance Agency I run monthly billing and accounts receivable in QuickBooks Online for 3 agents, and I moved our paper client files into SharePoint with a naming system the whole office uses. I also manage the calendars, renewal reminders, and client calls in Outlook.\n\nBefore that I scheduled patients for 4 dentists at Summit Dental Group, which taught me to keep a full day on track by phone.",
+    "close": "I would like to hear how your office handles month-end reports for the regional manager.",
+    "cites": ["hartley.billing", "hartley.files", "hartley.calendar", "summit.schedule"]
+  },
+  "gaps": ["Has not used Yardi or AppFolio; no property management experience."]
+}

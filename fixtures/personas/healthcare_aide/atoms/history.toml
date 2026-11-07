@@ -1,0 +1,83 @@
+[[summary]]
+id = "summary.main"
+text = "Certified nursing assistant with 6 years in memory care and rehab, steady on night shift and careful with transfers and charting."
+
+[[role]]
+id = "willow"
+employer = "Willow Creek Senior Living"
+title = "Certified Nursing Assistant"
+location = "Lubbock, TX"
+start = "2022-04"
+end = "present"
+
+[[bullet]]
+id = "willow.residents"
+role = "willow"
+text = "Provide daily care for 12 residents per shift in memory care, including bathing, feeding, transfers, and repositioning"
+basis = "records"
+defense = "Unit assignment sheets."
+
+[[bullet]]
+id = "willow.falls"
+role = "willow"
+text = "Helped bring unit falls down 40% in one year by running hourly rounding on night shift"
+basis = "records"
+defense = "Falls log reviewed with the director of nursing."
+
+[[bullet]]
+id = "willow.vitals"
+role = "willow"
+text = "Take and chart vital signs and intake and output in PointClickCare for every resident each shift"
+basis = "records"
+
+[[role]]
+id = "lakeview"
+employer = "Lakeview Rehabilitation Center"
+title = "Certified Nursing Assistant"
+location = "Lubbock, TX"
+start = "2020-06"
+end = "2022-03"
+
+[[bullet]]
+id = "lakeview.rehab"
+role = "lakeview"
+text = "Helped short-term rehab patients with mobility, ADLs, and safe transfers using gait belts and Hoyer lifts"
+basis = "records"
+
+[[bullet]]
+id = "lakeview.orient"
+role = "lakeview"
+text = "Oriented 15 new CNAs on unit routines and safe lifting"
+basis = "estimate"
+defense = "Orientation sign-off sheets, counted with the staff coordinator."
+
+[[skill]]
+id = "skill.care"
+label = "Patient care"
+items = ["Vital signs", "ADLs", "Hoyer lift", "Memory care", "Infection control"]
+
+[[skill]]
+id = "skill.charting"
+label = "Charting"
+items = ["PointClickCare"]
+
+[[credential]]
+id = "cred.cna"
+name = "Certified Nursing Assistant (CNA)"
+issuer = "Texas Health and Human Services"
+date = "2020"
+expires = "2028-06"
+
+[[credential]]
+id = "cred.bls"
+name = "BLS Provider (CPR and AED)"
+issuer = "American Heart Association"
+date = "2025-03"
+expires = "2027-03"
+
+[[education]]
+id = "edu.cna"
+school = "Caprock Career Institute"
+credential = "Nurse Aide Training Program"
+location = "Lubbock, TX"
+date = "2020"

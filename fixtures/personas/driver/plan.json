@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "fit": {"score": "strong", "summary": "Class A with reefer miles, a clean inspection record, and a current medical card; no hazmat endorsement."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "redline", "bullets": ["redline.miles", "redline.ontime", "redline.inspections", "redline.eld"]},
+    {"role": "valley", "bullets": ["valley.route", "valley.damage"]}
+  ],
+  "skills": ["skill.driving"],
+  "credentials": ["cred.cdl", "cred.tanker", "cred.medical"],
+  "education": ["edu.cdl"],
+  "cover_letter": {
+    "hook": "Regional reefer routes with home time every weekend are what I am looking for after years of over-the-road work.",
+    "body": "At Redline Carriers I have driven 650,000 accident-free miles in 48 states hauling dry van and reefer freight, and I kept a 98.5% on-time delivery rate across 2024 and 2025. I have passed 14 DOT roadside inspections with zero violations, and I log hours of service on ELDs.\n\nBefore that I ran a 22-stop daily grocery route at Valley Fresh Foods, so I am used to receivers with tight windows.",
+    "close": "I would like to hear how your dispatchers plan weekend home time on the regional lanes.",
+    "cites": ["redline.miles", "redline.ontime", "redline.inspections", "redline.eld", "valley.route"]
+  },
+  "gaps": ["A hazmat endorsement is a plus; Ray does not hold it."]
+}

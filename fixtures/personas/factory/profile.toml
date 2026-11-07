@@ -1,0 +1,12 @@
+# Factory persona (D-09 #2). Fictional. Two roles at one plant (operator,
+# then line lead) plus an earlier plant. Shift work, carried by output and
+# quality figures with decimals that must not be rounded.
+
+[person]
+name = "Luis Ortega"
+email = "luis.ortega@example.com"
+phone = "555-0121"
+location = "Toledo, OH"
+
+[claims]
+never_claim = ["Six Sigma Green Belt", "CNC programming"]

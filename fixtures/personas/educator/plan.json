@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "fit": {
+    "score": "strong",
+    "summary": "Eleven years of teaching, led an NGSS unit rewrite, and mentors student teachers; not National Board certified."
+  },
+  "summary": {
+    "atom": "summary.main"
+  },
+  "experience": [
+    {
+      "role": "larkspur.chair",
+      "bullets": [
+        "larkspur.chair.pd",
+        "larkspur.chair.hiring",
+        "larkspur.chair.budget"
+      ]
+    },
+    {
+      "role": "larkspur",
+      "bullets": [
+        "larkspur.curriculum",
+        "larkspur.mentor",
+        "larkspur.scores",
+        "larkspur.load",
+        "larkspur.night",
+        "larkspur.grant",
+        "larkspur.iep"
+      ]
+    },
+    {
+      "role": "riverbend",
+      "bullets": [
+        "riverbend.camp",
+        "riverbend.staff"
+      ]
+    },
+    {
+      "role": "briar",
+      "bullets": [
+        "briar.math",
+        "briar.reading",
+        "briar.behavior",
+        "briar.families"
+      ]
+    },
+    {
+      "role": "cascade.ta",
+      "bullets": [
+        "cascade.ta.labs",
+        "cascade.ta.review"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "project": "proj.night",
+      "bullets": [
+        "night.guides"
+      ]
+    }
+  ],
+  "skills": [
+    "skill.teaching",
+    "skill.tools"
+  ],
+  "credentials": [
+    "cred.license",
+    "cred.multiple",
+    "cred.cpr"
+  ],
+  "education": [
+    "edu.mat",
+    "edu.bs"
+  ],
+  "cover_letter": {
+    "hook": "Coaching science teachers through the Next Generation Science Standards is work I have been doing from my own classroom, and I would like to do it full time for Coburg Ridge School District.",
+    "body": "At Larkspur Middle School I led the 3-teacher science team that rewrote our 8th grade units to the Next Generation Science Standards, and I have mentored 4 student teachers through full-term placements. Over three years, weekly lab write-ups with a shared rubric raised the share of my students meeting the state science standard from 54% to 68%.\n\nI also started our family science night, which grew from 80 to 400 attendees, and published 30 demonstration guides that other schools now use (example.com/gholloway/science-night). Before Larkspur I taught 5th grade for five years and coached 5 colleagues through a new math curriculum.",
+    "close": "I would like to hear how your coaches split their time between new teachers and department-wide unit work.",
+    "cites": [
+      "larkspur.curriculum",
+      "larkspur.mentor",
+      "larkspur.scores",
+      "larkspur.night",
+      "night.guides",
+      "briar.math"
+    ]
+  },
+  "gaps": [
+    "National Board Certification is preferred; Grace does not hold it."
+  ]
+}
