@@ -67,14 +67,17 @@ class Letter:
     close: str
     cites: list[Atom]
 
-    def paragraphs(self) -> list[str]:
+    def part_paragraphs(self, part: str) -> list[str]:
+        """One part ("hook", "body", or "close"), reflowed into paragraphs."""
         out = []
-        for part in (self.hook, self.body, self.close):
-            for para in part.strip().split("\n\n"):
-                para = " ".join(line.strip() for line in para.splitlines() if line.strip())
-                if para:
-                    out.append(para)
+        for para in getattr(self, part).strip().split("\n\n"):
+            para = " ".join(line.strip() for line in para.splitlines() if line.strip())
+            if para:
+                out.append(para)
         return out
+
+    def paragraphs(self) -> list[str]:
+        return [p for part in ("hook", "body", "close") for p in self.part_paragraphs(part)]
 
     def text(self) -> str:
         return "\n\n".join(self.paragraphs())

@@ -242,6 +242,19 @@ def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
         check_voice(line.text, profile, line.where, rep)
 
 
+def _letter_sentences(letter) -> list[tuple[str, str]]:
+    """Each sentence with the part it is in, split within its own paragraph."""
+    return [(part, sentence) for part in ("hook", "body", "close")
+            for para in letter.part_paragraphs(part)
+            for sentence in split_sentences(para)]
+
+
+def _opening(sentence: str, words: int = 6) -> str:
+    """The first few words, enough for the user to find the sentence (#93)."""
+    split = sentence.split()
+    return " ".join(split[:words]) + ("..." if len(split) > words else "")
+
+
 def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: list[str],
                  rep: Report, job: dict | None = None) -> None:
     letter = plan.letter
@@ -287,8 +300,8 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
                           f"cover_letter_max_words). Cut it down.")
 
     employers = inv.employers()
-    for i, sentence in enumerate(split_sentences(text), 1):
-        sw = f"{where} sentence {i}"
+    for part, sentence in _letter_sentences(letter):
+        sw = f"{where} {part}, \"{_opening(sentence)}\""
         named = employers_named(sentence, inv)
         figures = _strip_contact(sentence, profile)
         if len(named) == 1:
