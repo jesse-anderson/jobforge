@@ -115,6 +115,11 @@ def test_instructions_ask_for_a_defense_on_every_bullet():
     assert "will not keep a new bullet without one" in text
 
 
+def test_instructions_say_confirm_can_edit():
+    """#83 item 4: confirm has an inline edit, so the agent may say so."""
+    assert "to keep, edit, or drop each one" in " ".join(source_text().split())
+
+
 def test_instructions_send_the_user_to_their_own_terminal_for_confirm():
     """Issue #2 run: the agent suggested `! jobforge confirm`, which cannot
     take typed answers."""
