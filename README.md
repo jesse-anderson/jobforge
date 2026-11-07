@@ -16,9 +16,11 @@ fact you did not give it.
 - **Free and local.** Nothing runs on a server. Your AI coding agent (Claude
   Code first; Codex, Gemini CLI and others also work) does the writing, and
   Jobforge does everything else.
-- **No invented facts.** Every number, employer, tool, and credential in your
-  documents is checked against facts you confirmed. If your agent invents
-  one, Jobforge refuses to write the document.
+- **No invented facts.** Every number written in digits, and every employer,
+  tool, and credential Jobforge knows, is checked against facts you
+  confirmed. If your agent invents one, Jobforge refuses to write the
+  document. It does not catch everything yet, so read what it writes; see
+  the [known limits](https://github.com/jesse-anderson/jobforge/blob/main/docs/MVP.md#known-limits-of-the-fact-check).
 - **Built for applicant tracking systems.** It writes `.docx` files with no
   tables, columns, or hidden characters, then reads them back to prove what a
   parser will see.
