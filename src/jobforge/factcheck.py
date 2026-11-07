@@ -165,18 +165,58 @@ _NOT_TITLE = {"a", "an", "and", "as", "at", "for", "former", "from", "i", "in", 
 # A word that raises a title the facts state: "Senior Warehouse Supervisor".
 _RANKS = {"senior", "sr", "sr.", "junior", "jr", "jr.", "lead", "principal", "staff",
           "chief", "head", "deputy", "executive", "assistant", "associate", "vice", "acting"}
+# Someone else's title, not one the user claims: "your Hiring Manager",
+# "worked with a Regional Director", "reported to the Plant Manager" (#119).
+_OWNED_BY_OTHERS = {"your", "their", "his", "her", "its"}
+_ALONGSIDE = {"with", "to", "for", "under", "by", "alongside", "beside"}
+_ARTICLES = {"a", "an", "the"}
+_NEVER_THE_USERS = {"hiring manager"}
+# "Promoted to Operations Manager" is the user's own title, "to" or not.
+_RAISED = {"promoted", "rose", "advanced", "moved", "stepped"}
+
+
+def _someone_elses(before: list[str], title: str) -> bool:
+    """Whether the words before a title (as written) make it another
+    person's: "your Hiring Manager", "reported to the Plant Manager"."""
+    if title.lower() in _NEVER_THE_USERS:
+        return True
+    words = list(before)
+
+    def last() -> str:
+        return words[-1].lower() if words else ""
+
+    if last() in _ARTICLES:
+        words.pop()
+    # In a list ("with Plant Managers and a Regional Director") the title
+    # takes the role of the item before "and"/"or": step back over that item.
+    if last() in ("and", "or"):
+        words.pop()
+        for _ in range(4):
+            if not words or not (words[-1][:1].isupper() or last().endswith("s")):
+                break
+            words.pop()
+        if last() in _ARTICLES:
+            words.pop()
+    if last() in _OWNED_BY_OTHERS:
+        return True
+    if last() in _ALONGSIDE:
+        # "Promoted to Operations Manager" is the user's own title.
+        return not (last() == "to" and len(words) > 1 and words[-2].lower() in _RAISED)
+    return False
 
 
 def invented_titles(text: str, pool: str) -> list[str]:
     """Titles the text claims that the pool does not state. The longest run
     the pool states must cover the whole title: a rank word in front of it
-    ("Senior") is a different, bigger title."""
+    ("Senior") is a different, bigger title. A title that belongs to someone
+    else ("your Hiring Manager") is not a claim."""
     out: list[str] = []
     for match in _TITLE_RUN.finditer(text):
         words = match.group(0).split()
+        before = re.findall(r"[A-Za-z']+", text[:match.start()])[-8:]
         while words and words[0].lower() in _NOT_TITLE:
-            words.pop(0)
-        if len(words) < 2:
+            before.append(words.pop(0))
+        if len(words) < 2 or _someone_elses(before, " ".join(words)):
             continue
         stated = next((k for k in range(len(words), 1, -1)
                        if term_in(" ".join(words[-k:]), pool)), 0)

@@ -320,6 +320,37 @@ def test_letter_may_name_the_postings_title(ws, john_plan):
     assert check(ws, john_plan).ok
 
 
+# #119 review: a title that belongs to someone else is not a claim.
+@pytest.mark.parametrize("text", [
+    "I would welcome a call with your Hiring Manager.",
+    "I have worked closely with Plant Managers and a Regional Director.",
+    "I work with a Plant Manager and the Regional Director every week.",
+    "I report to your Regional Director or the Operations Manager.",
+    "I report to the Operations Manager on the second shift.",
+    "I would report to Regional Director Lee.",
+    "Your Operations Manager would get a steady second shift.",
+    "Hiring Manager, thank you for reading.",
+])
+def test_letter_may_name_other_peoples_titles(ws, john_plan, text):
+    letter_body(john_plan, text)
+    rep = check(ws, john_plan)
+    assert rep.ok, rep.errors
+
+
+@pytest.mark.parametrize("text,title", [
+    ("I was the Operations Manager on the second shift.", "Operations Manager"),
+    ("I was promoted to Operations Manager last spring.", "Operations Manager"),
+    ("I rose to the Regional Director role.", "Regional Director"),
+    ("The Operations Manager role is mine today.", "Operations Manager"),
+    ("I was Store Manager and then Regional Director.", "Regional Director"),
+    ("I was Store Manager and a Regional Director.", "Regional Director"),
+    ("Operations Manager and Regional Director, both mine.", "Regional Director"),
+])
+def test_a_title_the_user_holds_is_still_a_claim(ws, john_plan, text, title):
+    letter_body(john_plan, text)
+    expect(check(ws, john_plan), f"names the title {title!r}")
+
+
 def test_letter_title_bound_to_the_employer_it_names(ws, john_plan):
     john_plan["cover_letter"]["cites"].append("lakeside")
     letter_body(john_plan, "At Lakeside Grocery Co-op I was the Warehouse Supervisor.")
