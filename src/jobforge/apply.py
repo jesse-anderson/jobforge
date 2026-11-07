@@ -118,7 +118,8 @@ def _swap_in(tmp: Path, folder: Path, names: list[str]) -> None:
 
     The old files are moved aside first, so a file another program holds
     (Word locks an open .docx on Windows) is found before anything changes.
-    On any failure the new files are taken out and the old ones put back."""
+    On any failure, Ctrl+C included, the new files are taken out and the old
+    ones put back before tmp is cleaned up."""
     aside = tmp / "previous"
     aside.mkdir()
     moved, placed = [], []
@@ -131,7 +132,7 @@ def _swap_in(tmp: Path, folder: Path, names: list[str]) -> None:
         for current in names:
             _move(tmp / current, folder / current)
             placed.append(current)
-    except OSError as exc:
+    except BaseException as exc:  # Ctrl+C too: the old files are in tmp (#28)
         for name in placed:
             (folder / name).unlink(missing_ok=True)
         for name in moved:

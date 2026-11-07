@@ -197,6 +197,27 @@ def test_failure_placing_a_new_file_restores_the_old_ones(ws, job_folder, monkey
     assert snapshot(job_folder) == before
 
 
+@pytest.mark.parametrize("nth", range(1, 7))
+def test_ctrl_c_during_the_swap_loses_nothing(ws, job_folder, monkeypatch, nth):
+    # Found red-teaming (#28): Ctrl+C is not an OSError, so the rollback was
+    # skipped and the cleanup deleted the old files moved aside.
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    real = apply_mod._move
+    calls = {"n": 0}
+
+    def move(src, dst):
+        calls["n"] += 1
+        if calls["n"] == nth:
+            raise KeyboardInterrupt
+        real(src, dst)
+    monkeypatch.setattr(apply_mod, "_move", move)
+    with pytest.raises(KeyboardInterrupt):
+        apply(ws, job_folder, today=TODAY)
+    assert snapshot(job_folder) == before
+    assert not [p for p in job_folder.iterdir() if p.name.startswith(".jobforge-")]
+
+
 @pytest.mark.skipif(__import__("sys").platform != "win32", reason="needs a real Windows lock")
 def test_real_windows_lock_changes_nothing(ws, job_folder):
     apply(ws, job_folder, today=TODAY)
