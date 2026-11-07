@@ -14,7 +14,7 @@ from jobforge.importer import format_preview, import_csv, plan_import
 from jobforge.ledger import job_folders, read_events
 from jobforge.prepare import prepare, similar_jobs
 
-from conftest import FIXTURES, TODAY
+from conftest import FIXTURES, REPO, TODAY
 
 pytestmark = pytest.mark.critical
 
@@ -254,3 +254,12 @@ def test_preview_table(ws):
     assert "NEW" in out and "ERROR" in out and "line 8" in out
     assert "applied 2026-09-02, rejected 2026-09-20" in out
     assert "6 new, 0 duplicate, 1 error" in out
+
+
+def test_readme_example_imports_cleanly(ws):
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    section = readme.split("## Bring in past applications", 1)[1]
+    example = section.split("```", 2)[1].lstrip("\n")
+    plan = plan_import(ws, example, today=TODAY)
+    assert plan.rows and [r.action for r in plan.rows] == ["new"] * len(plan.rows)
+    assert plan.warnings == []
