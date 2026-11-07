@@ -265,6 +265,78 @@ def test_letter_two_employers_in_one_sentence_warns(ws, john_plan):
     assert any("names 2 employers" in w for w in rep.warnings)
 
 
+def with_aliases(ws, northwind, lakeside=()):
+    """Give John's two employers the short names people use for them (#9)."""
+    path = ws.atoms_dir / "work.toml"
+    text = path.read_text(encoding="utf-8")
+    for employer, names in (("Northwind Distribution", northwind),
+                            ("Lakeside Grocery Co-op", lakeside)):
+        if names:
+            quoted = ", ".join(f'"{n}"' for n in names)
+            text = text.replace(f'employer = "{employer}"\n',
+                                f'employer = "{employer}"\naliases = [{quoted}]\n')
+    path.write_text(text, encoding="utf-8")
+
+
+def test_letter_short_name_without_alias_is_not_bound(ws, john_plan):
+    # Without aliases, "Northwind" alone is not the employer name: the
+    # sentence falls back to the letter's whole pool.
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At Northwind I reduced shrink 18% with rotation checks.")
+    assert check(ws, john_plan).ok
+
+
+def test_letter_alias_binds_the_sentence_to_its_employer(ws, john_plan):
+    # Issue #9: the short name scopes the sentence like the full one.
+    with_aliases(ws, ["Northwind"])
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At Northwind I reduced shrink 18% with rotation checks.")
+    expect(check(ws, john_plan), "(names 'Northwind')")
+
+
+def test_letter_acronym_alias_binds_the_sentence(ws, john_plan):
+    with_aliases(ws, ["NWD"])
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At NWD I reduced shrink 18% with rotation checks.")
+    expect(check(ws, john_plan), "the figure 18% is not in the facts")
+
+
+def test_letter_right_employer_by_alias_passes(ws, john_plan):
+    with_aliases(ws, ["Northwind"], ["Lakeside"])
+    john_plan["cover_letter"]["cites"].append("lakeside.shrink")
+    letter_body(john_plan, "At Lakeside I reduced produce shrink 18%.")
+    assert check(ws, john_plan).ok
+
+
+def test_letter_full_name_and_its_alias_are_one_employer(ws, john_plan):
+    with_aliases(ws, ["Northwind"])
+    letter_body(john_plan, "Northwind Distribution, or Northwind as we call it, is where I work.")
+    rep = check(ws, john_plan)
+    assert rep.ok and not any("employers" in w for w in rep.warnings)
+
+
+def test_letter_two_employers_by_alias_warns(ws, john_plan):
+    with_aliases(ws, ["Northwind"], ["Lakeside"])
+    letter_body(john_plan, "I worked at Lakeside and then Northwind.")
+    rep = check(ws, john_plan)
+    assert any("names 2 employers" in w for w in rep.warnings)
+
+
+def test_bullet_naming_another_employers_alias(ws, john_plan):
+    with_aliases(ws, ["Northwind"])
+    john_plan["experience"][1]["bullets"][0] = {
+        "atom": "lakeside.shrink", "text": "Reduced produce shrink 18% using the Northwind method"}
+    expect(check(ws, john_plan), "names 'Northwind', but this fact belongs to "
+                                 "Lakeside Grocery Co-op")
+
+
+def test_bullet_may_name_its_own_employers_alias(ws, john_plan):
+    with_aliases(ws, ["Northwind"], ["Lakeside"])
+    john_plan["experience"][1]["bullets"][0] = {
+        "atom": "lakeside.shrink", "text": "Reduced produce shrink 18% at Lakeside"}
+    assert check(ws, john_plan).ok
+
+
 def test_letter_may_quote_the_postings_figures(ws, john_plan):
     letter_body(john_plan, "Your 6 cross-dock facilities and a second-shift team of 20 "
                            "sound like the work I do now.")
