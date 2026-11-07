@@ -11,6 +11,12 @@ Lessons carried from the private repo:
   the suffix is stripped and a missing or domain-like company is an error that
   asks for --company.
 - Template placeholders like %HEADER_COMPANY_WEBSITE% are removed (F27).
+
+Per board (issue #4, fixtures in `fixtures/html/`): Lever, Ashby, and Workday
+publish JSON-LD, but Workday names an internal legal entity ("2100 Acme USA"),
+so a company starting with an entity number is refused. SmartRecruiters uses
+schema.org microdata instead. Greenhouse and Breezy have no structured data
+and name the company only in the page title ("... at Acme").
 """
 from __future__ import annotations
 
@@ -33,6 +39,8 @@ MIN_DESCRIPTION_CHARS = 200
 _BLOCK_TAGS = {"p", "div", "br", "li", "ul", "ol", "tr", "table", "section", "article",
                "h1", "h2", "h3", "h4", "h5", "h6", "header", "footer", "blockquote"}
 _DROP_TAGS = {"script", "style", "noscript", "svg", "head", "template"}
+# schema.org microdata address fields, in display order (SmartRecruiters).
+_MICRODATA_ADDRESS = ("addressLocality", "addressRegion", "addressCountry")
 
 
 @dataclass
@@ -61,6 +69,7 @@ class _TextExtractor(HTMLParser):
         self.parts: list[str] = []
         self.ld_json: list[str] = []
         self.meta: dict[str, str] = {}
+        self.microdata: dict[str, str] = {}
         self.title_parts: list[str] = []
         self._suppress = 0
         self._in_ld = False
@@ -72,6 +81,9 @@ class _TextExtractor(HTMLParser):
             key = (a.get("property") or a.get("name") or "").lower()
             if key and a.get("content"):
                 self.meta[key] = a["content"]
+        prop = a.get("itemprop", "")
+        if prop in _MICRODATA_ADDRESS and a.get("content"):
+            self.microdata.setdefault(prop, a["content"])
         if tag == "title":
             self._in_title = True
         if tag in _DROP_TAGS:
@@ -132,6 +144,9 @@ _SITE_WORDS = re.compile(
     r"careers?|jobs?|job board|hiring|linkedin|indeed|glassdoor|ziprecruiter|"
     r"workday|greenhouse|lever|smartrecruiters|breezy", re.IGNORECASE)
 _DOMAIN_RE = re.compile(r"^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:/.*)?$", re.IGNORECASE)
+# Greenhouse titles read "Job Application for <title> at <company>".
+_APPLICATION_PREFIX = re.compile(r"^job application for\s+", re.IGNORECASE)
+_AT_COMPANY = re.compile(r"\s+at\s+([A-Z][\w&.,' -]+)$")
 # Workday's hiringOrganization is often a legal entity: "2100 Acme USA".
 _ENTITY_CODE_RE = re.compile(r"^\d{3,}\s")
 
@@ -148,13 +163,30 @@ def strip_title_suffix(title: str) -> str:
     'Data Analyst at Ironbark Compute Group' -> 'Data Analyst'
     'Software Engineer - Infrastructure' is left alone.
     """
-    title = " ".join(title.split())
-    first = _SUFFIX_SPLIT.split(title)[0]
+    first = _title_head(title)
     head, sep, tail = first.rpartition(" - ")
     if sep and _SITE_WORDS.search(tail):
         first = head
-    first = re.sub(r"\s+at\s+[A-Z][\w&.,' -]+$", "", first)
+    first = _AT_COMPANY.sub("", first)
     return first.strip()
+
+
+def _title_head(title: str) -> str:
+    """The part of a page title before any site separator, without
+    Greenhouse's "Job Application for" prefix."""
+    first = _SUFFIX_SPLIT.split(" ".join(title.split()))[0]
+    return _APPLICATION_PREFIX.sub("", first)
+
+
+def company_from_title(title: str) -> str:
+    """The company a page title names as "... at <Company>", or "".
+
+    'Line Cook at Copperline Kitchen Group' -> 'Copperline Kitchen Group'
+    'Welder - Jobs at Acme' -> 'Acme'
+    'Field Applications Engineer — Google Careers' -> ''
+    """
+    m = _AT_COMPANY.search(_title_head(title))
+    return m.group(1).strip() if m else ""
 
 
 def _walk(node: Any):
@@ -249,10 +281,19 @@ def from_url(url: str, *, company: str | None = None, title: str | None = None,
             "No structured posting data on that page, so the description is the "
             "whole page's text and may include menus and other listings. Check "
             "job.json, or paste just the posting with --from-text.")
+    page_title = unescape("".join(parser.title_parts))
+    og_title = parser.meta.get("og:title", "")
     if not found_title:
-        found_title = strip_title_suffix(unescape("".join(parser.title_parts)))
+        # og:title is usually just the job title; <title> often adds the
+        # company or the board ("Acme Welder | SmartRecruiters").
+        found_title = strip_title_suffix(og_title or page_title)
     if not found_company:
-        found_company = parser.meta.get("og:site_name", "")
+        site = parser.meta.get("og:site_name", "")
+        found_company = (site if site and not looks_like_domain(site) else
+                         company_from_title(page_title) or company_from_title(og_title) or site)
+    if not found_location:
+        found_location = ", ".join(parser.microdata[k] for k in _MICRODATA_ADDRESS
+                                   if parser.microdata.get(k))
     if not company and _ENTITY_CODE_RE.match(found_company.strip()):
         raise JobforgeError(
             f"The company came out as {found_company.strip()!r}, which looks like an "
