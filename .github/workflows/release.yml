@@ -4,14 +4,19 @@
 #
 #   v0.1.0 (final X.Y.Z)                    -> PyPI
 #   v0.1.0rc1, v0.1.0b1, v0.1.0a1 (pre-release) -> TestPyPI, then PyPI if
-#       that succeeded; pip skips pre-releases unless asked, so this
-#       reserves the name without becoming the default install
+#       that succeeded. Until a final release exists, plain
+#       `pip install jobforge` installs the newest pre-release.
 #   anything else, e.g. v0.1.0.dev1             -> TestPyPI only
 #
-# Every upload waits for a maintainer to approve it: the `testpypi` and
-# `pypi` environments are set to require a reviewer (Settings > Environments).
-# PyPI never lets a version be reused, even after deletion, so the tag must
-# match __version__, and PyPI never takes a .dev build (tools/release_check.py).
+# Nothing uploads until the built wheel passes the clean-machine checklist on
+# a fresh Windows runner (tools/clean_windows.ps1, #56): the exact file about
+# to be published, installed and used the way the README says.
+#
+# The `testpypi` and `pypi` environments deploy from `v*` tags only; a
+# required reviewer is added at the public flip (a private repo on the Free
+# plan cannot have one). PyPI never lets a version be reused, even after
+# deletion, so the tag must match __version__, and PyPI never takes a .dev
+# build (tools/release_check.py).
 #
 # One-time setup, before the first tag: on PyPI and TestPyPI, add this repo as
 # a trusted publisher (workflow `release.yml`, environment `pypi` or
@@ -74,8 +79,33 @@ jobs:
           name: dist
           path: dist/
 
-  testpypi:
+  # The clean-machine checklist on the wheel about to be uploaded (#56). Both
+  # uploads wait for it; a failure stops the release with nothing published.
+  windows:
     needs: build
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Clean-machine checklist on the built wheel
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\clean_windows.ps1 -Install wheel -Out clean-windows-out
+      - name: Save the transcript and documents
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-windows-release
+          path: clean-windows-out/
+
+  testpypi:
+    needs: [build, windows]
     if: needs.build.outputs.target == 'testpypi' || needs.build.outputs.target == 'both'
     runs-on: ubuntu-latest
     environment:
@@ -93,11 +123,13 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   pypi:
-    needs: [build, testpypi]
+    needs: [build, windows, testpypi]
     # A pre-release reaches PyPI only after its TestPyPI upload succeeded; a
     # final version skips TestPyPI, so the skipped job must not block it.
+    # Either way the Windows checklist must have passed.
     if: >-
       !cancelled() && needs.build.result == 'success' &&
+      needs.windows.result == 'success' &&
       (needs.build.outputs.target == 'pypi' ||
        (needs.build.outputs.target == 'both' && needs.testpypi.result == 'success'))
     runs-on: ubuntu-latest

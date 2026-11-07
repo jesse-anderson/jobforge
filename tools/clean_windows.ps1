@@ -7,10 +7,14 @@
 # Everything it does and sees goes to <Out>/run.log; <Out>/summary.md is the
 # record table. Exit 1 if any step failed.
 #
+# -Install: "pypi" (pip install jobforge), "checkout" (pip install . from this
+# clone), or "wheel" (the one .whl in dist/, the exact file a release is about
+# to upload; release.yml runs this before any upload).
+#
 # Not covered here: step 11 in Word itself (the runner has no Office; done on
 # Windows 10 with Word on #28) and step 13, the agent run, which needs a person.
 param(
-    [ValidateSet("pypi", "checkout")][string]$Install = "checkout",
+    [ValidateSet("pypi", "checkout", "wheel")][string]$Install = "checkout",
     [string]$Out = "clean-windows-out"
 )
 $ErrorActionPreference = "Continue"
@@ -87,6 +91,10 @@ Step "2" "Python 3.11+ (python --version)" {
 Step "3" "Install Jobforge ($Install)" {
     if ($Install -eq "pypi") {
         $r = Run "pip" @("install", "jobforge")
+    } elseif ($Install -eq "wheel") {
+        $wheels = @(Get-ChildItem (Join-Path $Repo "dist") -Filter "*.whl" -ErrorAction SilentlyContinue)
+        Need ($wheels.Count -eq 1) "expected one .whl in dist/, found $($wheels.Count)"
+        $r = Run "pip" @("install", $wheels[0].FullName)
     } else {
         Push-Location $Repo
         $r = Run "pip" @("install", ".")

@@ -35,7 +35,10 @@ def test_workflow_runs_by_hand_or_when_the_script_changes():
 
 def test_workflow_runs_both_install_paths_on_windows_and_keeps_the_transcript():
     assert "runs-on: windows-latest" in WORKFLOW
-    assert "install: [checkout, pypi]" in WORKFLOW
+    assert "install: [checkout, pypi, wheel]" in WORKFLOW
+    # The wheel path is what release.yml gates on; built here the same way.
+    build = WORKFLOW.split("- name: Build the wheel", 1)[1].split("- name:", 1)[0]
+    assert "if: matrix.install == 'wheel'" in build and "python -m build --wheel" in build
     upload = WORKFLOW.split("actions/upload-artifact", 1)
     assert "if: always()" in upload[0].rsplit("- name:", 1)[1]
     assert "clean-windows-out/" in upload[1]

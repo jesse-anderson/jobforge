@@ -8,8 +8,9 @@
 # on a PR that changes the script or this file. Never on every push: Windows
 # minutes bill at 2x while the repo is private. Never commits (D-48).
 #
-# Two install paths, as the checklist asks: from PyPI (`pip install jobforge`,
-# the newest release there) and from the clone (`pip install .`, this commit).
+# Install paths: from PyPI (`pip install jobforge`, the newest release there),
+# from the clone (`pip install .`, this commit), and from a freshly built
+# wheel, the path release.yml gates every upload on.
 name: clean-windows
 
 on:
@@ -18,13 +19,14 @@ on:
     paths:
       - tools/clean_windows.ps1
       - .github/workflows/clean-windows.yml
+      - .github/workflows/release.yml
 
 jobs:
   checklist:
     strategy:
       fail-fast: false
       matrix:
-        install: [checkout, pypi]
+        install: [checkout, pypi, wheel]
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -33,6 +35,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Build the wheel, as release.yml does
+        if: matrix.install == 'wheel'
+        run: |
+          python -m pip install build
+          python -m build --wheel --outdir dist
       - name: Run the checklist
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\clean_windows.ps1 -Install ${{ matrix.install }} -Out clean-windows-out

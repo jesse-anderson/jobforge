@@ -83,8 +83,11 @@ it, never a branch push or a PR (#54, #69).
    run otherwise.
 3. The `build` job checks the tag, runs the suite with coverage, builds the
    wheel and sdist, runs `twine check`, and installs the wheel in a clean
-   venv to run `jobforge --version` and `jobforge init`. Nothing uploads if
-   any of that fails.
+   venv to run `jobforge --version` and `jobforge init`. Then the `windows`
+   job installs that same wheel on a fresh Windows runner and runs the
+   clean-machine checklist (`tools/clean_windows.ps1`); its transcript is
+   the `clean-windows-release` artifact. Nothing uploads if any of that
+   fails.
 4. The tag decides where it goes:
 
    | Tag | Goes to |
