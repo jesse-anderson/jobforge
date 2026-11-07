@@ -36,4 +36,4 @@ def test_package_metadata_names_and_ships_the_license():
 
 
 def test_readme_links_to_the_license():
-    assert "](LICENSE)" in (REPO / "README.md").read_text(encoding="utf-8")
+    assert "](https://github.com/jesse-anderson/jobforge/blob/main/LICENSE)" in (REPO / "README.md").read_text(encoding="utf-8")

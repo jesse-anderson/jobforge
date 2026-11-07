@@ -20,6 +20,12 @@ classifiers = [
 # The runtime is stdlib only (D-13). Nothing goes in `dependencies`.
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/jesse-anderson/jobforge"
+Source = "https://github.com/jesse-anderson/jobforge"
+Issues = "https://github.com/jesse-anderson/jobforge/issues"
+Security = "https://github.com/jesse-anderson/jobforge/security/policy"
+
 [project.optional-dependencies]
 dev = ["pytest>=8", "coverage>=7"]
 

@@ -3,9 +3,9 @@
 [![tests](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml/badge.svg)](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml)
 [![coverage](https://img.shields.io/endpoint?url=https://jesse-anderson.github.io/jobforge/coverage-badge.json)](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml)
 [![python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
-[![license](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
-[![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-lightgrey)](#what-you-need)
-[![dependencies](https://img.shields.io/badge/runtime%20dependencies-none-brightgreen)](pyproject.toml)
+[![license](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](https://github.com/jesse-anderson/jobforge/blob/main/LICENSE)
+[![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-lightgrey)](https://github.com/jesse-anderson/jobforge#what-you-need)
+[![dependencies](https://img.shields.io/badge/runtime%20dependencies-none-brightgreen)](https://github.com/jesse-anderson/jobforge/blob/main/pyproject.toml)
 
 Turn your real work history into a resume and cover letter tailored to one
 job posting, on your own computer, for free, without the tool ever stating a
@@ -23,7 +23,7 @@ fact you did not give it.
   tables, columns, or hidden characters, then reads them back to prove what a
   parser will see.
 
-Source-available under [PolyForm Noncommercial 1.0.0](LICENSE): free for personal use
+Source-available under [PolyForm Noncommercial 1.0.0](https://github.com/jesse-anderson/jobforge/blob/main/LICENSE): free for personal use
 and for nonprofits, schools, and public institutions. Not for commercial use.
 
 ## What you need
