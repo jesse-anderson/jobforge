@@ -290,3 +290,15 @@ def test_engineer_short_unit_is_not_read_as_million(tmp_path):
         cites=p["cover_letter"]["cites"] + ["northfield.fixture"]))
     result = run_check(ws, folder)
     assert any("the figure 0.003 is not in the facts" in e for e in result.errors), result.errors
+
+
+@pytest.mark.parametrize("name", ["Delta", "DPW", "Delta Pump Works"])
+def test_engineer_letter_short_employer_name_is_bound(tmp_path, name):
+    """Issue #9 repro: Northfield's figures credited to Delta by its short
+    name or acronym are caught like the full name."""
+    ws, folder = setup(tmp_path, "engineer")
+    edit_plan(folder, lambda p: p["cover_letter"].update(
+        body=f"At {name} I cut valve test setup from 40 minutes to 15.",
+        cites=p["cover_letter"]["cites"] + ["northfield.fixture"]))
+    result = run_check(ws, folder)
+    assert any(f"(names {name!r})" in e and "40" in e for e in result.errors), result.errors

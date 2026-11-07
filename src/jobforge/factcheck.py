@@ -116,14 +116,25 @@ def check_terms(text: str, pool: str, vocab: list[str], profile: Profile, where:
                               f"line cites do. Cite the atom where you used it.")
 
 
+def employers_named(text: str, inv: Inventory) -> dict[str, str]:
+    """Employer -> the name the text calls it by, full name or alias (#9).
+    An employer named twice ("Northwind Distribution, or Northwind") is one."""
+    out: dict[str, str] = {}
+    for employer, names in inv.employer_names().items():
+        written = next((n for n in names if term_in(n, text)), None)
+        if written:
+            out[employer] = written
+    return out
+
+
 def check_employers(text: str, line_atoms: list[Atom], inv: Inventory, where: str,
                     rep: Report) -> None:
     """A resume line may only name the employer its facts belong to."""
     own = {inv.employer_of(a) for a in line_atoms} - {None}
-    for employer in inv.employers():
-        if employer not in own and term_in(employer, text):
+    for employer, written in employers_named(text, inv).items():
+        if employer not in own:
             owners = ", ".join(sorted(own)) or "no employer (personal, school, or volunteer work)"
-            rep.errors.append(f"{where}: names {employer!r}, but this fact belongs to "
+            rep.errors.append(f"{where}: names {written!r}, but this fact belongs to "
                               f"{owners} (D-40).")
 
 
@@ -215,19 +226,20 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
     employers = inv.employers()
     for i, sentence in enumerate(split_sentences(text), 1):
         sw = f"{where} sentence {i}"
-        named = [e for e in employers if term_in(e, sentence)]
+        named = employers_named(sentence, inv)
         figures = _strip_contact(sentence, profile)
         if len(named) == 1:
             # Only that employer's facts may appear here.
-            bound = [a for a in cites if inv.employer_of(a) == named[0]]
-            bound += employers[named[0]]
+            (employer, written), = named.items()
+            bound = [a for a in cites if inv.employer_of(a) == employer]
+            bound += employers[employer]
             scoped = _pool_text(bound, inv)
-            check_figures(figures, scoped, f"{sw} (names {named[0]!r})", rep)
-            check_terms(sentence, scoped, vocab, profile, f"{sw} (names {named[0]!r})", rep)
+            check_figures(figures, scoped, f"{sw} (names {written!r})", rep)
+            check_terms(sentence, scoped, vocab, profile, f"{sw} (names {written!r})", rep)
         else:
             if len(named) > 1:
                 rep.warnings.append(f"{sw}: names {len(named)} employers "
-                                    f"({', '.join(named)}); check each figure is "
+                                    f"({', '.join(named.values())}); check each figure is "
                                     f"credited to the right one.")
             check_figures(figures, pool, sw, rep)
             check_terms(sentence, pool, vocab, profile, sw, rep)

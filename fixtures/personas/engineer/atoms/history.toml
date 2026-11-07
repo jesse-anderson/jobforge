@@ -5,6 +5,7 @@ text = "Mechanical engineer who designs pump and valve parts that are cheaper to
 [[role]]
 id = "delta"
 employer = "Delta Pump Works"
+aliases = ["Delta", "DPW"]
 title = "Mechanical Engineer I"
 location = "Tulsa, OK"
 start = "2022-07"
@@ -40,6 +41,7 @@ defense = "Purchasing's annual cost comparison."
 [[role]]
 id = "northfield"
 employer = "Northfield Valve Company"
+aliases = ["Northfield"]
 title = "Engineering Co-op"
 location = "Stillwater, OK"
 start = "2021-01"

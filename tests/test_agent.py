@@ -9,6 +9,8 @@ from jobforge.cli import _parser
 from jobforge.profile import load_profile
 from jobforge.workspace import init_workspace
 
+from conftest import FIXTURES
+
 
 def test_workspace_agent_files_match_the_source(ws):
     expected = render(values_for(ws))
@@ -77,6 +79,14 @@ def test_example_atoms_in_the_instructions_are_valid(tmp_path):
     (ws.atoms_dir / "example.toml").write_text(block, encoding="utf-8")
     inv = load_inventory(ws)
     assert inv.employer_of(inv.get("acme.downtime")) == "Acme Manufacturing"
+    assert inv.employer_names()["Acme Manufacturing"] == ["Acme Manufacturing", "Acme"]
+
+
+def test_agent_drafts_employer_aliases():
+    # Issue #9: the agent fills in aliases so the user never types them.
+    text = source_text()
+    setup = text.split("## First-time setup", 1)[1].split("\n## ", 1)[0]
+    assert "`aliases`" in setup and "never has to type them" in setup
 
 
 def test_example_plan_in_the_instructions_resolves(tmp_path):
@@ -121,3 +131,21 @@ def test_instructions_treat_a_skills_list_as_claims():
     text = source_text()
     assert "A skills list is claims too" in text
     assert "never_claim" in text.split("A skills list is claims too", 1)[1].split("\n6.", 1)[0]
+
+
+def test_page_text_capture_tells_the_agent_to_recapture():
+    # #16: a whole-page capture can hold other listings; the agent asks for
+    # the posting itself. The instructions quote the engine's own warning.
+    from jobforge.extract import from_url
+    page = (FIXTURES / "html" / "no_jsonld_google_style.html").read_text(encoding="utf-8")
+    _, warnings = from_url("https://example.com/j", company="Google", fetch=lambda url: page)
+    quoted = "No structured posting data"
+    assert warnings and warnings[0].startswith(quoted)
+    text = source_text()
+    assert f'warns "{quoted}"' in text
+    assert "direct link" in text and "--force" in text
+
+
+def test_instructions_say_the_check_misses_unknown_tools():
+    # #12: the check cannot know every tool; the agent rereads its lines.
+    assert "cannot catch one it has never seen" in source_text()
