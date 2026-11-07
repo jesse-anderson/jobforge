@@ -222,7 +222,10 @@ Step "W2" "Output piped to a file with a non-Latin company name (#52)" {
 Step "W3" "plan.json re-saved by PowerShell with a BOM still checks (#30)" {
     Set-Location $Ws
     $plan = Join-Path $script:Job.FullName "plan.json"
-    Get-Content $plan -Encoding UTF8 | Set-Content $plan -Encoding UTF8
+    # Read it whole first: piping Get-Content into Set-Content on the same
+    # file holds it open and fails.
+    $content = Get-Content $plan -Encoding UTF8
+    Set-Content -Path $plan -Value $content -Encoding UTF8
     $bytes = [IO.File]::ReadAllBytes($plan)
     Need ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB) "Set-Content did not write a BOM"
     $r = Run "jobforge" @("check", "prairie")
