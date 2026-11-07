@@ -81,7 +81,7 @@ def test_voice_add_and_allow():
 
 def test_defaults_carry_no_person_specific_rules():
     # SOW A-13: the defaults are general AI-tell words only.
-    assert "excited" not in DEFAULT_BANNED_WORDS  # was a personal rule in the private repo
+    assert "excited" not in DEFAULT_BANNED_WORDS  # a personal rule, not a general AI tell
     assert "ecosystem" not in DEFAULT_BANNED_WORDS
 
 

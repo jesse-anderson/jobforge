@@ -7,7 +7,7 @@ prepare, plan, or render these applications, so an import records only what
 happened and never fabricates evidence (no plan, no resume, no `prepared`
 event, no guessed date).
 
-Lessons from importing a real tracker by hand in the private repo:
+Lessons from importing a real tracker by hand:
 - Preview first. Reading the preview caught mistakes no validator would, so
   `plan_import` writes nothing and the CLI only writes on `--write`.
 - Never make a date up or more exact than given. Dates are YYYY-MM-DD; "9/1"

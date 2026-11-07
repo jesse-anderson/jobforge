@@ -70,7 +70,7 @@ def test_plan_errors(ws, john_plan, mutate, needle):
 
 
 def test_bullet_under_another_employers_role_is_a_hard_failure(ws, john_plan):
-    # D-40 and SOW finding 7: this was only a warning in the private repo.
+    # D-40 and SOW finding 7: a warning is not enough; this must fail.
     john_plan["experience"][1]["bullets"].append("northwind.overtime")
     _, errors, _ = run(ws, john_plan)
     assert has(errors, "bullet 'northwind.overtime' belongs to role 'northwind' "
