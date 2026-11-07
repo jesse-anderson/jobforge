@@ -145,6 +145,15 @@ def test_never_claim_with_a_look_alike_letter(ws, john_plan):
     expect(rep, "mixes Latin and Cyrillic")
 
 
+@pytest.mark.parametrize("written", ["Six Sigma Black-Belt", "Six Sigma Black/Belt",
+                                     "Six Sigma  Black Belt", "Six-Sigma Black Belt"])
+def test_never_claim_matches_hyphen_slash_and_spacing_variants(ws, john_plan, written):
+    # Issue #92 (audit A9): a hyphen or extra space made a different string.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": f"Cut weekly overtime 25% as a {written}"}
+    expect(check(ws, john_plan), "claims 'Six Sigma Black Belt'")
+
+
 def test_never_claim_written_all_in_cyrillic(ws, john_plan):
     john_plan["experience"][0]["bullets"][2] = {
         "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using \u0405\u0410\u0420"}
