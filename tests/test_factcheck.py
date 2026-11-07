@@ -265,6 +265,15 @@ def test_letter_two_employers_in_one_sentence_warns(ws, john_plan):
     assert any("names 2 employers" in w for w in rep.warnings)
 
 
+def test_meters_written_short_match_the_atom(ws, john_plan):
+    # Issue #10: "12 m" for an atom's "12 meters" is the same figure.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.conveyor"\nrole = "northwind"\n'
+                  'text = "Laid out 12 meters of new conveyor"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.conveyor", "text": "Laid out 12 m of new conveyor"})
+    assert check(ws, john_plan).ok
+
+
 def test_letter_may_quote_the_postings_figures(ws, john_plan):
     letter_body(john_plan, "Your 6 cross-dock facilities and a second-shift team of 20 "
                            "sound like the work I do now.")

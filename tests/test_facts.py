@@ -37,6 +37,15 @@ from jobforge.facts import (Token, find_hedges, number_tokens, split_sentences, 
     ("saved 14 thousand", [Token("number", "14000")]),
     ("saved 300 euros", [Token("money", "300", "€")]),
     ("saved 300 GBP", [Token("money", "300", "£")]),
+    # Issue #10: "m" and "mm" mean million only with money; otherwise the
+    # figure is taken as written (meters, millimeters).
+    ("held 0.05 mm", [Token("number", "0.05")]),
+    ("a 3 m beam", [Token("number", "3")]),
+    ("a 12m span", [Token("number", "12")]),
+    ("2MM rows", [Token("number", "2")]),
+    ("a $5mm deal", [Token("money", "5000000")]),
+    ("saved 4m dollars", [Token("money", "4000000")]),
+    ("2 million rows", [Token("number", "2000000")]),
 ])
 def test_number_tokens(text, expected):
     assert number_tokens(text) == expected

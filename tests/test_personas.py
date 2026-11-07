@@ -279,3 +279,14 @@ def test_returning_planted_gap_explanation_is_refused(tmp_path):
     result = run_check(ws, folder)
     banned = [e for e in result.errors if "banned phrase" in e]
     assert banned and all(p in banned[0] for p in ("career break", "caregiving", "return to work"))
+
+
+def test_engineer_short_unit_is_not_read_as_million(tmp_path):
+    """Issue #10: "0.003 m" used to read as 3,000 and match the fixture's
+    3,000 psi. A figure with a unit is now taken as written."""
+    ws, folder = setup(tmp_path, "engineer")
+    edit_plan(folder, lambda p: p["cover_letter"].update(
+        body="At Northfield I held a 0.003 m clearance on a pressure test fixture.",
+        cites=p["cover_letter"]["cites"] + ["northfield.fixture"]))
+    result = run_check(ws, folder)
+    assert any("the figure 0.003 is not in the facts" in e for e in result.errors), result.errors

@@ -20,6 +20,10 @@ _MULT = {"k": Decimal(1_000), "thousand": Decimal(1_000),
          "m": Decimal(1_000_000), "mm": Decimal(1_000_000),
          "million": Decimal(1_000_000), "b": Decimal(1_000_000_000),
          "bn": Decimal(1_000_000_000), "billion": Decimal(1_000_000_000)}
+# "m" and "mm" are also meters and millimeters, so they mean million only
+# beside a currency ("$5mm", "4m dollars"). Elsewhere the figure is taken as
+# written, 1:1 (issue #10).
+_MONEY_ONLY = {"m", "mm"}
 
 # Currency, by symbol before the figure or by word after it. Dollars are ""
 # so the common case reads plainly; other currencies never match dollars.
@@ -78,6 +82,8 @@ def number_tokens(text: str) -> list[Token]:
             out.append(Token("percent", _norm(val)))
         elif unit in ("x", "times"):
             out.append(Token("times", _norm(val)))
+        elif unit in _MONEY_ONLY and currency is None:
+            out.append(Token("number", _norm(val)))
         elif unit in _MULT:
             val *= _MULT[unit]
             out.append(Token("number", _norm(val)) if currency is None
