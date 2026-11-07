@@ -1,0 +1,11 @@
+# General office persona (D-09 #5). Fictional. Tools-heavy, few hard
+# figures: the facts are what she runs and in which software.
+
+[person]
+name = "Patricia Nguyen"
+email = "patricia.nguyen@example.com"
+phone = "555-0135"
+location = "Columbus, OH"
+
+[claims]
+never_claim = ["Salesforce", "Yardi"]

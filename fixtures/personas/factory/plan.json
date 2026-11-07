@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "fit": {"score": "moderate", "summary": "Runs a second-shift press line and owns OEE and scrap now; has led 9 operators, not 20 to 25."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "greatlakes.lead", "bullets": [
+      "greatlakes.lead.oee",
+      {"atom": "greatlakes.lead.scrap", "text": "Cut bracket line scrap from 4.1% to 2.3% with a first-piece inspection at every shift start"},
+      "greatlakes.lead.crew",
+      "greatlakes.lead.changeover"
+    ]},
+    {"role": "greatlakes.operator", "bullets": ["greatlakes.operator.output", "greatlakes.operator.safety"]},
+    {"role": "maumee", "bullets": ["maumee.qc"]}
+  ],
+  "skills": ["skill.production", "skill.quality"],
+  "credentials": ["cred.forklift", "cred.osha10"],
+  "education": ["edu.tech"],
+  "cover_letter": {
+    "hook": "A second shift where OEE, scrap, and safety all land on the supervisor is the job I already do as a line lead, and I want to run a full shift at Ridgeway.",
+    "body": "At Great Lakes Stamping I lead 9 operators on 12-hour rotating shifts. We raised press line OEE from 71% to 82% by standardizing die changeovers, and a first-piece inspection at each shift start cut bracket scrap from 4.1% to 2.3%.\n\nBefore I led the line I ran a 400-ton transfer press at 520 parts per hour, and I train new operators on lockout/tagout.",
+    "close": "I would like to hear how your second shift handles changeovers between the stamping and weld cells.",
+    "cites": ["greatlakes.lead.crew", "greatlakes.lead.oee", "greatlakes.lead.scrap", "greatlakes.operator.output", "greatlakes.operator.safety"]
+  },
+  "gaps": ["Six Sigma Green Belt is preferred; Luis has not earned it.", "The posting asks for 20 to 25 operators; Luis has led 9."]
+}

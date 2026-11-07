@@ -1,0 +1,15 @@
+Backend Engineer, Fieldnote Health
+
+Fieldnote Health builds scheduling and billing software for 2,000 independent clinics. We are hiring a Backend Engineer to work on our payments platform.
+
+Responsibilities:
+- Design and build Python services and REST APIs
+- Improve performance and reliability of PostgreSQL-backed services
+- Take part in an on-call rotation
+- Review code and mentor newer engineers
+
+Requirements:
+- 3+ years building backend services in Python
+- Strong SQL and PostgreSQL experience
+- Experience with Docker and AWS
+- Kubernetes experience a plus

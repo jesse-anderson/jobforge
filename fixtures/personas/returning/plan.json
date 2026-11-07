@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "fit": {"score": "moderate", "summary": "Seven years of the exact duties (close, AP, payroll) and current QuickBooks Online certification; most recent paid role ended in 2018."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "whitfield", "bullets": ["whitfield.close", "whitfield.payroll", "whitfield.backlog"]},
+    {"role": "prairieland", "bullets": ["prairieland.ap"]}
+  ],
+  "projects": [{"project": "proj.pto", "bullets": ["pto.books", "pto.review"]}],
+  "skills": ["skill.accounting", "skill.software"],
+  "credentials": ["cred.proadvisor", "cred.excel"],
+  "education": ["edu.bba"],
+  "cover_letter": {
+    "hook": "Payables, month-end close, and payroll for a multi-store business are the work I know best, and Oakmont Building Supply's Cedar Rapids office is close to home.",
+    "body": "At Whitfield & Grant CPAs I ran month-end close for 12 small-business clients, including bank reconciliations and accruals, and processed biweekly payroll for 9 clients with 180 employees. I once cleared a client's 3-year backlog of unreconciled vendor accounts in 6 weeks.\n\nBefore that I paid 400 vendor invoices a month at Prairieland Hardware, matching each one to its purchase order. I hold the QuickBooks Online ProAdvisor certification, and as volunteer PTO treasurer I kept the books for a $38,000 budget in QuickBooks Online.",
+    "close": "I would like to hear how your team splits payables across the 6 stores.",
+    "cites": ["whitfield.close", "whitfield.payroll", "whitfield.backlog", "prairieland.ap", "cred.proadvisor", "pto.books"]
+  },
+  "gaps": ["The CPA and NetSuite are pluses; Laura has neither.", "No paid role since 2018. The letter does not explain it; Laura can answer it in an interview if asked."]
+}

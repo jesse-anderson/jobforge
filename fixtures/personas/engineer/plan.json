@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "fit": {"score": "strong", "summary": "Designs centrifugal pump parts in SolidWorks with FEA and casting work now; EI, not yet a PE; no CFD."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "delta", "bullets": [
+      {"atom": "delta.impeller", "text": "Raised pump efficiency from 72.5% to 76% at 450 gpm by redesigning a cast impeller in SolidWorks"},
+      "delta.tolerance",
+      "delta.fea",
+      "delta.cost"
+    ]},
+    {"role": "northfield", "bullets": ["northfield.fixture", "northfield.drawings"]}
+  ],
+  "projects": [{"project": "proj.capstone", "bullets": ["capstone.build"]}],
+  "skills": ["skill.cad", "skill.mfg"],
+  "credentials": ["cred.ei", "cred.cswp"],
+  "education": ["edu.bs"],
+  "cover_letter": {
+    "hook": "Ironwood Fluid Systems designs the kind of centrifugal pumps I work on every day, and I would like to design them for municipal water.",
+    "body": "At Delta Pump Works I redesigned a cast impeller in SolidWorks that raised efficiency from 72.5% to 76% at 450 gpm, and I ran FEA on 12 pump brackets to cut their mass 18% with no loss in safety factor. Moving 3 castings to a local foundry saved $42,000 a year.\n\nMy senior design team built a solar-powered irrigation pump that delivers 1,800 gallons a day (example.com/priyaraman/solar-pump).",
+    "close": "I would like to hear how your design engineers work with the test loop team on new impellers.",
+    "cites": ["delta.impeller", "delta.fea", "delta.cost", "capstone.build"]
+  },
+  "gaps": ["A PE license is preferred; Priya holds the EI and is not yet eligible.", "No CFD experience; ANSYS Fluent is a plus."]
+}

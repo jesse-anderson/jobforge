@@ -1,0 +1,11 @@
+# Service industry persona (D-09 #3). Fictional. Five short front-of-house
+# jobs in five years, few hard numbers, carried by soft skills.
+
+[person]
+name = "Jasmine Wright"
+email = "jasmine.wright@example.com"
+phone = "555-0124"
+location = "Savannah, GA"
+
+[claims]
+never_claim = ["Opera PMS", "ServSafe Manager"]

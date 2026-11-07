@@ -1,0 +1,92 @@
+[[summary]]
+id = "summary.main"
+text = "ICU nurse with 6 years at the bedside, steady with ventilated and septic patients and glad to precept new graduates."
+
+[[role]]
+id = "lakeshore"
+employer = "Lakeshore Regional Medical Center"
+title = "Registered Nurse, Medical ICU"
+location = "Milwaukee, WI"
+start = "2021-09"
+end = "present"
+
+[[bullet]]
+id = "lakeshore.ratio"
+role = "lakeshore"
+text = "Care for 2 critically ill patients per shift in a 24-bed medical ICU, including ventilated patients and continuous drips"
+basis = "records"
+
+[[bullet]]
+id = "lakeshore.sepsis"
+role = "lakeshore"
+text = "Joined the unit sepsis workgroup that raised on-time sepsis bundle completion from 68% to 91% in one year"
+basis = "records"
+defense = "Quality department bundle compliance report."
+
+[[bullet]]
+id = "lakeshore.precept"
+role = "lakeshore"
+text = "Precepted 7 new graduate nurses through their 12-week ICU orientation"
+basis = "records"
+
+[[bullet]]
+id = "lakeshore.crrt"
+role = "lakeshore"
+text = "Trained as a CRRT super user and teach the CRRT station at the unit's annual skills day"
+basis = "records"
+
+[[role]]
+id = "prairie"
+employer = "Prairie View Hospital"
+title = "Registered Nurse, Medical-Surgical"
+location = "Waukesha, WI"
+start = "2019-06"
+end = "2021-08"
+
+[[bullet]]
+id = "prairie.load"
+role = "prairie"
+text = "Cared for 5 to 6 patients per shift on a 32-bed medical-surgical unit"
+basis = "records"
+
+[[bullet]]
+id = "prairie.falls"
+role = "prairie"
+text = "Worked as charge nurse 1 shift a week and helped cut falls with injury from 9 to 3 in a year with bed alarms and purposeful rounding"
+basis = "records"
+defense = "Unit falls dashboard."
+
+[[skill]]
+id = "skill.clinical"
+label = "Clinical"
+items = ["Ventilator management", "Vasoactive drips", "CRRT", "Sepsis bundles", "Arterial lines"]
+
+[[skill]]
+id = "skill.ehr"
+label = "Charting"
+items = ["Epic"]
+
+[[credential]]
+id = "cred.rn"
+name = "Registered Nurse License"
+issuer = "Wisconsin Board of Nursing"
+date = "2019"
+
+[[credential]]
+id = "cred.acls"
+name = "ACLS Provider"
+issuer = "American Heart Association"
+date = "2025"
+
+[[credential]]
+id = "cred.bls"
+name = "BLS Provider"
+issuer = "American Heart Association"
+date = "2025"
+
+[[education]]
+id = "edu.bsn"
+school = "Kettle Moraine University"
+credential = "Bachelor of Science in Nursing"
+location = "Milwaukee, WI"
+date = "2019"

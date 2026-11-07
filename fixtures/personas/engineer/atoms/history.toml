@@ -1,0 +1,102 @@
+[[summary]]
+id = "summary.main"
+text = "Mechanical engineer who designs pump and valve parts that are cheaper to make and easier to hold to print."
+
+[[role]]
+id = "delta"
+employer = "Delta Pump Works"
+title = "Mechanical Engineer I"
+location = "Tulsa, OK"
+start = "2022-07"
+end = "present"
+
+[[bullet]]
+id = "delta.impeller"
+role = "delta"
+text = "Redesigned a cast impeller in SolidWorks, raising pump efficiency from 72.5% to 76.0% at the rated flow of 450 gpm"
+basis = "measured"
+defense = "Test loop performance curves, old and new impeller."
+
+[[bullet]]
+id = "delta.tolerance"
+role = "delta"
+text = "Held bore tolerances to ±0.0005 in on a new bearing housing, cutting rework from 6% to 1.5%"
+basis = "records"
+defense = "Inspection reports and the shop's rework log."
+
+[[bullet]]
+id = "delta.fea"
+role = "delta"
+text = "Ran FEA in SolidWorks Simulation on 12 pump brackets and cut bracket mass 18% with no loss in safety factor"
+basis = "measured"
+
+[[bullet]]
+id = "delta.cost"
+role = "delta"
+text = "Moved 3 castings to a local foundry, saving $42,000 a year"
+basis = "records"
+defense = "Purchasing's annual cost comparison."
+
+[[role]]
+id = "northfield"
+employer = "Northfield Valve Company"
+title = "Engineering Co-op"
+location = "Stillwater, OK"
+start = "2021-01"
+end = "2021-08"
+
+[[bullet]]
+id = "northfield.fixture"
+role = "northfield"
+text = "Built a pressure test fixture rated to 3,000 psi that cut valve test setup from 40 minutes to 15"
+basis = "measured"
+
+[[bullet]]
+id = "northfield.drawings"
+role = "northfield"
+text = "Updated 85 legacy drawings to ASME Y14.5 GD&T"
+basis = "records"
+
+[[project]]
+id = "proj.capstone"
+title = "Solar Water Pump Capstone"
+context = "school"
+url = "https://example.com/priyaraman/solar-pump"
+text = "Senior design project"
+
+[[bullet]]
+id = "capstone.build"
+project = "proj.capstone"
+text = "Led a 4-person team that designed and built a solar-powered irrigation pump delivering 1,800 gallons a day"
+basis = "measured"
+defense = "Final report test data."
+
+[[skill]]
+id = "skill.cad"
+label = "CAD and analysis"
+items = ["SolidWorks", "SolidWorks Simulation", "AutoCAD", "MATLAB", "GD&T"]
+
+[[skill]]
+id = "skill.mfg"
+label = "Manufacturing"
+items = ["Casting design", "Machining tolerances", "Pressure testing"]
+
+[[credential]]
+id = "cred.ei"
+name = "Engineer Intern (EI)"
+issuer = "Oklahoma State Board of Licensure"
+date = "2022"
+
+[[credential]]
+id = "cred.cswp"
+name = "Certified SolidWorks Professional (CSWP)"
+issuer = "Dassault Systemes"
+date = "2023"
+
+[[education]]
+id = "edu.bs"
+school = "Red Earth University"
+credential = "Bachelor of Science"
+field = "Mechanical Engineering"
+location = "Stillwater, OK"
+date = "2022-05"
