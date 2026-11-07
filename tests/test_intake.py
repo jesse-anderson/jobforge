@@ -11,7 +11,7 @@ from jobforge.errors import JobforgeError
 from jobforge.extract import (FetchBlocked, company_from_title, from_text, from_url,
                               html_to_text, looks_like_domain, strip_title_suffix)
 from jobforge.ledger import read_events
-from jobforge.prepare import folder_name, prepare, slug
+from jobforge.prepare import folder_name, prepare, read_job, slug
 
 from conftest import FIXTURES, TODAY
 
@@ -171,6 +171,67 @@ def test_prepare_twice_needs_force(ws):
         prepare(ws, job, today=TODAY)
     prepare(ws, job, today=TODAY, force=True)
     assert len(read_events(folder)) == 1  # force does not add a second "prepared"
+
+
+# Issue #31: a different posting never overwrites a folder; it gets its own.
+def test_two_cities_on_one_day_get_two_folders(ws):
+    a, _ = from_text(LONG, company="Prairie Freight Co.", title="Operations Supervisor",
+                     location="Springfield, IL")
+    b, _ = from_text(LONG + " Peoria site.", company="Prairie Freight Co.",
+                     title="Operations Supervisor", location="Peoria, IL")
+    first, _ = prepare(ws, a, today=TODAY)
+    second, _ = prepare(ws, b, today=TODAY)
+    assert second.name == first.name + "__2"
+    assert read_job(first)["location"] == "Springfield, IL"
+    assert read_job(second)["location"] == "Peoria, IL"
+    assert [e.stage for e in read_events(second)] == ["prepared"]
+
+
+def test_two_non_latin_companies_get_two_folders(ws):
+    # Both slug to "untitled"; they are still different employers.
+    a, _ = from_text(LONG, company="株式会社テスト", title="Welder")
+    b, _ = from_text(LONG, company="株式会社サンプル", title="Welder")
+    first, _ = prepare(ws, a, today=TODAY)
+    second, _ = prepare(ws, b, today=TODAY)
+    assert first != second
+    assert read_job(first)["company"] == "株式会社テスト"
+    assert read_job(second)["company"] == "株式会社サンプル"
+
+
+def test_third_posting_takes_the_next_free_name(ws):
+    for city in ("Springfield, IL", "Peoria, IL", "Decatur, IL"):
+        job, _ = from_text(LONG, company="Acme", title="Welder", location=city)
+        folder, _ = prepare(ws, job, today=TODAY)
+    assert folder.name.endswith("__3") and read_job(folder)["location"] == "Decatur, IL"
+
+
+def test_force_on_a_different_posting_never_overwrites(ws):
+    a, _ = from_text(LONG, company="Acme", title="Welder", location="Springfield, IL")
+    b, _ = from_text(LONG, company="Acme", title="Welder", location="Peoria, IL")
+    first, _ = prepare(ws, a, today=TODAY)
+    second, _ = prepare(ws, b, today=TODAY, force=True)
+    assert second != first and read_job(first)["location"] == "Springfield, IL"
+
+
+def test_force_replaces_the_same_posting_in_place(ws):
+    job, _ = from_text(LONG, company="Acme", title="Welder", location="Springfield, IL")
+    folder, _ = prepare(ws, job, today=TODAY)
+    fixed, _ = from_text(LONG + " Night shift.", company="acme", title="Welder ",
+                         location="springfield,  IL")
+    with pytest.raises(JobforgeError, match="same posting"):
+        prepare(ws, fixed, today=TODAY)
+    again, _ = prepare(ws, fixed, today=TODAY, force=True)
+    assert again == folder and "Night shift." in read_job(folder)["description"]
+    assert len(list(ws.jobs_dir.iterdir())) == 1
+
+
+def test_same_url_is_the_same_posting(ws):
+    a, _ = from_text(LONG, company="Acme", title="Welder", url="https://example.com/j/1")
+    b, _ = from_text(LONG, company="Acme", title="Welder", location="Peoria, IL",
+                     url="https://example.com/j/1")
+    prepare(ws, a, today=TODAY)
+    with pytest.raises(JobforgeError, match="same posting"):
+        prepare(ws, b, today=TODAY)
 
 
 def test_prepare_warns_about_an_earlier_folder(ws):
