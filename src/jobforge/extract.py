@@ -3,7 +3,7 @@
 Ground truth only (D-04, D-45): one posting the user handed us. Nothing here
 lists a whole board.
 
-Lessons carried from the private repo:
+Lessons from real job boards:
 - Many pages publish a schema.org JobPosting in JSON-LD; prefer it.
 - Without it, the page `<title>` carries a site suffix ("... | Acme Careers")
   and the company is unknown. The private code then used the hostname, and

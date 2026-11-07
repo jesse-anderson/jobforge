@@ -2,9 +2,9 @@
 
 Every command finds the workspace by walking up from the current directory to
 the marker file, or from `--workspace` / `JOBFORGE_WORKSPACE`. If there is
-none, the command fails with a message. It never falls back to defaults: the
-private repo once scraped against built-in settings for weeks because a
-missing profile was silently replaced (FINDINGS F7).
+none, the command fails with a message. It never falls back to defaults: a
+missing profile silently replaced by built-in settings can run for weeks
+before anyone notices.
 """
 from __future__ import annotations
 

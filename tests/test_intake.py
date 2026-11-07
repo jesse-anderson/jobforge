@@ -1,5 +1,6 @@
 """D-30 item 2: job intake from a URL (saved HTML, fetch stubbed) and from
-pasted text, including the private repo's failures F23 and F27."""
+pasted text, including a hostname taken as the company and template
+placeholders left in the description."""
 import json
 import re
 import urllib.error

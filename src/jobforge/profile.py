@@ -1,6 +1,6 @@
 """The user's profile: identity, settings, voice rules, never-claim list.
 
-Replaces every hardcoded identity block in the private repo (D-08). Facts
+Every personal detail lives here, never hardcoded in the code (D-08). Facts
 about work history are not here; they are atoms.
 """
 from __future__ import annotations
