@@ -132,7 +132,10 @@ def letter_blocks(plan: ResolvedPlan, profile: Profile, job: dict,
 def letter_markdown(plan: ResolvedPlan, job: dict) -> str:
     """The working copy for review. Never a deliverable (D-30 item 5)."""
     lines = [f"# Cover letter (working copy, do not send): {job.get('company', '')}, "
-             f"{job.get('title', '')}", "", f"_Posting: {job.get('url', '')}_", ""]
+             f"{job.get('title', '')}", ""]
+    url = (job.get("url") or "").strip()
+    if url:  # a posting pasted with --from-text has none (#106)
+        lines += [f"_Posting: {url}_", ""]
     lines += [p + "\n" for p in plan.letter.paragraphs()]
     lines += ["---", "", "## Facts cited", ""]
     lines += [f"- `{a.id}` ({a.kind})" for a in plan.letter.cites]
