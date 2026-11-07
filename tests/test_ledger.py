@@ -241,6 +241,14 @@ def test_non_utf8_ledger_reports_clearly(job_folder):
 
 def test_empty_table_message(ws):
     assert "No jobs yet" in format_table([])
+    assert "No jobs match" in format_table([], filtered=True)  # #86
+
+
+def test_every_status_a_job_can_have_is_a_valid_filter():
+    # #86: --status accepts exactly what `jobs` can show.
+    from jobforge.jobs import UNREADABLE
+    from jobforge.ledger import LIST_STATUSES
+    assert set(LIST_STATUSES) == set(STAGES) | {GHOSTED, "unknown", UNREADABLE}
 
 
 def test_listing_is_fast_at_hundreds_of_jobs(ws):

@@ -28,6 +28,10 @@ RECORDABLE = tuple(s for s in STAGES if s != "prepared")
 # Stages that count as hearing back from the employer, for callback rate.
 RESPONSE_STAGES = frozenset({"screen", "interview", "offer", "accepted", "declined", "rejected"})
 GHOSTED = "ghosted"
+# Every status `jobforge jobs` can show, so `--status` accepts exactly these
+# (#86): "unknown" is a job with no events, "unreadable" one whose job.json
+# or ledger cannot be read.
+LIST_STATUSES = (*STAGES, GHOSTED, "unknown", "unreadable")
 LEDGER_NAME = "ledger.toml"
 
 

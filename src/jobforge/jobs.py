@@ -71,7 +71,9 @@ def _fit(text: str, cap: int | None) -> str:
     return text[:cap - 1].rstrip() + "…"
 
 
-def format_table(rows: list[JobRow]) -> str:
+def format_table(rows: list[JobRow], *, filtered: bool = False) -> str:
+    if not rows and filtered:  # #86: jobs exist, the filter matched none
+        return "No jobs match. Run `jobforge jobs` with no filter to see them all."
     if not rows:
         return "No jobs yet. Add one with `jobforge prepare --from-url <url>`."
     headers = ("STATUS", "DATE", "COMPANY", "TITLE", "FOLDER")

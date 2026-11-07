@@ -87,7 +87,27 @@ def test_full_flow(run, ws):
     code, out, _ = run("jobs")
     assert code == 0 and "Prairie Freight Co." in out
     code, out, _ = run("search", "--status", "prepared")
-    assert "No jobs yet" in out
+    assert "No jobs match" in out  # #86: was "No jobs yet", with a job listed above
+
+
+# Issue #86 (audit A16): a status typo, or a filter that matches nothing, told
+# a user with jobs that they had none.
+def test_jobs_rejects_an_unknown_status_and_names_the_valid_ones(run, capsys):
+    prepare_john(run)
+    with pytest.raises(SystemExit) as exc:
+        main(["jobs", "--status", "aplied"])
+    err = capsys.readouterr().err
+    assert exc.value.code == 2 and "invalid choice: 'aplied'" in err
+    for status in ("applied", "ghosted", "unknown", "unreadable"):
+        assert status in err
+
+
+@pytest.mark.parametrize("args", [("--status", "offer"), ("--company", "Nowhere"),
+                                  ("forklift-free text that matches nothing",)])
+def test_jobs_says_no_jobs_match_when_a_filter_empties_the_list(run, args):
+    prepare_john(run)
+    code, out, _ = run("jobs", *args)
+    assert code == 0 and "No jobs match" in out and "No jobs yet" not in out
 
 
 def test_apply_with_a_locked_docx_exits_1_without_a_traceback(run, ws, monkeypatch):
