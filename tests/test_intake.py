@@ -187,6 +187,48 @@ def test_visible_lookalikes_are_kept():
     assert all(f"Shown {c}" in text for c in "ABC")
 
 
+# Review of #62: text a reader can see must come through. Hidden on phones
+# only is visible, and an end tag the page leaves out must not hide the rest.
+POSTING = "Shift lead for the second shift."
+
+
+@pytest.mark.parametrize("html", [
+    f'<div class="hidden md:block">{POSTING}</div>',                     # Tailwind
+    f'<div class="d-none d-md-block">{POSTING}</div>',                   # Bootstrap
+    f'<ul><li class="hidden">menu<li>{POSTING}</ul>',                    # no </li>
+    f'<div><p style="display:none">x<p>{POSTING}</div>',                 # no </p>
+    f'<div class="sr-only lg:not-sr-only">{POSTING}</div>',
+    f'<div class="invisible md:hover:visible">{POSTING}</div>',
+    f'<div class="d-none d-xxl-flex">{POSTING}</div>',
+    f'<div><span hidden>x<b>y</div><p>{POSTING}</p>',                    # no </span>
+    f'<p hidden>x<div>{POSTING}</div>',               # a <div> ends the <p> first
+    f'<p hidden>x<hr>{POSTING}',                      # so does an <hr>
+])
+def test_text_a_reader_can_see_is_kept(html):
+    text = html_to_text(f"{html}<p>Visible after.</p>")
+    assert POSTING in text and "Visible after." in text
+
+
+@pytest.mark.parametrize("html", [
+    # A responsive class that hides at every size still hides.
+    f'<div class="hidden md:hidden">{PLANTED}</div>',
+    f'<div class="d-none d-md-none">{PLANTED}</div>',
+    # The hiding class wins when nothing shows the element again.
+    f'<div class="hidden md:text-lg">{PLANTED}</div>',
+    # A nested list's <li> does not end the hidden outer <li>.
+    f'<ul><li hidden>{PLANTED}<ul><li>{PLANTED}</ul>{PLANTED}</li></ul>',
+    # A stray end tag does not end a hidden section early.
+    f'<div hidden></span></p>{PLANTED}</div>',
+    # The <div> ended the <p>, so this </p> closes nothing and the div stays
+    # hidden, as in a browser.
+    f'<p>intro<div hidden>{PLANTED}</p>{PLANTED}</div>',
+])
+def test_hidden_text_stays_hidden(html):
+    text = html_to_text(f"<p>Visible before.</p>{html}<p>Visible after.</p>")
+    assert PLANTED not in text
+    assert "Visible before." in text and "Visible after." in text
+
+
 def test_hidden_text_inside_a_json_ld_description_is_dropped():
     import json
     posting = {"@type": "JobPosting", "title": "Clerk",

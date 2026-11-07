@@ -69,12 +69,34 @@ _HIDING_STYLE = re.compile(
 _HIDING_CLASSES = {"sr-only", "visually-hidden", "d-none", "hidden", "invisible"}
 _VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
               "source", "track", "wbr"}
+# A class that shows the element again at some screen size, so "hidden" or
+# "d-none" next to it means hidden on phones only: Tailwind's `md:block`,
+# `lg:not-sr-only`, `md:hover:visible`, Bootstrap's `d-md-flex`. One that
+# hides at every size (`md:hidden`, `d-md-none`) does not count.
+_SHOWING_CLASS = re.compile(
+    r"(?:[\w-]+:)+(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|table"
+    r"|table-row|table-cell|contents|flow-root|list-item|visible|not-sr-only)"
+    r"|d-(?:sm|md|lg|xl|xxl)-(?:block|inline|inline-block|flex|inline-flex|grid"
+    r"|inline-grid|table|table-row|table-cell)")
+# End tags a page may leave out, closed the way a browser closes them, so a
+# hidden <p> or <li> never swallows the rest of the page and a stray </p>
+# never ends a hidden section early. A block element (or a new <p>) ends an
+# open <p>; a new <li> ends an open <li> in the same list.
+_ENDS_P = {"address", "article", "aside", "blockquote", "details", "div", "dl", "fieldset",
+           "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6",
+           "header", "hr", "li", "main", "menu", "nav", "ol", "p", "pre", "section",
+           "table", "ul"}
+_P_SCOPE = {"button", "caption", "html", "table", "td", "th", "template"}
+_LIST_SCOPE = {"ol", "ul", "menu"}
 
 
 def _hides(attrs: dict[str, str]) -> bool:
-    return ("hidden" in attrs or attrs.get("aria-hidden", "").lower() == "true"
-            or bool(_HIDING_STYLE.search(attrs.get("style", "")))
-            or bool(_HIDING_CLASSES & set(attrs.get("class", "").lower().split())))
+    if ("hidden" in attrs or attrs.get("aria-hidden", "").lower() == "true"
+            or _HIDING_STYLE.search(attrs.get("style", ""))):
+        return True
+    classes = attrs.get("class", "").lower().split()
+    return (bool(_HIDING_CLASSES.intersection(classes))
+            and not any(_SHOWING_CLASS.fullmatch(c) for c in classes))
 
 
 class _TextExtractor(HTMLParser):
@@ -89,17 +111,21 @@ class _TextExtractor(HTMLParser):
         self.microdata: dict[str, str] = {}
         self.title_parts: list[str] = []
         self._suppress = 0
-        self._hidden: tuple[str, int] | None = None  # (tag, nesting depth)
+        self._open: list[str] = []  # the elements open around the parser now
+        self._hidden_at: int | None = None  # where in _open the hidden one is
         self._in_ld = False
         self._in_title = False
 
     def handle_starttag(self, tag, attrs):
         a = {k: (v or "") for k, v in attrs}
+        if tag == "li":
+            self._close_open("li", _LIST_SCOPE)
+        if tag in _ENDS_P:
+            self._close_open("p", _P_SCOPE)
         if tag not in _VOID_TAGS:
-            if self._hidden and self._hidden[0] == tag:
-                self._hidden = (tag, self._hidden[1] + 1)
-            elif self._hidden is None and _hides(a):
-                self._hidden = (tag, 1)
+            if self._hidden_at is None and _hides(a):
+                self._hidden_at = len(self._open)
+            self._open.append(tag)
         if tag == "meta":
             key = (a.get("property") or a.get("name") or "").lower()
             if key and a.get("content"):
@@ -116,10 +142,28 @@ class _TextExtractor(HTMLParser):
         if tag in _BLOCK_TAGS:
             self.parts.append("\n")
 
+    def _close_open(self, tag: str, scope: set[str]) -> None:
+        """Close the innermost open `tag`, unless a `scope` element lies
+        between it and the parser (a <p> outside the table cell stays open)."""
+        for i in range(len(self._open) - 1, -1, -1):
+            if self._open[i] == tag:
+                self._close_to(i)
+                return
+            if self._open[i] in scope:
+                return
+
+    def _close_to(self, index: int) -> None:
+        """Close the element at `index` in `_open` and everything inside it.
+        A hidden section ends with the element that began it, even when the
+        page never writes that element's end tag."""
+        del self._open[index:]
+        if self._hidden_at is not None and self._hidden_at >= index:
+            self._hidden_at = None
+
     def handle_endtag(self, tag):
-        if self._hidden and self._hidden[0] == tag:
-            depth = self._hidden[1] - 1
-            self._hidden = (tag, depth) if depth else None
+        # An end tag with nothing open to match (a stray </span>) is ignored.
+        if tag in self._open:
+            self._close_to(len(self._open) - 1 - self._open[::-1].index(tag))
         if tag == "title":
             self._in_title = False
         if tag in _DROP_TAGS and self._suppress:
@@ -134,7 +178,7 @@ class _TextExtractor(HTMLParser):
         if self._in_ld:
             self.ld_json.append(data)
             return
-        if self._suppress or self._hidden or not data.strip():
+        if self._suppress or self._hidden_at is not None or not data.strip():
             return
         self.parts.append(data)
 
