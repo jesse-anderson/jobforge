@@ -26,11 +26,14 @@ the friction points.
 
 1. Fresh VM snapshot. Confirm `jobforge` is not on PATH and no
    `~/jobsearch` exists.
-2. Install Python 3.11+ the way the README says. Note anything the README
-   left out.
+2. Install Python 3.11+ the way the README says (`python3 --version` on
+   Linux). Note anything the README left out.
 3. Install Jobforge:
-   - PyPI path: `pip install jobforge` (or the TestPyPI URL for a candidate).
-   - Clone path: `git clone ...`, `cd jobforge`, `pip install .`
+   - PyPI path: `pipx install jobforge` on Linux (after `sudo apt install
+     pipx` and `pipx ensurepath`), `pip install jobforge` on Windows, or the
+     TestPyPI URL for a candidate.
+   - Clone path: `git clone ...`, `cd jobforge`, then `pipx install .` on
+     Linux or `pip install .` on Windows.
 4. `jobforge --version` prints the expected version.
 5. `jobforge jobs` from your home folder fails with the "No Jobforge
    workspace found" message, not a traceback.
@@ -51,7 +54,8 @@ the friction points.
 13. Agent run: open Claude Code in a second empty workspace with a sample
     resume in `intake/`, say "set me up", and follow it through `confirm`
     and one application. Record where the agent went wrong.
-14. `pip uninstall jobforge` leaves the workspace untouched.
+14. `pipx uninstall jobforge` (Linux) or `pip uninstall jobforge` (Windows)
+    leaves the workspace untouched.
 
 ## Friction log
 

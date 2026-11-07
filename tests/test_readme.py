@@ -1,0 +1,42 @@
+"""Issue #40: the README's install steps work on a stock Linux. Ubuntu ships
+no `python`, and pip is blocked for the system Python (PEP 668) on Debian and
+Ubuntu since 23.04, so Linux installs with pipx. The VM checklist follows the
+README, so it says the same."""
+from conftest import REPO
+
+
+def _section(text: str, heading: str) -> str:
+    return text.split(heading, 1)[1].split("\n## ", 1)[0]
+
+
+README = (REPO / "README.md").read_text(encoding="utf-8")
+CHECKLIST = (REPO / "docs" / "VM_CHECKLIST.md").read_text(encoding="utf-8")
+
+
+def test_python_check_names_python3_for_linux():
+    needs = _section(README, "## What you need")
+    assert "python3 --version" in needs
+
+
+def test_linux_setup_uses_pipx():
+    setup = _section(README, "## Set up (once)")
+    linux = setup.split("On Linux", 1)[1].split("On Windows", 1)[0]
+    for step in ("sudo apt install pipx", "pipx ensurepath", "pipx install jobforge"):
+        assert step in linux, step
+    assert "pip install jobforge" not in linux.replace("pipx install jobforge", "")
+
+
+def test_windows_setup_keeps_pip():
+    setup = _section(README, "## Set up (once)")
+    assert "pip install jobforge" in setup.split("On Windows", 1)[1]
+
+
+def test_readme_says_how_to_uninstall_on_each_os():
+    setup = _section(README, "## Set up (once)")
+    assert "pipx uninstall jobforge" in setup and "pip uninstall jobforge" in setup
+
+
+def test_checklist_installs_and_uninstalls_like_the_readme():
+    for step in ("pipx install jobforge", "pipx install .", "pipx uninstall jobforge",
+                 "pip install jobforge", "pip uninstall jobforge", "python3 --version"):
+        assert step in CHECKLIST, step
