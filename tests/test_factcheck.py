@@ -194,6 +194,23 @@ def test_letter_credits_employer_with_personal_project_figure(ws, john_plan):
     expect(check(ws, john_plan), "the figure 40 is not in the facts")
 
 
+def test_letter_figure_from_profile_phone_is_not_a_fact(ws, john_plan):
+    # Issue #1: John's phone is 555-0100; its digits are not achievements.
+    letter_body(john_plan, "I have trained 100 drivers.")
+    expect(check(ws, john_plan), "the figure 100 is not in the facts")
+
+
+def test_letter_figure_from_profile_phone_in_an_employer_sentence(ws, john_plan):
+    letter_body(john_plan, "At Northwind Distribution I trained 555 drivers.")
+    expect(check(ws, john_plan), "the figure 555 is not in the facts")
+
+
+def test_letter_may_give_contact_details(ws, john_plan):
+    letter_body(john_plan, "You can reach me at 555-0100 or john.smith@example.com, "
+                           "and my work is at example.com/johnsmith.")
+    assert check(ws, john_plan).ok
+
+
 def test_letter_right_employer_passes(ws, john_plan):
     john_plan["cover_letter"]["cites"].append("lakeside.shrink")
     letter_body(john_plan, "At Lakeside Grocery Co-op I reduced produce shrink 18%.")
