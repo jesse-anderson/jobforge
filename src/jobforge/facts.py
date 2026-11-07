@@ -12,19 +12,30 @@ not match "50%" (D-37: no more precision than the basis supports).
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
-_MULT = {"k": Decimal(1_000), "m": Decimal(1_000_000), "mm": Decimal(1_000_000),
+_MULT = {"k": Decimal(1_000), "thousand": Decimal(1_000),
+         "m": Decimal(1_000_000), "mm": Decimal(1_000_000),
          "million": Decimal(1_000_000), "b": Decimal(1_000_000_000),
          "bn": Decimal(1_000_000_000), "billion": Decimal(1_000_000_000)}
 
+# Currency, by symbol before the figure or by word after it. Dollars are ""
+# so the common case reads plainly; other currencies never match dollars.
+# "pounds" is left out: it is as often a weight.
+_CURRENCY = {"$": "", "dollar": "", "dollars": "", "usd": "",
+             "€": "€", "euro": "€", "euros": "€", "eur": "€",
+             "£": "£", "gbp": "£"}
+
 NUMBER_RE = re.compile(
     r"(?<![\w.])"
-    r"(?P<money>\$\s?)?"
+    r"(?:(?P<sym>[$€£])\s?)?"
     r"(?P<int>\d{1,3}(?:,\d{3})+|\d+)"
     r"(?P<dec>\.\d+)?"
-    r"(?:\s?(?P<unit>%|percent\b|x\b|times\b|k\b|mm\b|m\b|million\b|bn\b|b\b|billion\b))?",
+    r"(?:\s?(?P<unit>%|per\s?cent\b|x\b|times\b|k\b|mm\b|m\b|thousand\b|million\b"
+    r"|bn\b|b\b|billion\b))?"
+    r"(?:\s?(?P<cur>dollars?\b|usd\b|euros?\b|eur\b|gbp\b))?",
     re.IGNORECASE,
 )
 
@@ -33,10 +44,11 @@ NUMBER_RE = re.compile(
 class Token:
     kind: str   # "money" | "percent" | "times" | "number"
     value: str  # normalized decimal string
+    currency: str = ""  # money only: "" for dollars, else the symbol
 
     def __str__(self) -> str:
         if self.kind == "money":
-            return f"${self.value}"
+            return f"{self.currency or '$'}{self.value}"
         if self.kind == "percent":
             return f"{self.value}%"
         if self.kind == "times":
@@ -50,23 +62,28 @@ def _norm(d: Decimal) -> str:
 
 
 def number_tokens(text: str) -> list[Token]:
+    """Figures in `text`. NFKC first, so a fullwidth "１４％" is "14%" and
+    cannot slip past as something else (issue #1)."""
     out: list[Token] = []
-    for m in NUMBER_RE.finditer(text):
+    for m in NUMBER_RE.finditer(unicodedata.normalize("NFKC", text)):
         raw = m.group("int").replace(",", "") + (m.group("dec") or "")
         try:
             val = Decimal(raw)
         except InvalidOperation:  # pragma: no cover - regex guarantees digits
             continue
-        unit = (m.group("unit") or "").lower()
+        unit = re.sub(r"\s", "", (m.group("unit") or "").lower())
+        cur_key = m.group("sym") or (m.group("cur") or "").lower()
+        currency = _CURRENCY.get(cur_key) if cur_key else None
         if unit in ("%", "percent"):
             out.append(Token("percent", _norm(val)))
         elif unit in ("x", "times"):
             out.append(Token("times", _norm(val)))
         elif unit in _MULT:
-            kind = "money" if m.group("money") else "number"
-            out.append(Token(kind, _norm(val * _MULT[unit])))
-        elif m.group("money"):
-            out.append(Token("money", _norm(val)))
+            val *= _MULT[unit]
+            out.append(Token("number", _norm(val)) if currency is None
+                       else Token("money", _norm(val), currency))
+        elif currency is not None:
+            out.append(Token("money", _norm(val), currency))
         else:
             out.append(Token("number", _norm(val)))
     return out

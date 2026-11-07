@@ -117,6 +117,19 @@ def test_year_from_role_dates_passes(ws, john_plan):
     assert check(ws, john_plan).ok
 
 
+@pytest.mark.parametrize("claim,figure", [
+    ("cut labor cost 14 per cent", "14%"),
+    ("cut labor cost 14％", "14%"),
+    ("saved €14", "€14"),
+    ("saved 14 thousand dollars", "$14000"),
+])
+def test_unit_change_does_not_borrow_a_count(ws, john_plan, claim, figure):
+    # Issue #1: "14 associates" must not back 14 percent or 14 of a currency.
+    john_plan["experience"][0]["bullets"][1] = {
+        "atom": "northwind.team", "text": f"Lead 14 associates and {claim}"}
+    expect(check(ws, john_plan), f"the figure {figure} is not in the facts")
+
+
 def test_never_claim_tool_in_a_bullet(ws, john_plan):
     john_plan["experience"][0]["bullets"][0] = {
         "atom": "northwind.accuracy", "text": "Raised pick accuracy from 97.2% to 99.6% with SAP scanning"}
