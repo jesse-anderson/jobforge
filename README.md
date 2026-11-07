@@ -16,7 +16,7 @@ fact you did not give it.
   tables, columns, or hidden characters, then reads them back to prove what a
   parser will see.
 
-Source-available under PolyForm Noncommercial 1.0.0: free for personal use
+Source-available under [PolyForm Noncommercial 1.0.0](LICENSE): free for personal use
 and for nonprofits, schools, and public institutions. Not for commercial use.
 
 ## What you need
