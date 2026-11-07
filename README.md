@@ -22,10 +22,23 @@ and for nonprofits, schools, and public institutions. Not for commercial use.
 ## What you need
 
 - Windows or Linux (macOS is untested).
-- Python 3.11 or newer. Check with `python --version`.
+- Python 3.11 or newer. Check with `python3 --version` on Linux, or
+  `python --version` on Windows.
 - An AI coding agent that runs in a terminal, such as Claude Code.
 
 ## Set up (once)
+
+On Linux, install with pipx. Ubuntu, Debian, and others block `pip` for the
+system Python, and pipx is how they want apps like this one installed:
+
+```
+sudo apt install pipx
+pipx ensurepath                 # then open a new terminal
+pipx install jobforge           # or: git clone, then `pipx install .`
+jobforge init ~/jobsearch
+```
+
+On Windows:
 
 ```
 pip install jobforge            # or: git clone, then `pip install .`
@@ -50,6 +63,9 @@ jobsearch/
    `profile/pending/`. Where your resume is unclear, it asks.
 3. Run **`jobforge confirm`**. For each drafted fact, you choose keep, drop,
    or skip. Only facts you keep are ever used.
+
+To remove Jobforge later, `pipx uninstall jobforge` (Linux) or
+`pip uninstall jobforge` (Windows). Your `jobsearch` folder stays as it is.
 
 ## Apply to a job
 
