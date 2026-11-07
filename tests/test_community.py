@@ -57,3 +57,23 @@ def test_issue_templates_have_front_matter():
 
 def test_gitattributes_stores_text_with_lf():
     assert "* text=auto eol=lf" in _read(".gitattributes")
+
+
+def test_contributing_grants_contributions_under_the_project_license():
+    text = " ".join(_read("CONTRIBUTING.md").split())
+    assert "By submitting a contribution, you license it under" in text
+    assert "PolyForm Noncommercial 1.0.0" in text
+    assert "You keep the copyright in what you wrote" in text
+
+
+def test_copyright_holders_agree_across_license_contributing_and_decisions():
+    # D-49: the holders named in LICENSE's Required Notice are the ones
+    # CONTRIBUTING and DECISIONS name.
+    notice = _read("LICENSE").splitlines()[0]
+    holders = notice.split("Copyright 2026 ", 1)[1]
+    assert holders == "Jesse Anderson and Mike Wilson"
+    contributing = " ".join(_read("CONTRIBUTING.md").split())
+    assert f"held jointly by its maintainers, {holders} (D-49)" in contributing
+    decisions = _read("docs/DECISIONS.md")
+    assert "| D-49 | Copyright |" in decisions
+    assert "**D-49." in decisions
