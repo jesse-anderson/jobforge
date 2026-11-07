@@ -52,6 +52,10 @@ fix the plan or ask the user to fix a fact, then run `jobforge apply` again.
    them to `never_claim`.
 3. Draft atoms into `profile/pending/` (format below). One `[[role]]` per job
    held, and one `[[bullet]]` per achievement, each naming its role.
+   Fill in each role's `aliases` yourself with the short names and acronyms
+   people use for that employer (Kestrel Testing Laboratories: "KT",
+   "Kestrel Labs"), so the user never has to type them. They see the list in
+   `jobforge confirm`.
 4. Where an old resume is unclear about which job something happened at (a
    skills list, a summary, merged roles), **ask**. Never guess an employer.
 5. **A skills list is claims too.** Do not copy it over as it stands. Ask
@@ -84,6 +88,7 @@ save money? Roughly how much?", and record only what they answer.
 [[role]]
 id = "acme"                      # lowercase; letters, digits, . _ -
 employer = "Acme Manufacturing"
+aliases = ["Acme"]               # other names for the employer; optional
 title = "Maintenance Technician"
 location = "Peoria, IL"
 start = "2019-03"                # YYYY or YYYY-MM
@@ -176,7 +181,8 @@ an employer is never described as a personal project, and the reverse.
 - Every figure in a line must appear in an atom the line cites. A reworded
   bullet keeps its atom's figures exactly.
 - A bullet goes only under its own role. A cover-letter sentence that names
-  an employer may only use that employer's facts.
+  an employer, by its full name or an alias, may only use that employer's
+  facts.
 - Nothing from the never-claim list, and no tool the cited atoms do not show.
 - If you mention a project that has a URL, include the URL in full.
 - No hedged figures ("about 50%"), no atom ids in the letter.
