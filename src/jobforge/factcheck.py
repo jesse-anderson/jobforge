@@ -209,18 +209,48 @@ def live_url(atom: Atom) -> str | None:
     return atom.get("url") or None
 
 
+def check_sentence(sentence: str, figures: str, cites: list[Atom], pool: str,
+                   inv: Inventory, profile: Profile, vocab: list[str], where: str,
+                   rep: Report) -> None:
+    """A sentence that names one employer may use only that employer's facts
+    (D-40). One that names none may use any of `pool`."""
+    named = employers_named(sentence, inv)
+    if len(named) == 1:
+        (employer, written), = named.items()
+        bound = [a for a in cites if inv.employer_of(a) == employer]
+        bound += inv.employers()[employer]
+        scoped = _pool_text(bound, inv)
+        check_figures(figures, scoped, f"{where} (names {written!r})", rep)
+        check_terms(sentence, scoped, vocab, profile, f"{where} (names {written!r})", rep)
+        return
+    if len(named) > 1:
+        rep.warnings.append(f"{where}: names {len(named)} employers "
+                            f"({', '.join(named.values())}); check each figure is "
+                            f"credited to the right one.")
+    check_figures(figures, pool, where, rep)
+    check_terms(sentence, pool, vocab, profile, where, rep)
+
+
 def check_line(line: Line, inv: Inventory, profile: Profile, vocab: list[str],
                rep: Report) -> None:
     pool = _pool_text(line.cites, inv)
-    check_figures(line.text, pool, line.where, rep)
-    check_terms(line.text, pool, vocab, profile, line.where, rep)
+    own_words = line.owner is not None and line.text == (line.owner.get("text") or "").strip()
+    if line.where == "summary" and not own_words:
+        # A reworded summary is prose: each sentence is scoped to the
+        # employer it names, as in the letter (#90).
+        for sentence in split_sentences(line.text):
+            check_sentence(sentence, sentence, line.cites, pool, inv, profile, vocab,
+                           f"{line.where}, \"{_opening(sentence)}\"", rep)
+    else:
+        check_figures(line.text, pool, line.where, rep)
+        check_terms(line.text, pool, vocab, profile, line.where, rep)
     check_employers(line.text, line.cites, inv, line.where, rep)
     check_atom_ids(line.text, inv, line.where, rep)
     check_scripts(line.text, line.where, rep)
     check_hidden(line.text, line.where, rep)
     # Voice rules are for text the agent wrote. An atom rendered as the user
     # wrote it is their own wording and is not second-guessed.
-    if line.owner is None or line.text != (line.owner.get("text") or "").strip():
+    if not own_words:
         check_voice(line.text, profile, line.where, rep)
 
 
@@ -281,26 +311,9 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
                           f"{profile.cover_letter_max_words} (profile setting "
                           f"cover_letter_max_words). Cut it down.")
 
-    employers = inv.employers()
     for part, sentence in _letter_sentences(letter):
-        sw = f"{where} {part}, \"{_opening(sentence)}\""
-        named = employers_named(sentence, inv)
-        figures = _strip_contact(sentence, profile)
-        if len(named) == 1:
-            # Only that employer's facts may appear here.
-            (employer, written), = named.items()
-            bound = [a for a in cites if inv.employer_of(a) == employer]
-            bound += employers[employer]
-            scoped = _pool_text(bound, inv)
-            check_figures(figures, scoped, f"{sw} (names {written!r})", rep)
-            check_terms(sentence, scoped, vocab, profile, f"{sw} (names {written!r})", rep)
-        else:
-            if len(named) > 1:
-                rep.warnings.append(f"{sw}: names {len(named)} employers "
-                                    f"({', '.join(named.values())}); check each figure is "
-                                    f"credited to the right one.")
-            check_figures(figures, pool, sw, rep)
-            check_terms(sentence, pool, vocab, profile, sw, rep)
+        check_sentence(sentence, _strip_contact(sentence, profile), cites, pool, inv,
+                       profile, vocab, f"{where} {part}, \"{_opening(sentence)}\"", rep)
 
     figures = number_tokens(_strip_contact(text, profile))
     own = set(number_tokens(facts))
