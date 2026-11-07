@@ -209,7 +209,10 @@ an employer is never described as a personal project, and the reverse.
   employer is read as the same employer's, so it may not use another
   employer's facts: name the other employer again, start a new paragraph,
   or write the sentence in general terms ("I have run cycle counts", not
-  "There I ran cycle counts").
+  "There I ran cycle counts"). A career-wide figure (years of experience,
+  totals) goes in a sentence that names no employer, before any that does:
+  "Warehouse supervisor with 9 years in distribution. Currently at
+  Northwind Distribution."
 - Nothing from the never-claim list, and no tool the cited atoms do not show.
   The check only knows the tools and credentials named somewhere in the
   user's facts, so it cannot catch one it has never seen. Before `check`,
