@@ -19,6 +19,7 @@ selected:
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 from .atoms import Atom, Inventory
@@ -160,12 +161,29 @@ def check_employers(text: str, line_atoms: list[Atom], inv: Inventory, where: st
                               f"{owners} (D-40).")
 
 
+def _dash_chars() -> dict[str, str]:
+    """Every dash or hyphen but the ASCII one, with its name (#88): the dash
+    punctuation in the general and supplemental punctuation blocks and the
+    small and fullwidth forms, plus the minus sign. Hyphens that belong to
+    another script (Hebrew maqaf, Armenian hyphen, Japanese wave dash) live in
+    that script's block, join words there, and are left alone."""
+    blocks = [*range(0x2010, 0x2E80), *range(0xFE30, 0xFF10)]
+    return {chr(c): unicodedata.name(chr(c)).lower() for c in blocks
+            if unicodedata.category(chr(c)) == "Pd" or c == 0x2212}
+
+
+_DASHES = _dash_chars()
+
+
 def check_voice(text: str, profile: Profile, where: str, rep: Report) -> None:
     if profile.ban_dashes:
-        for ch, name in (("—", "em dash"), ("–", "en dash")):
-            if ch in text:
-                rep.errors.append(f"{where}: contains an {name} ({ch}). Use a comma, "
-                                  f"colon, or period.")
+        for ch in sorted(set(text) & _DASHES.keys(), key=text.index):
+            name = _DASHES[ch]
+            article = "an" if name[0] in "aeiou" else "a"
+            fix = ("Type a plain hyphen (-) instead." if "hyphen" in name
+                   else "Use a comma, colon, or period.")
+            rep.errors.append(f"{where}: contains {article} {name} "
+                              f"({ch}, U+{ord(ch):04X}). {fix}")
     lower = text.lower()
     words = set(re.findall(r"[a-z][a-z'-]*", lower))
     hits = sorted(w for w in profile.banned_words if w in words)
