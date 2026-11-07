@@ -64,6 +64,11 @@ fix the plan or ask the user to fix a fact, then run `jobforge apply` again.
    people use for that employer (Kestrel Testing Laboratories: "KT",
    "Kestrel Labs"), so the user never has to type them. They see the list in
    `jobforge confirm`.
+   A title is a claim, so never fill in `title_aliases` yourself. If the
+   work went past the official title (a "Software Engineer" doing data
+   engineering), ask what else the user would call it and record only what
+   they answer. The fact check accepts a role's title or one of its
+   confirmed `title_aliases` in that role's lines, and nothing else.
 4. Where an old resume is unclear about which job something happened at (a
    skills list, a summary, merged roles), **ask**. Never guess an employer.
 5. **A skills list is claims too.** Do not copy it over as it stands. Ask
@@ -98,6 +103,7 @@ id = "acme"                      # lowercase; letters, digits, . _ -
 employer = "Acme Manufacturing"
 aliases = ["Acme"]               # other names for the employer; optional
 title = "Maintenance Technician"
+title_aliases = ["Reliability Technician"]  # other titles the user gave; optional
 location = "Peoria, IL"
 start = "2019-03"                # YYYY or YYYY-MM
 end = "present"

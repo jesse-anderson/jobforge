@@ -158,6 +158,16 @@ def test_describe_shows_a_roles_aliases(ws):
     assert "Also called: KT, Kestrel Labs" in "\n".join(said)
 
 
+def test_describe_shows_a_roles_title_aliases(ws):
+    # Issue #89: a title alias is a claim; the user sees it before keeping.
+    add_atoms(ws, '[[role]]\nid = "kt"\nemployer = "Kestrel Testing Laboratories"\n'
+                  'title = "Software Engineer"\ntitle_aliases = ["Data Engineer"]\n'
+                  'start = "2020"\n', "d.toml", pending=True)
+    said = []
+    run_confirm(ws, ask=script("s"), say=said.append)
+    assert "Also titled: Data Engineer" in "\n".join(said)
+
+
 def test_without_a_terminal_confirm_stops_before_asking(ws, monkeypatch):
     """Issue #2 run: `! jobforge confirm` inside an agent has no stdin, and
     confirm crashed with an EOFError traceback on the first prompt."""

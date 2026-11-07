@@ -66,9 +66,11 @@ def _pool_text(atoms: list[Atom], inv: Inventory) -> str:
 
 
 def vocabulary(inv: Inventory, profile: Profile) -> list[str]:
-    """Tool, skill, and credential terms the check can recognize: every skill
-    item, every credential name, and the never-claim list."""
-    terms: set[str] = set()
+    """Tool, skill, credential, and title terms the check can recognize: every
+    skill item, every credential name, the never-claim list, and every role
+    title or title alias of two words or more (#89). A one-word title
+    ("Server", "Cashier") is an everyday word too, so it is left out."""
+    terms: set[str] = set(t for t in inv.role_titles() if len(t.split()) > 1)
     for skill in inv.of_kind("skill"):
         for item in skill.get("items") or []:
             terms.add(item.strip())
@@ -137,6 +139,52 @@ def check_terms(text: str, pool: str, vocab: list[str], profile: Profile, where:
         if term_in(term, text) and not term_in(term, pool):
             rep.errors.append(f"{where}: mentions {term!r}, but none of the atoms this "
                               f"line cites do. Cite the atom where you used it.")
+    known = {t.lower() for t in vocab}
+    for title in invented_titles(text, pool):
+        if title.lower() not in known:
+            rep.errors.append(
+                f"{where}: names the title {title!r}, which no role this line cites "
+                f"holds. Use the role's own title, or add {title!r} to that role's "
+                f"title_aliases and confirm it.")
+
+
+# A job title written as one: capitalized words ending in a title word. Only
+# runs of two or more words count, so a lone "Lead" starting a bullet, or a
+# lowercase "warehouse supervisor", is not read as a title (#89).
+_TITLE_WORDS = (
+    "Accountant Administrator Analyst Apprentice Architect Assistant Associate "
+    "Attendant Auditor Chair Clerk Consultant Controller Coordinator Designer "
+    "Developer Director Driver Electrician Engineer Executive Foreman Instructor "
+    "Intern Lead Manager Nurse Officer Operator Owner President Principal Professor "
+    "Programmer Receptionist Representative Scientist Secretary Specialist "
+    "Superintendent Supervisor Teacher Technician Treasurer").split()
+_TITLE_RUN = re.compile(r"(?:\b[A-Z][\w&.'-]*\s+){1,4}(?:" + "|".join(_TITLE_WORDS) + r")\b")
+# Words that can start a title run without being part of the title.
+_NOT_TITLE = {"a", "an", "and", "as", "at", "for", "former", "from", "i", "in", "my",
+              "now", "our", "the", "then", "to", "was", "while", "with", "your"}
+# A word that raises a title the facts state: "Senior Warehouse Supervisor".
+_RANKS = {"senior", "sr", "sr.", "junior", "jr", "jr.", "lead", "principal", "staff",
+          "chief", "head", "deputy", "executive", "assistant", "associate", "vice", "acting"}
+
+
+def invented_titles(text: str, pool: str) -> list[str]:
+    """Titles the text claims that the pool does not state. The longest run
+    the pool states must cover the whole title: a rank word in front of it
+    ("Senior") is a different, bigger title."""
+    out: list[str] = []
+    for match in _TITLE_RUN.finditer(text):
+        words = match.group(0).split()
+        while words and words[0].lower() in _NOT_TITLE:
+            words.pop(0)
+        if len(words) < 2:
+            continue
+        stated = next((k for k in range(len(words), 1, -1)
+                       if term_in(" ".join(words[-k:]), pool)), 0)
+        if not stated:
+            out.append(" ".join(words))
+        elif stated < len(words) and words[-stated - 1].lower() in _RANKS:
+            out.append(" ".join(words[-stated - 1:]))
+    return out
 
 
 def employers_named(text: str, inv: Inventory) -> dict[str, str]:
