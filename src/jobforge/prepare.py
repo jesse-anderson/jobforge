@@ -32,6 +32,9 @@ def read_job(folder: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
         raise JobforgeError(f"{folder.name}/job.json is not valid JSON: {exc}") from exc
+    except UnicodeDecodeError:  # #28, F6
+        raise JobforgeError(f"{folder.name}/job.json is not UTF-8 text. Save it as UTF-8, "
+                            f"or capture the posting again with `jobforge prepare`.") from None
 
 
 def similar_jobs(ws: Workspace, job: Job, exclude: Path | None = None) -> list[str]:
@@ -45,7 +48,7 @@ def similar_jobs(ws: Workspace, job: Job, exclude: Path | None = None) -> list[s
             continue
         try:
             other = json.loads((folder / "job.json").read_text(encoding="utf-8-sig"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, ValueError):  # bad JSON or not UTF-8: not this one (#28)
             continue
         same_url = job.url and other.get("url") == job.url
         same_role = (slug(other.get("company", "")) == slug(job.company)

@@ -292,6 +292,47 @@ def test_same_url_is_the_same_posting(ws):
         prepare(ws, b, today=TODAY)
 
 
+# Red-team finding F6 (#28): a job.json that is not UTF-8 is a clear
+# message, never a traceback, and never stops prepare or jobs elsewhere.
+def bad_bytes_job(ws, name="acme__welder__2026-11-20"):
+    folder = ws.jobs_dir / name
+    folder.mkdir(parents=True)
+    (folder / "job.json").write_bytes(b'{"company": "\xff\xfe"}')
+    return folder
+
+
+def test_read_job_says_the_file_is_not_utf8(ws):
+    folder = bad_bytes_job(ws)
+    with pytest.raises(JobforgeError, match="job.json is not UTF-8 text"):
+        read_job(folder)
+
+
+def test_prepare_is_not_stopped_by_another_jobs_bad_file(ws):
+    bad_bytes_job(ws)
+    job, _ = from_text(LONG, company="Bolt", title="Painter")
+    folder, _ = prepare(ws, job, today=TODAY)
+    assert read_job(folder)["company"] == "Bolt"
+
+
+def test_jobs_listing_skips_a_bad_job_json(ws):
+    from jobforge.jobs import list_jobs
+    bad_bytes_job(ws)
+    job, _ = from_text(LONG, company="Bolt", title="Painter")
+    prepare(ws, job, today=TODAY)
+    assert [r.company for r in list_jobs(ws, today=TODAY)] == ["Bolt"]
+
+
+# Red-team finding F8 (#28): a lone surrogate in a posting is dropped at
+# capture, so prepare never crashes writing job.json.
+def test_prepare_drops_a_lone_surrogate_from_a_posting(ws):
+    html = (HTML / "jsonld_posting.html").read_text(encoding="utf-8")
+    html = html.replace('"name": "Acme Manufacturing"', '"name": "Acme\\ud800 Manufacturing"')
+    job, _ = from_url("https://acme.example.com/jobs/1", fetch=lambda url: html)
+    assert job.company == "Acme Manufacturing"
+    folder, _ = prepare(ws, job, today=TODAY)
+    assert read_job(folder)["company"] == "Acme Manufacturing"
+
+
 def test_prepare_warns_about_an_earlier_folder(ws):
     job, _ = from_text(LONG, company="Acme", title="Welder", url="https://example.com/j/1")
     prepare(ws, job, today=TODAY)

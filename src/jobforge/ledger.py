@@ -50,8 +50,12 @@ def append_event(folder: Path, stage: str, date: _dt.date | None = None,
     if not path.exists():
         prefix = ("# Dated events for this application. Append with\n"
                   "# `jobforge applied --mark <job> --status <stage>`.\n\n")
-    elif not path.read_text(encoding="utf-8").endswith("\n\n"):
-        prefix = "\n"
+    else:
+        # Raises with the reason for a ledger that is not UTF-8 or not valid,
+        # before anything is appended to it (#28).
+        read_events(folder)
+        if not path.read_text(encoding="utf-8-sig").endswith("\n\n"):
+            prefix = "\n"
     with path.open("a", encoding="utf-8", newline="\n") as fh:
         fh.write(prefix + entry)
     return Event(date, stage, note)
@@ -65,6 +69,9 @@ def read_events(folder: Path) -> list[Event]:
         data = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     except tomllib.TOMLDecodeError as exc:
         raise JobforgeError(f"{folder.name}/{LEDGER_NAME} is not valid TOML: {exc}") from exc
+    except UnicodeDecodeError:
+        raise JobforgeError(f"{folder.name}/{LEDGER_NAME} is not UTF-8 text. Open it "
+                            f"in a text editor and save it as UTF-8.") from None
     events = []
     for n, raw in enumerate(data.get("event", []), 1):
         date, stage = raw.get("date"), raw.get("stage")

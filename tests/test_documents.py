@@ -61,6 +61,7 @@ def test_no_tables_frames_or_headers(tmp_path):
     # invisible separator and the Arabic letter mark.
     ("\u2063", "invisible formatting character"), ("\u061c", "invisible formatting character"),
     ("", "private-use character"),
+    ("\ud800", "lone surrogate"),  # F8 (#28): cannot be written to a file
 ])
 def test_hidden_characters_are_found(ch, name):
     found = find_hidden(f"Manage{ch}ment")
@@ -101,3 +102,7 @@ def test_italic_run_is_written_and_reads_back(tmp_path):
     with zipfile.ZipFile(path) as z:
         assert "<w:i/>" in z.read("word/document.xml").decode()
     assert extract_text(path) == "Plain slanted"
+
+
+def test_clean_drops_a_lone_surrogate():
+    assert clean("Ware\ud800house") == "Warehouse"

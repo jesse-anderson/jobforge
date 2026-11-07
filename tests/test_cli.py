@@ -194,6 +194,19 @@ def test_confirm_via_cli(run, ws, monkeypatch):
     assert code == 0 and "Kept 1" in out
 
 
+# Red-team finding F7 (#28): a broken ledger is a warning naming the file,
+# and every other job is still listed.
+def test_jobs_warns_about_a_broken_ledger_and_lists_the_rest(run, ws):
+    run("import", str(SAMPLE_CSV), "--write")
+    folders = sorted(ws.jobs_dir.iterdir())
+    (folders[0] / "ledger.toml").write_text("[[event\n", encoding="utf-8")
+    code, out, err = run("jobs")
+    assert code == 0
+    assert f"warning: {folders[0].name}/ledger.toml is not valid TOML" in err
+    assert all(f.name in out for f in folders)
+    assert err.count("warning:") == 1
+
+
 def test_jobs_works_with_a_starter_profile(tmp_path, monkeypatch, capsys):
     main(["init", str(tmp_path / "w")])
     monkeypatch.chdir(tmp_path / "w")

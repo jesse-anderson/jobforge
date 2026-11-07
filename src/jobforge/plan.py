@@ -107,9 +107,41 @@ def load_plan(folder: Path) -> dict:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
         raise JobforgeError(f"{folder.name}/plan.json is not valid JSON: {exc}") from exc
+    except UnicodeDecodeError:
+        raise JobforgeError(f"{folder.name}/plan.json is not UTF-8 text.") from None
+    except RecursionError:
+        raise JobforgeError(f"{folder.name}/plan.json is nested too deeply to be a "
+                            f"plan.") from None
     if not isinstance(data, dict):
         raise JobforgeError(f"{folder.name}/plan.json must be a JSON object.")
+    where = _find_surrogate(data)
+    if where:
+        raise JobforgeError(f"{folder.name}/plan.json: {where} holds half of a broken "
+                            f"character, which no document can store. Rewrite that text.")
     return data
+
+
+def _find_surrogate(data) -> str | None:
+    """Where the first lone surrogate is (a JSON escape like \\ud800 with no
+    partner), as a path like `cover_letter.body`, or None. Iterative: the
+    plan may be nested as deep as the JSON parser allows (#28)."""
+    def surrogate(text: str) -> str | None:
+        bad = next((c for c in text if "\ud800" <= c <= "\udfff"), None)
+        return f"U+{ord(bad):04X}" if bad else None
+
+    stack: list[tuple[str, object]] = [("", data)]
+    while stack:
+        path, value = stack.pop()
+        if isinstance(value, str) and surrogate(value):
+            return f"{path} ({surrogate(value)})"
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if surrogate(key):  # never echo the key: printing it would fail
+                    return f"a key in {path or 'the top level'} ({surrogate(key)})"
+                stack.append((f"{path}.{key}" if path else key, child))
+        elif isinstance(value, list):
+            stack.extend((f"{path}[{i}]", child) for i, child in enumerate(value))
+    return None
 
 
 def resolve(plan: dict, inv: Inventory, pending: set[str] | frozenset = frozenset()
