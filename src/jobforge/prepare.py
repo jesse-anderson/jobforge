@@ -28,7 +28,7 @@ def read_job(folder: Path) -> dict:
     if not path.exists():
         raise JobforgeError(f"{folder.name} has no job.json. Run `jobforge prepare` first.")
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
         raise JobforgeError(f"{folder.name}/job.json is not valid JSON: {exc}") from exc
 
@@ -43,7 +43,7 @@ def similar_jobs(ws: Workspace, job: Job, exclude: Path | None = None) -> list[s
         if not folder.is_dir() or (exclude and folder.resolve() == exclude.resolve()):
             continue
         try:
-            other = json.loads((folder / "job.json").read_text(encoding="utf-8"))
+            other = json.loads((folder / "job.json").read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             continue
         same_url = job.url and other.get("url") == job.url

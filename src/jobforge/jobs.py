@@ -31,7 +31,7 @@ def list_jobs(ws: Workspace, *, today: _dt.date | None = None, ghost_after_days:
     rows = []
     for folder in job_folders(ws):
         try:
-            job = json.loads((folder / "job.json").read_text(encoding="utf-8"))
+            job = json.loads((folder / "job.json").read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             continue
         events = read_events(folder)

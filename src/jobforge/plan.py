@@ -104,7 +104,7 @@ def load_plan(folder: Path) -> dict:
         raise JobforgeError(f"{folder.name} has no plan.json yet. Your agent writes it; "
                             f"see the instructions in CLAUDE.md or AGENTS.md.")
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
         raise JobforgeError(f"{folder.name}/plan.json is not valid JSON: {exc}") from exc
     if not isinstance(data, dict):

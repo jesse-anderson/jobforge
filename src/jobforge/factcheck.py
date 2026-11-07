@@ -225,12 +225,23 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
     where = "cover_letter"
     cites = letter.cites
     # Figures about the employer, quoted from its own posting, are ground truth
-    # too ("your 40 locations"). They are not claims about the user.
-    posting = ""
+    # too ("your 40 locations"). They are not claims about the user. How far
+    # the posting is trusted depends on how it was captured (#16):
+    #   json-ld    the posting itself: trusted quietly.
+    #   manual     pasted, maybe a whole page: trusted, but every figure the
+    #              letter takes only from it is named once for the user.
+    #   page-text  the whole page, other listings included: its description
+    #              is not trusted at all.
+    posting = description = ""
+    source = ""
     if job:
-        posting = " ".join(str(job.get(k, "")) for k in
-                           ("company", "title", "location", "description"))
-    pool = "\n".join([_pool_text(cites, inv), posting])
+        source = str(job.get("source") or "manual")
+        description = str(job.get("description", ""))
+        posting = " ".join(str(job.get(k, "")) for k in ("company", "title", "location"))
+        if source != "page-text":
+            posting += " " + description
+    facts = _pool_text(cites, inv)
+    pool = "\n".join([facts, posting])
 
     check_voice(text, profile, where, rep)
     check_atom_ids(text, inv, where, rep)
@@ -266,6 +277,21 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
                                     f"credited to the right one.")
             check_figures(figures, pool, sw, rep)
             check_terms(sentence, pool, vocab, profile, sw, rep)
+
+    figures = number_tokens(_strip_contact(text, profile))
+    own = set(number_tokens(facts))
+    from_page = [t for t in figures if t not in own and t in set(number_tokens(description))]
+    if from_page and source == "page-text":
+        rep.warnings.append(
+            f"{where}: {', '.join(dict.fromkeys(map(str, from_page)))} appear only in the "
+            f"posting, which was saved from the whole page and may include other "
+            f"listings. To quote the employer's figures, paste just the posting with "
+            f"`jobforge prepare --from-text ... --force`.")
+    elif from_page and source == "manual":
+        rep.warnings.append(
+            f"{where}: {', '.join(dict.fromkeys(map(str, from_page)))} come only from the "
+            f"posting, not your facts. Check the pasted posting says this about the "
+            f"employer, not about another job on the page.")
 
     # Projects: cited, or named by title, with a live URL -> full URL in text.
     mentioned = {a.id: a for a in cites if a.kind == "project"}

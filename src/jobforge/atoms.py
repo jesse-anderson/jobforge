@@ -159,7 +159,7 @@ def read_files(folder: Path) -> list[Path]:
 def parse_file(path: Path, rel: str, errors: list[str]) -> list[Atom]:
     """Parse one atom file. Schema problems go into `errors`."""
     try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        data = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     except tomllib.TOMLDecodeError as exc:
         errors.append(f"{rel}: not valid TOML: {exc}")
         return []
