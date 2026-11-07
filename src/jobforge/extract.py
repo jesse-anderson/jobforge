@@ -60,6 +60,23 @@ class FetchBlocked(JobforgeError):
     pass
 
 
+# What a person never sees on the page is not part of the posting (#28, F4):
+# a planted instruction hidden in a job page would otherwise reach the agent.
+_HIDING_STYLE = re.compile(
+    r"(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden"
+    r"|font-size\s*:\s*0(?:\.0+)?(?:px|pt|em|rem|%)?|opacity\s*:\s*0(?:\.0+)?)\s*(?:;|$)",
+    re.IGNORECASE)
+_HIDING_CLASSES = {"sr-only", "visually-hidden", "d-none", "hidden", "invisible"}
+_VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+              "source", "track", "wbr"}
+
+
+def _hides(attrs: dict[str, str]) -> bool:
+    return ("hidden" in attrs or attrs.get("aria-hidden", "").lower() == "true"
+            or bool(_HIDING_STYLE.search(attrs.get("style", "")))
+            or bool(_HIDING_CLASSES & set(attrs.get("class", "").lower().split())))
+
+
 class _TextExtractor(HTMLParser):
     """Flatten HTML to readable text, keeping block boundaries as newlines,
     and collect JSON-LD blocks and a few meta tags on the way."""
@@ -72,11 +89,17 @@ class _TextExtractor(HTMLParser):
         self.microdata: dict[str, str] = {}
         self.title_parts: list[str] = []
         self._suppress = 0
+        self._hidden: tuple[str, int] | None = None  # (tag, nesting depth)
         self._in_ld = False
         self._in_title = False
 
     def handle_starttag(self, tag, attrs):
         a = {k: (v or "") for k, v in attrs}
+        if tag not in _VOID_TAGS:
+            if self._hidden and self._hidden[0] == tag:
+                self._hidden = (tag, self._hidden[1] + 1)
+            elif self._hidden is None and _hides(a):
+                self._hidden = (tag, 1)
         if tag == "meta":
             key = (a.get("property") or a.get("name") or "").lower()
             if key and a.get("content"):
@@ -94,6 +117,9 @@ class _TextExtractor(HTMLParser):
             self.parts.append("\n")
 
     def handle_endtag(self, tag):
+        if self._hidden and self._hidden[0] == tag:
+            depth = self._hidden[1] - 1
+            self._hidden = (tag, depth) if depth else None
         if tag == "title":
             self._in_title = False
         if tag in _DROP_TAGS and self._suppress:
@@ -108,7 +134,7 @@ class _TextExtractor(HTMLParser):
         if self._in_ld:
             self.ld_json.append(data)
             return
-        if self._suppress or not data.strip():
+        if self._suppress or self._hidden or not data.strip():
             return
         self.parts.append(data)
 
