@@ -3,10 +3,12 @@ built for PyPI (#54). PyPI never lets a version be reused, even after it is
 deleted, so a wrong or development version must stop here.
 
     python tools/release_check.py v0.1.0            # for PyPI
-    python tools/release_check.py v0.1.0rc1 --test  # for TestPyPI
+    python tools/release_check.py v0.1.0rc1         # for PyPI, as a pre-release
+    python tools/release_check.py v0.1.0.dev1 --test  # for TestPyPI only
 
 Exit 0 when the tag is "v" plus the package version. For PyPI the version
-must also be a final release (no .dev, a, b, rc); TestPyPI takes any."""
+must also be a final release or a pre-release (X.Y.Z, or X.Y.Z with a, b, or
+rc and a number); a .dev build never goes there. TestPyPI takes any."""
 from __future__ import annotations
 
 import re
@@ -15,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 VERSION_RE = re.compile(r'^__version__\s*=\s*"([^"]+)"', re.MULTILINE)
-FINAL_RE = re.compile(r"^\d+\.\d+\.\d+$")
+PYPI_RE = re.compile(r"^\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?$")
 
 
 def package_version(init: Path = ROOT / "src" / "jobforge" / "__init__.py") -> str:
@@ -30,9 +32,9 @@ def problems(tag: str, version: str, *, test: bool) -> list[str]:
     if tag != f"v{version}":
         out.append(f"Tag {tag!r} does not match the package version {version!r}; "
                    f"tag it v{version}, or change __version__ first.")
-    if not test and not FINAL_RE.match(version):
-        out.append(f"{version!r} is not a final release (X.Y.Z). Only a tested final "
-                   f"version goes to PyPI; use --test for TestPyPI.")
+    if not test and not PYPI_RE.match(version):
+        out.append(f"{version!r} is not a release or pre-release (X.Y.Z, X.Y.ZrcN). "
+                   f"Development builds never go to PyPI; use --test for TestPyPI.")
     return out
 
 
