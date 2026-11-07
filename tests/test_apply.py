@@ -130,6 +130,37 @@ def test_plan_not_json(ws, job_folder):
         run_check(ws, job_folder)
 
 
+# Red-team finding F8 (#28): plan files that used to end in a traceback.
+def test_lone_surrogate_in_a_plan_is_reported_where_it_is(ws, job_folder):
+    edit_plan(job_folder, lambda p: p["cover_letter"].update(
+        body=p["cover_letter"]["body"] + " Ware\ud800house"))
+    with pytest.raises(JobforgeError, match=r"cover_letter\.body.*U\+D800"):
+        apply(ws, job_folder, today=TODAY)
+    assert not any((job_folder / name).exists() for name in DELIVERABLES)
+
+
+def test_lone_surrogate_in_a_list_or_key_is_reported(ws, job_folder):
+    edit_plan(job_folder, lambda p: p.update({"x\udfff": ["ok", "b\ud800"]}))
+    with pytest.raises(JobforgeError, match=r"U\+DFFF") as err:
+        run_check(ws, job_folder)
+    edit_plan(job_folder, lambda p: (p.pop("x\udfff"), p.update(extra=["ok", "b\ud800"])))
+    with pytest.raises(JobforgeError, match=r"extra\[1\].*U\+D800"):
+        run_check(ws, job_folder)
+    assert "plan.json" in str(err.value)
+
+
+def test_deeply_nested_plan_is_reported(ws, job_folder):
+    (job_folder / "plan.json").write_text("[" * 100_000, encoding="utf-8")
+    with pytest.raises(JobforgeError, match="nested too deeply"):
+        run_check(ws, job_folder)
+
+
+def test_plan_not_utf8(ws, job_folder):
+    (job_folder / "plan.json").write_bytes(b'{"version": 1, "x": "\xff"}')
+    with pytest.raises(JobforgeError, match="plan.json is not UTF-8 text"):
+        run_check(ws, job_folder)
+
+
 def test_readback_failure_blocks_and_cleans_up(ws, job_folder, monkeypatch):
     # Simulate a writer bug that drops text: the read-back must catch it.
     monkeypatch.setattr(apply_mod, "extract_text", lambda path: "John Smith")

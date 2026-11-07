@@ -264,6 +264,17 @@ def test_jobs_listing_skips_a_bad_job_json(ws):
     assert [r.company for r in list_jobs(ws, today=TODAY)] == ["Bolt"]
 
 
+# Red-team finding F8 (#28): a lone surrogate in a posting is dropped at
+# capture, so prepare never crashes writing job.json.
+def test_prepare_drops_a_lone_surrogate_from_a_posting(ws):
+    html = (HTML / "jsonld_posting.html").read_text(encoding="utf-8")
+    html = html.replace('"name": "Acme Manufacturing"', '"name": "Acme\\ud800 Manufacturing"')
+    job, _ = from_url("https://acme.example.com/jobs/1", fetch=lambda url: html)
+    assert job.company == "Acme Manufacturing"
+    folder, _ = prepare(ws, job, today=TODAY)
+    assert read_job(folder)["company"] == "Acme Manufacturing"
+
+
 def test_prepare_warns_about_an_earlier_folder(ws):
     job, _ = from_text(LONG, company="Acme", title="Welder", url="https://example.com/j/1")
     prepare(ws, job, today=TODAY)
