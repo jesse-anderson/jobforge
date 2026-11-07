@@ -242,6 +242,17 @@ def test_prepare_warns_about_an_earlier_folder(ws):
     assert any("already have a folder" in w for w in warnings)
 
 
+@pytest.mark.parametrize("text,expected", [
+    # Issue #36 (D-52): folder names fold accents too.
+    ("Café Société", "cafe_societe"),
+    ("Łódź Foods", "lodz_foods"),
+    ("Niño's Tacos", "nino_s_tacos"),
+    ("株式会社テスト", "untitled"),    # nothing Latin left: unchanged
+])
+def test_slug_folds_accents(text, expected):
+    assert slug(text) == expected
+
+
 def test_slug_is_bounded_and_never_empty():
     assert slug("!!!") == "untitled"
     assert len(slug("x" * 200)) <= 40

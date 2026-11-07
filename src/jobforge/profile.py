@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 import tomllib
+import unicodedata
 from dataclasses import dataclass, field
 
 from .errors import JobforgeError
@@ -84,8 +85,26 @@ def display_url(url: str) -> str:
     return u.rstrip("/")
 
 
+# Letters NFKD leaves whole, spelled the way their languages write them in
+# plain Latin letters.
+_UNDECOMPOSED = str.maketrans({
+    "Ł": "L", "ł": "l", "Ø": "O", "ø": "o", "Đ": "D", "đ": "d", "Ð": "D", "ð": "d",
+    "Ħ": "H", "ħ": "h", "ı": "i", "ß": "ss", "Æ": "AE", "æ": "ae", "Œ": "OE",
+    "œ": "oe", "Þ": "Th", "þ": "th"})
+
+
+def plain_letters(text: str) -> str:
+    """Accents folded to plain letters: "Núñez" -> "Nunez", "Łódź" -> "Lodz"
+    (D-52). File and folder names are ASCII because the resume's file name
+    goes through ATS uploads, email, and zip tools that mangle anything else,
+    and a recruiter sees the result. Letters with no Latin form are left as
+    they are, for the caller to drop."""
+    decomposed = unicodedata.normalize("NFKD", text.translate(_UNDECOMPOSED))
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
 def stem_from_name(name: str) -> str:
-    parts = [re.sub(r"[^A-Za-z0-9-]", "", p) for p in name.split()]
+    parts = [re.sub(r"[^A-Za-z0-9-]", "", p) for p in plain_letters(name).split()]
     return "_".join(p for p in parts if p)
 
 
@@ -160,7 +179,11 @@ def profile_from_dict(data: dict, rel: str = "profile.toml") -> Profile:
         if not re.match(r"^https?://[^\s/]+\.[^\s]+$", link):
             errors.append(f"[person] links: {link!r} is not a full http(s) URL")
     stem = get_str(person, "person", "file_stem") or stem_from_name(name)
-    if name and not re.fullmatch(r"[A-Za-z0-9_-]+", stem):
+    if name and not stem:
+        errors.append("[person] name has no letters a file name can use (A-Z, 0-9), "
+                      "so set the file name yourself under [person], in plain "
+                      'letters: file_stem = "Li_Xiaolong" makes Li_Xiaolong_Resume.docx.')
+    elif name and not re.fullmatch(r"[A-Za-z0-9_-]+", stem):
         errors.append(f"[person] file_stem {stem!r} may only use letters, digits, "
                       f"_ and -")
 
