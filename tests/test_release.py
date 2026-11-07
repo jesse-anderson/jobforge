@@ -34,7 +34,7 @@ def test_every_upload_waits_in_an_environment_and_uses_trusted_publishing():
 
 
 def test_build_checks_the_tag_and_tests_before_building():
-    build = WORKFLOW.split("\n  build:\n", 1)[1].split("\n  testpypi:\n", 1)[0]
+    build = WORKFLOW.split("\n  build:\n", 1)[1].split("\n  windows:\n", 1)[0]
     order = [build.index(s) for s in ("tools/release_check.py", "pytest", "python -m build",
                                       "twine check", "jobforge --version")]
     assert order == sorted(order)
@@ -71,11 +71,25 @@ def test_release_check_cli_exit_codes(capsys):
 
 def test_a_pre_release_reaches_pypi_only_after_testpypi():
     pypi = WORKFLOW.split("\n  pypi:\n", 1)[1].split("steps:", 1)[0]
-    assert "needs: [build, testpypi]" in pypi
+    assert "needs: [build, windows, testpypi]" in pypi
     assert "needs.testpypi.result == 'success'" in pypi
     assert "needs.build.outputs.target == 'pypi'" in pypi  # finals skip TestPyPI
     testpypi = WORKFLOW.split("\n  testpypi:\n", 1)[1].split("steps:", 1)[0]
     assert "'both'" in testpypi and "'testpypi'" in testpypi
+
+
+def test_nothing_uploads_until_the_wheel_passes_on_clean_windows():
+    # #56: the exact wheel about to be published runs the clean-machine
+    # checklist on a fresh Windows runner before either upload.
+    windows = WORKFLOW.split("\n  windows:\n", 1)[1].split("\n  testpypi:\n", 1)[0]
+    assert "needs: build" in windows and "runs-on: windows-latest" in windows
+    assert "name: dist" in windows  # the artifact the uploads publish
+    assert r"tools\clean_windows.ps1 -Install wheel" in windows
+    testpypi = WORKFLOW.split("\n  testpypi:\n", 1)[1].split("steps:", 1)[0]
+    assert "needs: [build, windows]" in testpypi
+    assert "!cancelled()" not in testpypi  # so a failed or skipped gate skips it
+    pypi = WORKFLOW.split("\n  pypi:\n", 1)[1].split("steps:", 1)[0]
+    assert "needs.windows.result == 'success'" in pypi
 
 
 def test_maintaining_says_how_to_release():
