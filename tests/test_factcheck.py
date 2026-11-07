@@ -145,6 +145,15 @@ def test_never_claim_with_a_look_alike_letter(ws, john_plan):
     expect(rep, "mixes Latin and Cyrillic")
 
 
+@pytest.mark.parametrize("written", ["Six Sigma Black-Belt", "Six Sigma Black/Belt",
+                                     "Six Sigma  Black Belt", "Six-Sigma Black Belt"])
+def test_never_claim_matches_hyphen_slash_and_spacing_variants(ws, john_plan, written):
+    # Issue #92 (audit A9): a hyphen or extra space made a different string.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": f"Cut weekly overtime 25% as a {written}"}
+    expect(check(ws, john_plan), "claims 'Six Sigma Black Belt'")
+
+
 def test_never_claim_written_all_in_cyrillic(ws, john_plan):
     john_plan["experience"][0]["bullets"][2] = {
         "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using \u0405\u0410\u0420"}
@@ -706,6 +715,57 @@ def test_letter_dashes_allowed_when_profile_says_so(ws, john_plan):
     ws.profile_path.write_text(text, encoding="utf-8")
     letter_body(john_plan, "Safety matters — a lot.")
     assert check(ws, john_plan).ok
+
+
+# Issue #88 (audit A12): the dash ban caught only the em and en dash.
+OTHER_DASHES = [("‒", "figure dash"), ("―", "horizontal bar"),
+                ("−", "minus sign"), ("⸺", "two-em dash"),
+                ("⸻", "three-em dash"), ("﹘", "small em dash"),
+                ("︱", "presentation form for vertical em dash")]
+UNICODE_HYPHENS = [("‐", "hyphen"), ("‑", "non-breaking hyphen"),
+                   ("－", "fullwidth hyphen-minus"), ("﹣", "small hyphen-minus")]
+
+
+def dash_bullet(john_plan, ch):
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime",
+        "text": f"Cut weekly overtime 25% {ch} by rebuilding the shift schedule"}
+
+
+@pytest.mark.parametrize("ch,name", OTHER_DASHES)
+def test_every_dash_is_banned(ws, john_plan, ch, name):
+    dash_bullet(john_plan, ch)
+    rep = check(ws, john_plan)
+    expect(rep, f"contains a {name} ({ch}, U+{ord(ch):04X}). Use a comma, colon, or period.")
+
+
+@pytest.mark.parametrize("ch,name", UNICODE_HYPHENS)
+def test_a_unicode_hyphen_asks_for_a_plain_one(ws, john_plan, ch, name):
+    # They look like a hyphen but an ATS will not match "scan<U+2011>to" as
+    # "scan-to"; the advice is to retype it, not to restructure the sentence.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime",
+        "text": f"Cut weekly overtime 25% by rebuilding the shift{ch}schedule"}
+    expect(check(ws, john_plan), f"({ch}, U+{ord(ch):04X}). Type a plain hyphen (-) instead.")
+
+
+@pytest.mark.parametrize("ch", [c for c, _ in OTHER_DASHES + UNICODE_HYPHENS])
+def test_other_dashes_allowed_when_profile_says_so(ws, john_plan, ch):
+    text = ws.profile_path.read_text(encoding="utf-8").replace("ban_dashes = true",
+                                                               "ban_dashes = false")
+    ws.profile_path.write_text(text, encoding="utf-8")
+    dash_bullet(john_plan, ch)
+    assert check(ws, john_plan).ok
+
+
+@pytest.mark.parametrize("word", ["scan-to-confirm",          # ASCII hyphen
+                                  "בית־ספר",  # Hebrew maqaf
+                                  "հայ֊երեն"])
+def test_plain_and_script_hyphens_are_not_dashes(ws, john_plan, word):
+    # A word in Hebrew or Armenian is joined with its own script's hyphen.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": f"Cut weekly overtime 25% with {word} checks"}
+    assert not [e for e in check(ws, john_plan).errors if "U+" in e and "contains" in e]
 
 
 def test_letter_word_limit_comes_from_profile(ws, john_plan):

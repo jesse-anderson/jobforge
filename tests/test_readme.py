@@ -42,6 +42,25 @@ def test_checklist_installs_and_uninstalls_like_the_readme():
         assert step in CHECKLIST, step
 
 
+def test_checklist_commands_can_be_typed_as_written():
+    # #3, Linux run: `<posting.txt>` typed as written is a shell redirect,
+    # so no placeholder in angle brackets inside a command.
+    import re
+    for span in re.findall(r"`([^`]+)`", CHECKLIST):
+        assert not re.search(r"<[\w./ -]+>", span), span
+
+
+def test_checklist_carries_the_fixes_from_the_linux_run():
+    flat = " ".join(CHECKLIST.split())
+    # pipx looks for its own pip on the index it is given; TestPyPI has none.
+    assert "--index-url https://test.pypi.org/simple/" in flat
+    assert '--pip-args="--extra-index-url https://pypi.org/simple/"' in flat
+    # Reverting a running VM's snapshot restores its clock too.
+    assert "timedatectl" in flat
+    # Not preinstalled on Ubuntu Desktop; and #3 asks for Google Docs as well.
+    assert "sudo apt install libreoffice" in flat and "Google Docs" in flat
+
+
 def test_readme_links_are_absolute_so_they_work_on_pypi():
     # PyPI renders the README as the project page and cannot follow a
     # relative link such as (LICENSE) or (#what-you-need) (#54).

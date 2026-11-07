@@ -16,11 +16,13 @@ def test_mvp_lists_the_known_limits_of_the_fact_check():
     mvp = (REPO / "docs" / "MVP.md").read_text(encoding="utf-8")
     limits = _section(mvp, "### Known limits of the fact check")
     for limit, issue in [("written in words", "#84"), ("titles are not checked", "#89"),
-                         ("Unknown names", ""), ("alias", "#22"), ("synonym", "#92"),
+                         ("Unknown names", ""), ("alias", "#22"), ("synonym", ""),
                          ("Pronouns", "#90"), ("posting's figures", "#83"),
                          ("hedges", "#91")]:
         assert limit in limits, limit
         assert issue in limits, issue
+    # Fixed since the audit, so no longer a limit: hyphen and spacing variants.
+    assert "#92" not in limits and "do match" in limits
 
 
 def test_mvp_says_the_letter_quotes_the_posting_only_about_the_employer():
