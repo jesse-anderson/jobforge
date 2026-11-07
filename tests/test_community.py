@@ -48,6 +48,22 @@ def test_security_routes_reports_privately_and_bypasses_to_issues():
     assert "Fact-check bypass" in _read(".github/ISSUE_TEMPLATE/fact_check_bypass.md")
 
 
+def test_security_scope_names_what_the_red_team_found():
+    # #28: each finding was in scope, but the scope did not say so plainly
+    # enough for a reporter to know.
+    scope = _read("SECURITY.md").split("## In scope", 1)[1].split("\n## ", 1)[0]
+    scope = " ".join(scope.split())  # phrases may wrap across lines
+    for needle in ("redirect",                   # F5: a fetch sent somewhere else
+                   "path given on the command",  # F2: a job folder outside
+                   "symlink or junction",        # F3: links out of the workspace
+                   "hidden on the page",         # F4: text a reader never sees
+                   "Ctrl+C"):                    # F1: an interrupted command
+        assert needle in scope, needle
+    # F6-F8 were crashes that lost nothing: a bug, reported as one.
+    not_security = _read("SECURITY.md").split("## Not a security issue", 1)[1]
+    assert "crash that loses nothing" in not_security
+
+
 def test_issue_templates_have_front_matter():
     for name in ("bug.md", "fact_check_bypass.md"):
         text = _read(f".github/ISSUE_TEMPLATE/{name}")
