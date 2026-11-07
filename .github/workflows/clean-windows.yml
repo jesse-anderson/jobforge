@@ -1,0 +1,44 @@
+# The clean-machine checklist on Windows (#56), unattended. A GitHub Windows
+# runner is a fresh machine every run: nothing of ours installed, no
+# workspace, no leftovers. tools/clean_windows.ps1 follows
+# docs/VM_CHECKLIST.md steps 1 to 14 in Windows PowerShell 5.1, plus the
+# Windows bugs that bit before, and saves a transcript.
+#
+# Runs by hand (Actions > clean-windows > Run workflow) before a release, and
+# on a PR that changes the script or this file. Never on every push: Windows
+# minutes bill at 2x while the repo is private. Never commits (D-48).
+#
+# Two install paths, as the checklist asks: from PyPI (`pip install jobforge`,
+# the newest release there) and from the clone (`pip install .`, this commit).
+name: clean-windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - tools/clean_windows.ps1
+      - .github/workflows/clean-windows.yml
+
+jobs:
+  checklist:
+    strategy:
+      fail-fast: false
+      matrix:
+        install: [checkout, pypi]
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # Stands in for the python.org installer the README assumes.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Run the checklist
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\clean_windows.ps1 -Install ${{ matrix.install }} -Out clean-windows-out
+      - name: Save the transcript and documents
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-windows-${{ matrix.install }}
+          path: clean-windows-out/
