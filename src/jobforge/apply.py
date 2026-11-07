@@ -113,13 +113,25 @@ def _move(src: Path, dst: Path) -> None:
     os.replace(src, dst)
 
 
+class _RollbackFailed(Exception):
+    """The swap failed, and so did part of putting things back (#64)."""
+
+    def __init__(self, cause: BaseException, current: str, stuck: list[str],
+                 left: list[str]) -> None:
+        super().__init__(str(cause))
+        self.cause, self.current = cause, current
+        self.stuck = stuck  # old files still in tmp/previous/
+        self.left = left    # new files that could not be taken out again
+
+
 def _swap_in(tmp: Path, folder: Path, names: list[str]) -> None:
     """Replace each folder/name with tmp/name, all or nothing (#32).
 
     The old files are moved aside first, so a file another program holds
     (Word locks an open .docx on Windows) is found before anything changes.
     On any failure, Ctrl+C included, the new files are taken out and the old
-    ones put back before tmp is cleaned up."""
+    ones put back before tmp is cleaned up. Each of those steps is tried even
+    if another fails; whatever cannot be undone raises _RollbackFailed."""
     aside = tmp / "previous"
     aside.mkdir()
     moved, placed = [], []
@@ -133,15 +145,42 @@ def _swap_in(tmp: Path, folder: Path, names: list[str]) -> None:
             _move(tmp / current, folder / current)
             placed.append(current)
     except BaseException as exc:  # Ctrl+C too: the old files are in tmp (#28)
+        left, stuck = [], []
         for name in placed:
-            (folder / name).unlink(missing_ok=True)
+            try:
+                (folder / name).unlink(missing_ok=True)
+            except BaseException:  # a scanner or sync client holding it
+                if name not in moved:  # an old file going back replaces it
+                    left.append(name)
         for name in moved:
-            _move(aside / name, folder / name)
+            try:
+                _move(aside / name, folder / name)
+            except BaseException:
+                stuck.append(name)
+        if stuck or left:
+            raise _RollbackFailed(exc, current, stuck, left) from exc
         if isinstance(exc, PermissionError):
             raise JobforgeError(
                 f"Close {current} (it is open in another program, such as Word), then "
                 f"run `jobforge apply` again. Nothing was changed.") from None
         raise
+
+
+def _rollback_error(ws: Workspace, folder: Path, tmp: Path,
+                    rf: _RollbackFailed) -> JobforgeError:
+    why = ("it was interrupted" if isinstance(rf.cause, KeyboardInterrupt)
+           else f"of an error with {rf.current}: {rf.cause}")
+    details = []
+    if rf.stuck:
+        details.append(f"Your previous documents are in {ws.rel(tmp / 'previous')}/: "
+                       f"move them back into {ws.rel(folder)}/, then run "
+                       f"`jobforge apply` again. Still there: {', '.join(rf.stuck)}.")
+    if rf.left:
+        details.append(f"New file(s) that could not be removed, so delete them before "
+                       f"you send anything: {', '.join(rf.left)}.")
+    return JobforgeError(f"Apply stopped partway because {why}, and could not "
+                         f"put everything back. Another program (a virus scanner, "
+                         f"OneDrive, Dropbox) may be holding a file.", details)
 
 
 def apply(ws: Workspace, folder: Path, *, today: _dt.date | None = None) -> dict:
@@ -159,6 +198,7 @@ def apply(ws: Workspace, folder: Path, *, today: _dt.date | None = None) -> dict
     resume_lines = [ln.text for ln in plan.resume_lines()]
 
     tmp = Path(tempfile.mkdtemp(prefix=".jobforge-", dir=folder))
+    keep_tmp = False
     try:
         r_path = write_docx(r_blocks, tmp / resume_name)
         c_path = write_docx(c_blocks, tmp / cover_name)
@@ -170,9 +210,15 @@ def apply(ws: Workspace, folder: Path, *, today: _dt.date | None = None) -> dict
             result.write()
             raise result.failure("Apply")
         (tmp / COVER_MD_NAME).write_text(letter_markdown(plan, job), encoding="utf-8")
-        _swap_in(tmp, folder, [resume_name, cover_name, COVER_MD_NAME])
+        try:
+            _swap_in(tmp, folder, [resume_name, cover_name, COVER_MD_NAME])
+        except _RollbackFailed as rf:
+            keep_tmp = bool(rf.stuck)  # never delete the only copy of an old file
+            raise _rollback_error(ws, folder, tmp, rf) from rf.cause
     finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+        # keep_tmp is only ever true while an error is on its way out.
+        if not keep_tmp:  # pragma: no branch
+            shutil.rmtree(tmp, ignore_errors=True)
 
     result.write()
     return {

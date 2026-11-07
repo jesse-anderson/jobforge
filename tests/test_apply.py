@@ -249,6 +249,101 @@ def test_ctrl_c_during_the_swap_loses_nothing(ws, job_folder, monkeypatch, nth):
     assert not [p for p in job_folder.iterdir() if p.name.startswith(".jobforge-")]
 
 
+# Issue #64: if the rollback itself fails, the old documents must survive in
+# the temp folder, and the message must say where they are.
+def failing_swap(monkeypatch, folder, fail_place, fail_back=(), first=PermissionError):
+    """Placing new file `fail_place` raises `first`; moving any of `fail_back`
+    back from previous/ raises PermissionError (a scanner holding it)."""
+    real = apply_mod._move
+
+    def move(src, dst):
+        if dst == folder / fail_place and src.parent.name.startswith(".jobforge-"):
+            raise first(13, "Access is denied") if first is PermissionError else first()
+        if src.parent.name == "previous" and src.name in fail_back:
+            raise PermissionError(13, "Access is denied", str(src))
+        real(src, dst)
+    monkeypatch.setattr(apply_mod, "_move", move)
+
+
+def leftovers(folder):
+    return [p for p in folder.iterdir() if p.name.startswith(".jobforge-")]
+
+
+@pytest.mark.parametrize("first", [PermissionError, KeyboardInterrupt])
+def test_failed_rollback_keeps_the_old_documents_and_says_where(ws, job_folder,
+                                                                monkeypatch, first):
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    edit_plan(job_folder, lambda p: p["experience"][1].update(bullets=["lakeside.shrink"]))
+    resume, letter = "John_Smith_Resume.docx", "John_Smith_Cover_Letter.docx"
+    failing_swap(monkeypatch, job_folder, letter, fail_back={resume}, first=first)
+    with pytest.raises(JobforgeError) as exc:
+        apply(ws, job_folder, today=TODAY)
+    [tmp] = leftovers(job_folder)
+    previous = tmp / "previous"
+    # The old resume could not go back: it is still on disk, unchanged.
+    assert (previous / resume).read_bytes() == before[resume]
+    # Every other step was still tried: the other old files are back.
+    assert (job_folder / letter).read_bytes() == before[letter]
+    assert (job_folder / COVER_MD_NAME).read_bytes() == before[COVER_MD_NAME]
+    text = exc.value.render()
+    assert f"jobs/{job_folder.name}/{tmp.name}/previous" in text and resume in text
+    assert "Nothing was changed" not in text
+
+
+def test_failed_rollback_of_every_file_keeps_them_all(ws, job_folder, monkeypatch):
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    failing_swap(monkeypatch, job_folder, COVER_MD_NAME, fail_back=set(DELIVERABLES))
+    with pytest.raises(JobforgeError) as exc:
+        apply(ws, job_folder, today=TODAY)
+    assert "move them back" in exc.value.render()
+    [tmp] = leftovers(job_folder)
+    assert {n: (tmp / "previous" / n).read_bytes() for n in DELIVERABLES} == before
+
+
+def test_new_file_that_cannot_be_removed_is_reported(ws, job_folder, monkeypatch):
+    # First apply: no old files to protect. A new file placed before the
+    # failure cannot be taken out again; say so instead of "Nothing was changed".
+    resume, letter = "John_Smith_Resume.docx", "John_Smith_Cover_Letter.docx"
+    failing_swap(monkeypatch, job_folder, letter)
+    real_unlink = type(job_folder).unlink
+
+    def unlink(self, missing_ok=False):
+        if self == job_folder / resume:
+            raise PermissionError(13, "Access is denied", str(self))
+        real_unlink(self, missing_ok=missing_ok)
+    monkeypatch.setattr(type(job_folder), "unlink", unlink)
+    with pytest.raises(JobforgeError) as exc:
+        apply(ws, job_folder, today=TODAY)
+    text = exc.value.render()
+    assert resume in text and "Nothing was changed" not in text
+    assert (job_folder / resume).exists() and not (job_folder / letter).exists()
+    assert not leftovers(job_folder)  # nothing old to keep, so tmp is cleaned up
+
+
+def test_new_file_that_cannot_be_removed_is_replaced_by_the_old_one(ws, job_folder,
+                                                                     monkeypatch):
+    # Re-apply: the new resume cannot be deleted, but the old resume moving
+    # back replaces it, so the rollback is still clean.
+    apply(ws, job_folder, today=TODAY)
+    before = snapshot(job_folder)
+    edit_plan(job_folder, lambda p: p["experience"][1].update(bullets=["lakeside.shrink"]))
+    resume = "John_Smith_Resume.docx"
+    failing_swap(monkeypatch, job_folder, "John_Smith_Cover_Letter.docx")
+    real_unlink = type(job_folder).unlink
+
+    def unlink(self, missing_ok=False):
+        if self == job_folder / resume:
+            raise PermissionError(13, "Access is denied", str(self))
+        real_unlink(self, missing_ok=missing_ok)
+    monkeypatch.setattr(type(job_folder), "unlink", unlink)
+    with pytest.raises(JobforgeError, match="Nothing was changed"):
+        apply(ws, job_folder, today=TODAY)
+    assert snapshot(job_folder) == before
+    assert not leftovers(job_folder)
+
+
 @pytest.mark.skipif(__import__("sys").platform != "win32", reason="needs a real Windows lock")
 def test_real_windows_lock_changes_nothing(ws, job_folder):
     apply(ws, job_folder, today=TODAY)
