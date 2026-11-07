@@ -3,6 +3,7 @@ it calls (D-13)."""
 from __future__ import annotations
 
 import argparse
+import codecs
 import sys
 from pathlib import Path
 
@@ -231,7 +232,8 @@ def _run(args) -> int:
 
 
 def _decode_file(path: str, fix: str, check: str) -> str:
-    """A file the user saved, as text. UTF-8 first (with or without a BOM);
+    """A file the user saved, as text. UTF-16 when it starts with its byte
+    order mark, else UTF-8 (with or without a BOM);
     older Windows programs (Excel's "CSV", Notepad) save Windows-1252, so try
     that next and say so. Never replace undecodable bytes with U+FFFD: a
     mangled name would land in job.json, or in a letter, silently (#87)."""
@@ -239,10 +241,23 @@ def _decode_file(path: str, fix: str, check: str) -> str:
     if not p.is_file():
         raise JobforgeError(f"{path} does not exist.")
     data = p.read_bytes()
+    # Windows PowerShell 5.1's `>` and Notepad's "Unicode" save UTF-16 with a
+    # byte order mark. As Windows-1252 that reads as "ÿþ" and a NUL after
+    # every letter, so take the mark at its word.
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        try:
+            return data.decode("utf-16")
+        except UnicodeDecodeError:
+            raise JobforgeError(f"{path} starts like UTF-16 text but is damaged. "
+                                f"{fix}") from None
     try:
         return data.decode("utf-8-sig")
     except UnicodeDecodeError:
         pass
+    # No saved text file holds a NUL. UTF-16 without its mark is the likely
+    # cause, and Windows-1252 would read it as noise.
+    if b"\x00" in data:
+        raise JobforgeError(f"{path} is not UTF-8 or Windows-1252 text. {fix}")
     try:
         text = data.decode("cp1252")
     except UnicodeDecodeError:

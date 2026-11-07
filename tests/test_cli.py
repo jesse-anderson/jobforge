@@ -1,4 +1,5 @@
 """The CLI end to end, the way a user (or their agent) runs it."""
+import codecs
 import datetime as _dt
 import json
 import shutil
@@ -395,11 +396,38 @@ def test_prepare_reads_a_utf8_posting_without_a_warning(run, ws, tmp_path):
     assert "Café Rouge" in desc and "�" not in desc
 
 
-def test_prepare_refuses_a_posting_that_is_not_text(run, ws, tmp_path):
+# Windows PowerShell 5.1's `>` and Notepad's "Unicode" save UTF-16 with a
+# byte order mark; read as Windows-1252 it came out as "ÿþ" plus noise.
+@pytest.mark.parametrize("encoding", ["utf-16", "utf-16-le", "utf-16-be"])
+def test_prepare_reads_a_utf16_posting(run, ws, tmp_path, encoding):
     posting = tmp_path / "posting.txt"
-    posting.write_bytes(b"\x81\x8d\x8f" * 100)
+    bom = "﻿" if encoding != "utf-16" else ""  # "utf-16" writes its own
+    posting.write_bytes((bom + POSTING_1252).encode(encoding))
+    code, err, desc = prepare_from(run, ws, posting)
+    assert code == 0 and "warning" not in err, err
+    assert desc.startswith("Café Rouge") and "“shift lead”" in desc
+    assert "\x00" not in desc and "ÿþ" not in desc
+
+
+def test_import_reads_a_utf16_csv(run, tmp_path):
+    csv_file = tmp_path / "tracker.csv"
+    csv_file.write_bytes("company,title,applied\nCafé Rouge,Clerk,2026-09-10\n"
+                         .encode("utf-16"))
+    code, out, err = run("import", str(csv_file))
+    assert code == 0 and "Café Rouge" in out and err == ""
+
+
+@pytest.mark.parametrize("data,message", [
+    (codecs.BOM_UTF16_LE + b"C\x00a\x00\x00\xd8", "starts like UTF-16 text but is damaged"),
+    ("Café Rouge is hiring. ".encode("utf-16-le") * 20,  # UTF-16 with no mark
+     "is not UTF-8 or Windows-1252 text"),
+    (b"\x81\x8d\x8f" * 100, "is not UTF-8 or Windows-1252 text"),
+])
+def test_prepare_refuses_a_posting_that_is_not_text(run, ws, tmp_path, data, message):
+    posting = tmp_path / "posting.txt"
+    posting.write_bytes(data)
     code, err, _ = prepare_from(run, ws, posting)
-    assert code == 1 and "is not UTF-8 or Windows-1252 text" in err
+    assert code == 1 and message in err
     assert "--from-text -" in err  # pasting is the way out
     assert not any(ws.jobs_dir.iterdir())
 
