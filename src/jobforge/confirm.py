@@ -117,10 +117,14 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
     ask = ask or input
     say = say or print
     confirmed = load_inventory(ws)  # raises if confirmed atoms are broken
+    ws.check_inside(ws.atoms_dir / CONFIRMED_FILE)  # confirm appends to it (#28)
 
     errors: list[str] = []
     per_file: dict[Path, list[Atom]] = {}
     for path in read_files(ws.pending_dir):
+        if not ws.contains(path):
+            errors.append(ws.outside_message(path))
+            continue
         per_file[path] = parse_file(path, ws.rel(path), errors)
     if errors:
         raise JobforgeError("Some drafted facts in profile/pending/ are malformed. "

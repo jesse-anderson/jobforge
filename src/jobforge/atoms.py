@@ -343,6 +343,9 @@ def load_inventory(ws: Workspace, *, include_pending: bool = False) -> Inventory
     folders = [ws.atoms_dir] + ([ws.pending_dir] if include_pending else [])
     for folder in folders:
         for path in read_files(folder):
+            if not ws.contains(path):  # never read a file outside (#28, F3)
+                errors.append(ws.outside_message(path))
+                continue
             for atom in parse_file(path, ws.rel(path), errors):
                 if atom.id in atoms:
                     errors.append(f"{ws.rel(path)}: {atom.label()}: id already used "
@@ -362,5 +365,6 @@ def pending_ids(ws: Workspace) -> set[str]:
     `confirm` reports those)."""
     ids: set[str] = set()
     for path in read_files(ws.pending_dir):
-        ids.update(a.id for a in parse_file(path, ws.rel(path), []))
+        if ws.contains(path):
+            ids.update(a.id for a in parse_file(path, ws.rel(path), []))
     return ids

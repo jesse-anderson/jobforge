@@ -99,6 +99,7 @@ def load_profile(ws: Workspace) -> Profile:
     if not path.exists():
         raise JobforgeError(f"{rel} is missing. Restore it from a backup, or "
                             f"start a new workspace with `jobforge init <folder>`.")
+    ws.check_inside(path)  # never read a profile outside the workspace (#28)
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     except tomllib.TOMLDecodeError as exc:
