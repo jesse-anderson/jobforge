@@ -67,7 +67,24 @@ def _parser() -> argparse.ArgumentParser:
     return p
 
 
+def _utf8_output(stream) -> None:
+    """Write UTF-8 whatever the console or pipe would choose (#52). On
+    Windows a pipe, which is how every agent runs jobforge, defaults to the
+    locale code page, and printing "Łódź" or "株式会社" crashed after the work
+    was already saved. If a stream cannot switch, replace what it cannot
+    encode rather than raise."""
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is None:
+        return
+    try:
+        reconfigure(encoding="utf-8")
+    except (ValueError, OSError):
+        reconfigure(errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        _utf8_output(stream)
     parser = _parser()
     args = parser.parse_args(argv)
     if not args.command:
