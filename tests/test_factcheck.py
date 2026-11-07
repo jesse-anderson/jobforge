@@ -845,6 +845,51 @@ def test_without_a_job_the_letter_cannot_quote_posting_figures(ws, john_plan):
     expect(check(ws, john_plan, job=None), "the figure 6 is not in the facts")
 
 
+# Issue #122: a career-wide figure in a sentence that names an employer fails
+# (the check cannot tell "with 9 years" from "for 9 years"), but the message
+# said the figure was not in the line's facts when it was.
+CAREER = "the figure 9 is not in Northwind Distribution's facts. If it is about your whole career"
+
+
+def test_summary_career_figure_next_to_an_employer_says_what_to_do(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind"],
+                            "text": "Warehouse supervisor at Northwind Distribution with 9 "
+                                    "years in distribution."}
+    rep = check(ws, john_plan)
+    expect(rep, CAREER)
+    assert not any("is not in the facts this line cites" in e for e in rep.errors), rep.errors
+
+
+def test_summary_career_figure_in_its_own_sentence_passes(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind"],
+                            "text": "Warehouse supervisor with 9 years in distribution. "
+                                    "Currently at Northwind Distribution."}
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+def test_letter_career_figure_next_to_an_employer_says_what_to_do(ws, john_plan):
+    john_plan["cover_letter"]["cites"].append("summary.main")
+    letter_body(john_plan, "At Northwind Distribution I bring 9 years in distribution.")
+    expect(check(ws, john_plan), CAREER)
+
+
+def test_another_employers_figure_keeps_the_d40_message(ws, john_plan):
+    # Not career-wide: Lakeside's 18% credited to Northwind stays the D-40
+    # error, with no advice to move it.
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["lakeside.shrink", "northwind"],
+                            "text": "At Northwind Distribution, reduced produce shrink 18%."}
+    rep = check(ws, john_plan)
+    expect(rep, "(names 'Northwind Distribution'): the figure 18% is not in the facts")
+    assert not any("whole career" in e for e in rep.errors), rep.errors
+
+
+def test_a_figure_in_no_cited_fact_keeps_the_plain_message(ws, john_plan):
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["northwind"],
+                            "text": "Warehouse supervisor at Northwind Distribution with 11 "
+                                    "years in distribution."}
+    expect(check(ws, john_plan), "the figure 11 is not in the facts this line cites")
+
+
 def test_a_plan_without_a_letter_gets_no_letter_errors(ws, john_plan):
     from dataclasses import replace
     from jobforge.factcheck import Report, check_letter

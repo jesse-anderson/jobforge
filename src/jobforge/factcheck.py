@@ -250,7 +250,20 @@ def check_sentence(sentence: str, figures: str, cites: list[Atom], pool: str,
         bound = [a for a in cites if inv.employer_of(a) in allowed]
         bound += inv.employers()[employer]
         scoped = _pool_text(bound, inv)
-        check_figures(figures, scoped, f"{where} ({how} {written!r})", rep)
+        # A figure the cited summary states is career-wide ("with 9 years in
+        # distribution"), not this employer's: say where it belongs instead
+        # of "not in the facts this line cites", which it is (#122).
+        own = set(number_tokens(scoped))
+        career = set(number_tokens(_pool_text([a for a in cites if a.kind == "summary"], inv)))
+        moved = [t for t in dict.fromkeys(number_tokens(figures))
+                 if t not in own and t in career]
+        for tok in moved:
+            rep.errors.append(
+                f"{where} ({how} {written!r}): the figure {tok} is not in {employer}'s "
+                f"facts. If it is about your whole career, put it in a sentence that "
+                f"names no employer.")
+        check_figures(figures, scoped, f"{where} ({how} {written!r})", rep,
+                      extra_pool=" ".join(t.shown for t in moved))
         check_terms(sentence, scoped, vocab, profile, f"{where} ({how} {written!r})", rep)
         return named
     if len(named) > 1:

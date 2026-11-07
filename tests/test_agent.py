@@ -25,6 +25,15 @@ def test_every_command_in_the_instructions_exists():
     assert mentioned <= commands, mentioned - commands
 
 
+def test_instructions_put_career_wide_figures_in_their_own_sentence(ws):
+    """#122: "with 9 years" next to an employer's name reads as that
+    employer's 9 years, so the agent writes it in a sentence of its own."""
+    for name in AGENT_FILES:
+        flat = " ".join((ws.root / name).read_text(encoding="utf-8").split())
+        assert "A career-wide figure (years of experience, totals)" in flat, name
+        assert "Warehouse supervisor with 9 years in distribution. Currently at" in flat, name
+
+
 def test_every_flag_in_the_instructions_exists():
     parser = _parser()
     sub = parser._subparsers._group_actions[0].choices
