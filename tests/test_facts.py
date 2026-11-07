@@ -72,13 +72,19 @@ def test_token_display():
 
 @pytest.mark.parametrize("text", ["about 50%", "~50%", "~ $5", "approximately 20 people",
                                   "roughly $3k", "nearly 40", "around 12", "an estimated 30%",
-                                  "Almost 9 years"])
+                                  "Almost 9 years",
+                                  # #91: these read as hedges too
+                                  "close to 25%", "Close to $40,000", "just under 30%",
+                                  "just over 2 years", "upwards of 40 drivers"])
 def test_hedges_found(text):
     assert find_hedges(text)
 
 
 @pytest.mark.parametrize("text", ["over 50 stores", "more than 20 people", "up to 30%",
-                                  "about the team", "50%"])
+                                  "about the team", "50%",
+                                  # #91: bounds, like "over"; "+" is #125's question
+                                  "20+ years", "25%+", "close to the dock",
+                                  "under 30 minutes", "just in time"])
 def test_not_hedges(text):
     assert not find_hedges(text)
 
