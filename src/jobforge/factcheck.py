@@ -180,7 +180,8 @@ def check_voice(text: str, profile: Profile, where: str, rep: Report) -> None:
         for ch in sorted(set(text) & _DASHES.keys(), key=text.index):
             name = _DASHES[ch]
             article = "an" if name[0] in "aeiou" else "a"
-            fix = ("Type a plain hyphen (-) instead." if "hyphen" in name
+            # A minus sign stands for a hyphen-minus ("-20%"), not a pause (#114).
+            fix = ("Type a plain hyphen (-) instead." if "hyphen" in name or "minus" in name
                    else "Use a comma, colon, or period.")
             rep.errors.append(f"{where}: contains {article} {name} "
                               f"({ch}, U+{ord(ch):04X}). {fix}")

@@ -719,11 +719,12 @@ def test_letter_dashes_allowed_when_profile_says_so(ws, john_plan):
 
 # Issue #88 (audit A12): the dash ban caught only the em and en dash.
 OTHER_DASHES = [("‒", "figure dash"), ("―", "horizontal bar"),
-                ("−", "minus sign"), ("⸺", "two-em dash"),
+                ("⸺", "two-em dash"),
                 ("⸻", "three-em dash"), ("﹘", "small em dash"),
                 ("︱", "presentation form for vertical em dash")]
 UNICODE_HYPHENS = [("‐", "hyphen"), ("‑", "non-breaking hyphen"),
-                   ("－", "fullwidth hyphen-minus"), ("﹣", "small hyphen-minus")]
+                   ("－", "fullwidth hyphen-minus"), ("﹣", "small hyphen-minus"),
+                   ("−", "minus sign")]  # #114: "−20%" wants a hyphen, not a comma
 
 
 def dash_bullet(john_plan, ch):
@@ -916,3 +917,12 @@ def test_hidden_character_cannot_slip_a_never_claim_term_past_check(ws, john_pla
     john_plan["experience"][0]["bullets"][2] = {
         "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using S​AP"}
     expect(check(ws, john_plan), "hidden character: zero-width space")
+
+
+def test_a_minus_sign_in_a_figure_asks_for_a_plain_hyphen(ws, john_plan):
+    # #114: "Use a comma, colon, or period" is wrong advice for "−5°C".
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime \u221225% by rebuilding the shift schedule"}
+    rep = check(ws, john_plan)
+    expect(rep, "contains a minus sign (\u2212, U+2212). Type a plain hyphen (-) instead.")
+    assert not any("comma" in e for e in rep.errors if "U+2212" in e)
