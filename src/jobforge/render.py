@@ -17,6 +17,9 @@ from .plan import ResolvedPlan
 from .profile import Profile, display_url
 
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+# One line of space between letter parts, in twentieths of a point (the body
+# text is 10.5 pt, so about one line).
+LETTER_GAP = 210
 
 
 def fmt_date(value: str | None) -> str:
@@ -117,14 +120,18 @@ def letter_blocks(plan: ResolvedPlan, profile: Profile, job: dict,
     today = today or _dt.date.today()
     company = (job.get("company") or "").strip()
     title = (job.get("title") or "").strip()
+    # A line of space after each part, as in any business letter (#102).
+    gap = LETTER_GAP
     blocks = header_blocks(profile)
-    blocks.append(Block("para", [Run(f"{MONTHS[today.month - 1]} {today.day}, {today.year}")]))
+    blocks.append(Block("para", [Run(f"{MONTHS[today.month - 1]} {today.day}, {today.year}")],
+                        space_before=gap, space_after=gap))
     if title or company:
-        blocks.append(Block("para", [Run("Re: ", bold=True), Run(_join([title, company]))]))
+        blocks.append(Block("para", [Run("Re: ", bold=True), Run(_join([title, company]))],
+                            space_after=gap))
     blocks.append(Block("para", [Run(f"Dear {company} Hiring Team," if company
-                                     else "Dear Hiring Team,")]))
-    blocks.extend(Block("para", [Run(p)]) for p in plan.letter.paragraphs())
-    blocks.append(Block("para", [Run("Sincerely,")]))
+                                     else "Dear Hiring Team,")], space_after=gap))
+    blocks.extend(Block("para", [Run(p)], space_after=gap) for p in plan.letter.paragraphs())
+    blocks.append(Block("para", [Run("Sincerely,")], space_after=gap))
     blocks.append(Block("para", [Run(profile.name)]))
     return blocks
 

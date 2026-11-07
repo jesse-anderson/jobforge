@@ -273,3 +273,40 @@ def test_other_file_errors_roll_back_and_are_not_called_a_lock(ws, job_folder, m
     with pytest.raises(OSError, match="No space"):
         apply(ws, job_folder, today=TODAY)
     assert snapshot(job_folder) == before
+
+
+# Issue #102: the letter's paragraphs ran together with no space between
+# them (Normal has spacing after = 0, right for the resume, not a letter).
+def _paragraphs(docx_path):
+    import re
+    import zipfile
+    with zipfile.ZipFile(docx_path) as z:
+        xml = z.read("word/document.xml").decode("utf-8")
+    out = []
+    for p in re.findall(r"<w:p>(.*?)</w:p>", xml, re.S):
+        text = "".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", p))
+        after = re.search(r'<w:spacing[^>]*w:after="(\d+)"', p)
+        before = re.search(r'<w:spacing[^>]*w:before="(\d+)"', p)
+        out.append((text, int(after.group(1)) if after else 0,
+                    int(before.group(1)) if before else 0))
+    return out
+
+
+def test_letter_paragraphs_have_space_between_them(ws, job_folder):
+    apply(ws, job_folder, today=TODAY)
+    paras = _paragraphs(job_folder / "John_Smith_Cover_Letter.docx")
+    texts = [t for t, _, _ in paras]
+    start = texts.index("Nov 20, 2026")
+    body = paras[start:]
+    # Date, Re:, greeting, each paragraph, and "Sincerely," are followed by a
+    # line of space; the signed name is the end of the letter.
+    assert all(after > 0 for _, after, _ in body[:-1]), body
+    assert body[-1][0] == "John Smith" and body[-1][1] == 0
+    assert body[0][2] > 0  # the date stands apart from the contact header
+    assert len(body) >= 7  # date, Re, greeting, 3+ paragraphs, sign-off, name
+
+
+def test_resume_spacing_is_unchanged(ws, job_folder):
+    apply(ws, job_folder, today=TODAY)
+    paras = _paragraphs(job_folder / "John_Smith_Resume.docx")
+    assert paras and all(after == 0 and before == 0 for _, after, before in paras)
