@@ -53,6 +53,11 @@ Every change ships with tests, written in the same change. No exceptions for
 - A bug fix starts with a test that fails without the fix.
 - New fact-check rules get a planted-violation test and a clean-passes test.
 - Persona fixtures in `fixtures/personas/` are fictional, always.
+- The README's sample pages (`docs/samples/`) are John Smith's application.
+  When a change alters what it renders, `test_sample_documents_are_not_stale`
+  fails: run `python tools/readme_samples.py` (Word on Windows, LibreOffice
+  and poppler-utils on Linux), look at the new images, and commit them with
+  the change (#104).
 - Before every push, run the suite with coverage and paste the pytest
   summary and coverage TOTAL into the PR. CI is Ubuntu only while the repo
   is private, so that local run is the only Windows check.

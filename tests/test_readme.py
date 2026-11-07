@@ -89,3 +89,38 @@ def test_readme_claims_no_more_than_the_fact_check_does():
     assert anchor in claim
     mvp = (REPO / "docs" / "MVP.md").read_text(encoding="utf-8")
     assert "\n### Known limits of the fact check\n" in mvp  # the anchor resolves
+
+
+def _samples_tool():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("readme_samples",
+                                                  REPO / "tools" / "readme_samples.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_readme_shows_the_sample_documents():
+    # #104: a visitor sees what Jobforge makes before installing it.
+    section = _section(README, "## What you get")
+    raw = "https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/"
+    for name in ("resume", "cover_letter"):
+        assert f"{raw}{name}.png" in section, name
+        assert (REPO / "docs" / "samples" / f"{name}.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_sample_documents_are_not_stale():
+    # #104: the images cannot be compared, so each has a text snapshot of the
+    # same document. Any change to what John's application renders fails
+    # here until `python tools/readme_samples.py` is run and both committed.
+    assert _samples_tool().stale() == [], (
+        "docs/samples is stale: run python tools/readme_samples.py and commit "
+        "the .txt and .png files")
+
+
+def test_stale_samples_are_caught(tmp_path):
+    tool = _samples_tool()
+    for name in ("resume", "cover_letter"):
+        (tmp_path / f"{name}.txt").write_text("an older version\n", encoding="utf-8")
+    assert tool.stale(tmp_path) == ["resume", "cover_letter"]
+    assert tool.stale(tmp_path / "missing") == ["resume", "cover_letter"]

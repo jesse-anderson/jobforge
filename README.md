@@ -29,6 +29,18 @@ PyPI; the first full release, 0.1.0, comes with the public launch.
 Source-available under [PolyForm Noncommercial 1.0.0](https://github.com/jesse-anderson/jobforge/blob/main/LICENSE): free for personal use
 and for nonprofits, schools, and public institutions. Not for commercial use.
 
+## What you get
+
+A one-page resume and cover letter for one posting, as `.docx` files. These
+are for John Smith, a made-up warehouse supervisor applying to a made-up
+operations job, built from the [sample data](https://github.com/jesse-anderson/jobforge/tree/main/fixtures/personas/john_smith)
+and shown as Word opens them. Every figure in them comes from a fact he
+confirmed.
+
+| Resume | Cover letter |
+|---|---|
+| [![John Smith's sample resume](https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/resume.png)](https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/resume.png) | [![John Smith's sample cover letter](https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/cover_letter.png)](https://raw.githubusercontent.com/jesse-anderson/jobforge/main/docs/samples/cover_letter.png) |
+
 ## What you need
 
 - Windows or Linux (macOS is untested).
