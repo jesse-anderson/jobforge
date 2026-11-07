@@ -97,6 +97,8 @@ def write_agent_files(ws) -> list[str]:
     """Write CLAUDE.md and AGENTS.md, keeping the user's notes section. An
     edit above it is never dropped silently: the old file is saved as
     <name>.bak (then .bak2, ...) first. Returns a notice per backup."""
+    for name in AGENT_FILES:  # both checked before either is written (#65)
+        ws.check_inside(ws.root / name)
     generated = _generated(values_for(ws))
     body = _LEADING_COMMENT.sub("", generated, count=1)
     notices = []
