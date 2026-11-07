@@ -204,12 +204,37 @@ def test_table_never_marks_what_fits():
     assert "…" not in out
 
 
-def test_list_skips_broken_folders(ws):
+# #72: a broken job.json keeps the job in the list, marked, like a broken
+# ledger (F7), instead of the job silently disappearing.
+@pytest.mark.parametrize("content,reason", [
+    (b"{", "job.json is not valid JSON"),
+    (b'{"company": "Caf\xe9"}', "job.json is not UTF-8 text"),   # Windows-1252
+    (b"[1, 2]", "job.json must be a JSON object"),
+])
+def test_list_keeps_a_job_whose_job_json_is_broken(ws, content, reason):
     add_job(ws, "Acme", "Welder")
-    bad = ws.jobs_dir / "broken"
-    bad.mkdir()
-    (bad / "job.json").write_text("{", encoding="utf-8")
-    assert len(list_jobs(ws, today=TODAY)) == 1
+    bad = add_job(ws, "Bolt", "Painter")
+    (bad / "job.json").write_bytes(content)
+    rows = {r.folder: r for r in list_jobs(ws, today=TODAY)}
+    assert len(rows) == 2
+    broken = rows[bad.name]
+    assert broken.status == "unreadable" and f"{bad.name}/{reason}" in broken.problem
+    assert broken.company == broken.title == broken.url == ""
+    others = [r for r in rows.values() if r.folder != bad.name]
+    assert [(r.company, r.status, r.problem) for r in others] == [("Acme", "prepared", "")]
+    assert [r.folder for r in list_jobs(ws, today=TODAY, status="unreadable")] == [bad.name]
+    assert bad.name in format_table(list(rows.values()))
+
+
+def test_list_keeps_a_job_it_has_no_permission_to_read(ws, monkeypatch):
+    import jobforge.jobs as jobs_mod
+    bad = add_job(ws, "Bolt", "Painter")
+
+    def denied(folder):
+        raise PermissionError(13, "Permission denied", str(folder / "job.json"))
+    monkeypatch.setattr(jobs_mod, "read_job", denied)
+    [row] = list_jobs(ws, today=TODAY)
+    assert row.status == "unreadable" and row.problem == f"{bad.name}: Permission denied"
 
 
 # Red-team finding F7 (#28): one broken ledger.toml must not stop the
