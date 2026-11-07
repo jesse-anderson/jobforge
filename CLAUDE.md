@@ -21,6 +21,21 @@ Every change ships with tests, written in the same change. No exceptions for
 - New fact-check rules get a planted-violation test and a clean-passes test.
 - Persona fixtures in `fixtures/personas/` are fictional, always.
 
+## Before every push
+
+Run the whole suite with coverage before pushing a branch or opening a PR,
+and paste the result into the PR description:
+
+```
+python -m coverage run -m pytest -q
+python -m coverage report --fail-under=95
+```
+
+Paste the pytest summary line (passed, skipped, failed) and the coverage
+TOTAL line. Do not push a branch with a failing test or coverage under 95%.
+CI runs Ubuntu only while the repo is private, so this local run is the only
+Windows check a change gets.
+
 ## Commits
 
 Never run `git commit`, or anything else that creates a commit (merge,
