@@ -25,13 +25,20 @@ Do each on both OSes. Note every place you had to stop and think: those are
 the friction points.
 
 1. Fresh VM snapshot. Confirm `jobforge` is not on PATH and no
-   `~/jobsearch` exists.
+   `~/jobsearch` exists. Reverting a snapshot of a running VM also restores
+   its clock, and every date Jobforge writes comes from it: on Linux run
+   `sudo timedatectl set-ntp true`, then check `date` shows today.
 2. Install Python 3.11+ the way the README says (`python3 --version` on
    Linux). Note anything the README left out.
 3. Install Jobforge:
    - PyPI path: `pipx install jobforge` on Linux (after `sudo apt install
-     pipx` and `pipx ensurepath`), `pip install jobforge` on Windows, or the
-     TestPyPI URL for a candidate.
+     pipx` and `pipx ensurepath`, then a new terminal), `pip install jobforge`
+     on Windows.
+   - TestPyPI candidate, Linux: `pipx install --index-url
+     https://test.pypi.org/simple/ --pip-args="--extra-index-url
+     https://pypi.org/simple/" jobforge==VERSION`, with the candidate's
+     version for VERSION. Without the extra index, pipx looks for its own pip
+     on TestPyPI and fails (`No matching distribution found for pip>=23.1`).
    - Clone path: `git clone ...`, `cd jobforge`, then `pipx install .` on
      Linux or `pip install .` on Windows.
 4. `jobforge --version` prints the expected version.
@@ -42,13 +49,17 @@ the friction points.
    the new workspace (from a clone, or the repo on GitHub).
    `jobforge init --refresh ~/jobsearch`.
 8. From inside `~/jobsearch`: `jobforge inventory` lists John's facts.
-9. `jobforge prepare --from-text <posting.txt> --company "Prairie Freight Co."
-   --title "Operations Supervisor"`.
+9. Copy John's `posting.txt` into the workspace, then `jobforge prepare
+   --from-text posting.txt --company "Prairie Freight Co." --title
+   "Operations Supervisor"`. (Type file names as they are: angle brackets
+   around one are a shell redirect.)
 10. Copy John's `plan.json` into the new job folder. `jobforge check prairie`
     passes. `jobforge apply prairie` writes both `.docx` files.
-11. Open both `.docx` files in Word (Windows) or LibreOffice (Linux). They
-    open without a repair prompt, each is one page or less, and they read
-    correctly.
+11. Open both `.docx` files in Word (Windows) or LibreOffice (Linux), and in
+    Google Docs. They open without a repair prompt, each is one page or less,
+    and they read correctly. LibreOffice is not preinstalled on Ubuntu
+    Desktop: `sudo apt install libreoffice`; `xdg-open` takes one file at a
+    time.
 12. `jobforge applied --mark prairie --status applied`, then `jobforge jobs`
     shows it.
 13. Agent run: open Claude Code in a second empty workspace with a sample
