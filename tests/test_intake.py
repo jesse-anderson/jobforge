@@ -76,15 +76,73 @@ def test_blocked_board_says_to_paste():
 def test_fetch_html_turns_http_errors_into_paste_hint(monkeypatch):
     def raise_403(req, timeout):
         raise urllib.error.HTTPError(req.full_url, 403, "Forbidden", {}, None)
-    monkeypatch.setattr(extract.urllib.request, "urlopen", raise_403)
+    monkeypatch.setattr(extract, "_open", raise_403)
     with pytest.raises(FetchBlocked, match="HTTP 403 Forbidden"):
         extract.fetch_html("https://example.com/j")
 
     def raise_url(req, timeout):
         raise urllib.error.URLError("name not resolved")
-    monkeypatch.setattr(extract.urllib.request, "urlopen", raise_url)
+    monkeypatch.setattr(extract, "_open", raise_url)
     with pytest.raises(FetchBlocked, match="Could not reach"):
         extract.fetch_html("https://example.com/j")
+
+
+# Red-team finding F5 (#28): a posting's redirects are followed only to
+# public web pages. No network: the redirect handler is called directly.
+def redirect(newurl, monkeypatch, resolves_to="93.184.216.34"):
+    monkeypatch.setattr(extract.socket, "getaddrinfo",
+                        lambda host, port, *a, **k: [(2, 1, 6, "", (resolves_to, 0))])
+    req = urllib.request.Request("https://jobs.example.com/1")
+    return extract._SafeRedirect().redirect_request(req, None, 302, "Found", {}, newurl)
+
+
+@pytest.mark.parametrize("newurl,why", [
+    ("ftp://files.example.com/x", "not a web page"),
+    ("file:///etc/hostname", "not a web page"),
+    ("http://localhost:8080/admin", "on this computer or your local network"),
+    ("http://127.0.0.1/admin", "on this computer or your local network"),
+    ("http://192.168.1.1/", "on this computer or your local network"),
+    ("http://10.0.0.5/", "on this computer or your local network"),
+    ("http://169.254.169.254/latest/meta-data", "on this computer or your local network"),
+    ("http://[::1]/", "on this computer or your local network"),
+])
+def test_redirect_to_a_non_public_place_is_refused(monkeypatch, newurl, why):
+    with pytest.raises(FetchBlocked, match=why) as exc:
+        redirect(newurl, monkeypatch)
+    assert "jobs.example.com/1" in exc.value.message and "--from-text" in exc.value.message
+
+
+def test_redirect_to_a_name_that_resolves_locally_is_refused(monkeypatch):
+    # A public-looking name pointed at a private address.
+    with pytest.raises(FetchBlocked, match="local network"):
+        redirect("https://intranet.example.com/", monkeypatch, resolves_to="192.168.0.10")
+
+
+def test_redirect_to_a_public_page_is_followed(monkeypatch):
+    new = redirect("https://boards.example.com/jobs/1", monkeypatch)
+    assert new.full_url == "https://boards.example.com/jobs/1"
+
+
+def test_redirect_to_a_name_that_does_not_resolve_is_left_to_the_fetch(monkeypatch):
+    def fail(*a, **k):
+        raise OSError("no such host")
+    monkeypatch.setattr(extract.socket, "getaddrinfo", fail)
+    req = urllib.request.Request("https://jobs.example.com/1")
+    new = extract._SafeRedirect().redirect_request(req, None, 302, "Found", {},
+                                                   "https://gone.example.com/1")
+    assert new.full_url == "https://gone.example.com/1"
+
+
+def test_open_goes_through_the_safe_opener(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(extract._OPENER, "open",
+                        lambda req, timeout: seen.update(url=req.full_url, timeout=timeout) or "r")
+    assert extract._open(urllib.request.Request("https://example.com/j"), 7) == "r"
+    assert seen == {"url": "https://example.com/j", "timeout": 7}
+
+
+def test_fetch_uses_the_safe_redirect_opener():
+    assert any(isinstance(h, extract._SafeRedirect) for h in extract._OPENER.handlers)
 
 
 def test_almost_empty_page_says_to_paste():

@@ -117,7 +117,7 @@ def test_prepare_errors_reach_the_user(run, tmp_path, monkeypatch):
 
     def offline(req, timeout):  # tests never touch the network
         raise urllib.error.URLError("offline")
-    monkeypatch.setattr(extract.urllib.request, "urlopen", offline)
+    monkeypatch.setattr(extract, "_open", offline)
     code, _, err = run("prepare", "--from-url", "https://example.com/x", "--company", "A")
     assert code == 1 and "--from-text" in err
 
