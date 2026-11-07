@@ -112,7 +112,8 @@ All of it is code. None of it depends on the agent behaving.
   under "Known limits of the fact check" below.
 - A bullet renders only under its own role. A sentence in the cover letter
   that names an employer carries only facts from that employer's atoms or the
-  profile (D-40).
+  profile (D-40). The sentences after it in the same paragraph that name no
+  employer may not use another employer's facts (#83).
 - The posting's figures and tools appear in the letter only in a sentence
   about the employer ("you", "your", or its name) with no "I", "my", or
   "we": "Your 6 sites" passes, "I bring 20 years" does not when only the
@@ -150,9 +151,10 @@ deliverable still matter.
   (#22). A synonym of a known term ("Postgres" for "PostgreSQL") is a
   different term. Hyphen, slash, and spacing variants ("Black-Belt" for
   "Black Belt") do match.
-- **Pronouns.** A sentence that refers back to an employer without naming it
-  ("There I also...") is checked against every cited fact, not only that
-  employer's (#83, #90).
+- **Pronouns across paragraphs.** Within a paragraph, a sentence that names
+  no employer is read as the last one named ("There I also..."). One that
+  refers back to an employer from an earlier paragraph is checked against
+  every cited fact (#83, #90).
 - **The posting's figures in the letter.** A sentence about the employer
   that also claims something for the user without "I", "my", or "we"
   ("Your team of 20 would get a lead with 20 years on the floor") may still

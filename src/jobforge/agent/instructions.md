@@ -203,9 +203,13 @@ an employer is never described as a personal project, and the reverse.
 - Every figure in a line must appear in an atom the line cites. A reworded
   bullet keeps its atom's figures exactly, units included: never convert or
   swap a unit ("650,000 miles" stays miles, not km).
-- A bullet goes only under its own role. A cover-letter sentence that names
-  an employer, by its full name or an alias, may only use that employer's
-  facts.
+- A bullet goes only under its own role. A cover-letter or summary sentence
+  that names an employer, by its full name or an alias, may only use that
+  employer's facts. A sentence after it in the same paragraph that names no
+  employer is read as the same employer's, so it may not use another
+  employer's facts: name the other employer again, start a new paragraph,
+  or write the sentence in general terms ("I have run cycle counts", not
+  "There I ran cycle counts").
 - Nothing from the never-claim list, and no tool the cited atoms do not show.
   The check only knows the tools and credentials named somewhere in the
   user's facts, so it cannot catch one it has never seen. Before `check`,
