@@ -91,6 +91,19 @@ def test_readme_claims_no_more_than_the_fact_check_does():
     assert "\n### Known limits of the fact check\n" in mvp  # the anchor resolves
 
 
+def test_friction_log_records_the_linux_runs():
+    """#3: every place a Linux run stopped is in the log, each marked fixed,
+    documented, or open, so the next run starts from what is known."""
+    log = _section(CHECKLIST, "## Friction log")
+    rows = [r for r in log.splitlines() if r.startswith("| ") and not r.startswith("| Step")]
+    assert len(rows) >= 13, rows
+    for row in rows:
+        outcome = row.rstrip(" |").rsplit(" | ", 1)[1]
+        assert outcome.split(":")[0].split(" (")[0] in ("Fixed", "Documented", "Open"), row
+    for issue in ("#39", "#40", "#102", "#105", "#106", "#107", "#118"):
+        assert issue in log, issue
+
+
 def _samples_tool():
     import importlib.util
     spec = importlib.util.spec_from_file_location("readme_samples",
