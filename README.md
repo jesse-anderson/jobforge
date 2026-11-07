@@ -11,7 +11,8 @@ Turn your real work history into a resume and cover letter tailored to one
 job posting, on your own computer, for free, without the tool ever stating a
 fact you did not give it.
 
-**Status: pre-release.** It works end to end, but it is not on PyPI yet.
+**Status: pre-release.** It works end to end. A release candidate is on
+PyPI; the first full release, 0.1.0, comes with the public launch.
 
 - **Free and local.** Nothing runs on a server. Your AI coding agent (Claude
   Code first; Codex, Gemini CLI and others also work) does the writing, and
