@@ -1,0 +1,16 @@
+Mechanical Design Engineer, Ironwood Fluid Systems
+
+Ironwood Fluid Systems designs centrifugal pumps for municipal water and oil and gas customers. We are hiring a Mechanical Design Engineer for our Tulsa engineering team.
+
+Responsibilities:
+- Design pump components in SolidWorks and release drawings with GD&T
+- Run FEA and hydraulic performance analysis
+- Work with suppliers and the shop floor on castings and machined parts
+- Support testing on our 2,000 hp test loop
+
+Requirements:
+- BS in Mechanical Engineering
+- 2+ years of design experience
+- SolidWorks and FEA experience
+- EI certificate; PE license preferred
+- ANSYS Fluent or other CFD experience a plus

@@ -1,0 +1,16 @@
+# Educator persona (D-09 #8). Fictional. A long teaching record that needs
+# two pages (page_limit = 2, SOW A-8), and a school event site with a live
+# URL credited to her current employer (D-42, D-40).
+
+[person]
+name = "Grace Holloway"
+email = "grace.holloway@example.com"
+phone = "555-0158"
+location = "Eugene, OR"
+links = ["https://example.com/gholloway"]
+
+[settings]
+page_limit = 2
+
+[claims]
+never_claim = ["National Board Certification", "ESOL endorsement"]

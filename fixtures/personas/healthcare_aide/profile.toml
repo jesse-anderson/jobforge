@@ -1,0 +1,12 @@
+# Blue-collar healthcare persona (D-09 #4). Fictional. A CNA moving from
+# senior living into a hospital patient care tech job. Carried by
+# certifications and patient-care wording; two employers.
+
+[person]
+name = "Rosa Delgado"
+email = "rosa.delgado@example.com"
+phone = "555-0131"
+location = "Lubbock, TX"
+
+[claims]
+never_claim = ["Phlebotomy certification", "EKG Technician certification"]

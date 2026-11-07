@@ -1,0 +1,100 @@
+[[summary]]
+id = "summary.main"
+text = "Production line lead with 10 years on stamping and molding floors, focused on uptime, first-pass quality, and safe shift handoffs."
+
+[[role]]
+id = "greatlakes.lead"
+employer = "Great Lakes Stamping"
+title = "Production Line Lead"
+location = "Toledo, OH"
+start = "2021-03"
+end = "present"
+
+[[bullet]]
+id = "greatlakes.lead.oee"
+role = "greatlakes.lead"
+text = "Raised press line OEE from 71% to 82% by standardizing die changeovers on second shift"
+basis = "records"
+defense = "Plant OEE dashboard, 2022 against 2024."
+
+[[bullet]]
+id = "greatlakes.lead.scrap"
+role = "greatlakes.lead"
+text = "Cut scrap on the bracket line from 4.1% to 2.3% by adding a first-piece inspection at each shift start"
+basis = "records"
+defense = "Monthly scrap report from quality."
+
+[[bullet]]
+id = "greatlakes.lead.crew"
+role = "greatlakes.lead"
+text = "Lead a crew of 9 operators on 12-hour rotating shifts across 3 presses"
+basis = "records"
+
+[[bullet]]
+id = "greatlakes.lead.changeover"
+role = "greatlakes.lead"
+text = "Shortened die changeovers from 45 minutes to 28 minutes with a SMED checklist"
+basis = "measured"
+defense = "Stopwatch times logged on the changeover sheet."
+
+[[role]]
+id = "greatlakes.operator"
+employer = "Great Lakes Stamping"
+title = "Press Operator"
+location = "Toledo, OH"
+start = "2018-06"
+end = "2021-02"
+
+[[bullet]]
+id = "greatlakes.operator.output"
+role = "greatlakes.operator"
+text = "Ran a 400-ton transfer press at 520 parts per hour, the top rate on second shift for 2 straight years"
+basis = "records"
+defense = "Shift production boards kept by the supervisor."
+
+[[bullet]]
+id = "greatlakes.operator.safety"
+role = "greatlakes.operator"
+text = "Worked 3 years with no recordable injuries and was picked as a plant lockout/tagout trainer"
+basis = "records"
+
+[[role]]
+id = "maumee"
+employer = "Maumee Plastics"
+title = "Machine Operator"
+location = "Maumee, OH"
+start = "2015-08"
+end = "2018-05"
+
+[[bullet]]
+id = "maumee.qc"
+role = "maumee"
+text = "Ran 2 injection molding machines and passed every customer quality audit on my line"
+basis = "records"
+
+[[skill]]
+id = "skill.production"
+label = "Production"
+items = ["Lean manufacturing", "5S", "SMED", "Lockout/tagout", "Forklift"]
+
+[[skill]]
+id = "skill.quality"
+label = "Quality"
+items = ["First-piece inspection", "Calipers and micrometers", "SPC charts"]
+
+[[credential]]
+id = "cred.forklift"
+name = "Forklift Operator Certification"
+date = "2019"
+
+[[credential]]
+id = "cred.osha10"
+name = "OSHA 10-Hour General Industry"
+date = "2020"
+
+[[education]]
+id = "edu.tech"
+school = "Lucas County Technical College"
+credential = "Certificate"
+field = "Manufacturing Technology"
+date = "2015"

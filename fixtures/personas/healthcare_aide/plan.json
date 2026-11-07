@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "fit": {"score": "moderate", "summary": "Six years of direct care with vitals, charting, and transfers, plus active CNA and BLS; no hospital, phlebotomy, or EKG experience."},
+  "summary": {"atom": "summary.main"},
+  "experience": [
+    {"role": "willow", "bullets": [
+      {"atom": "willow.residents", "text": "Care for 12 memory care residents per shift: bathing, feeding, transfers, and repositioning"},
+      "willow.vitals",
+      "willow.falls"
+    ]},
+    {"role": "lakeview", "bullets": ["lakeview.rehab", "lakeview.orient"]}
+  ],
+  "skills": ["skill.care", "skill.charting"],
+  "credentials": ["cred.cna", "cred.bls"],
+  "education": ["edu.cna"],
+  "cover_letter": {
+    "hook": "Night-shift patient care on a busy unit is the work I know best, and I would like to bring it to St. Brendan Medical Center.",
+    "body": "At Willow Creek Senior Living I care for 12 memory care residents per shift and chart vital signs and intake and output in PointClickCare. Hourly rounding on my night shift helped bring our unit's falls down 40% in one year.\n\nBefore that I worked in short-term rehab at Lakeview Rehabilitation Center, moving patients safely with gait belts and Hoyer lifts. I hold an active Texas CNA certification and current BLS from the American Heart Association.",
+    "close": "I would like to hear how your patient care techs and nurses split the work on a night shift.",
+    "cites": ["willow.residents", "willow.vitals", "willow.falls", "lakeview.rehab", "cred.cna", "cred.bls"]
+  },
+  "gaps": ["No hospital experience yet; phlebotomy and EKG certifications are preferred and Rosa holds neither."]
+}

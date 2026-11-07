@@ -1,0 +1,79 @@
+[[summary]]
+id = "summary.main"
+text = "Office administrator who keeps billing, files, and calendars running for a small team, so the people with clients can stay with clients."
+
+[[role]]
+id = "hartley"
+employer = "Hartley & Moss Insurance Agency"
+title = "Office Administrator"
+location = "Columbus, OH"
+start = "2019-09"
+end = "present"
+
+[[bullet]]
+id = "hartley.billing"
+role = "hartley"
+text = "Run monthly client billing and accounts receivable in QuickBooks Online for 3 agents"
+basis = "records"
+
+[[bullet]]
+id = "hartley.files"
+role = "hartley"
+text = "Moved the agency's paper client files into SharePoint and set up a naming system the whole office uses"
+basis = "records"
+
+[[bullet]]
+id = "hartley.calendar"
+role = "hartley"
+text = "Manage calendars, renewal reminders, and incoming client calls in Outlook"
+basis = "records"
+
+[[bullet]]
+id = "hartley.vendors"
+role = "hartley"
+text = "Handle office vendors, supply orders, and the copier and phone contracts"
+basis = "records"
+
+[[role]]
+id = "summit"
+employer = "Summit Dental Group"
+title = "Front Desk Receptionist"
+location = "Columbus, OH"
+start = "2016-03"
+end = "2019-08"
+
+[[bullet]]
+id = "summit.schedule"
+role = "summit"
+text = "Scheduled patients for 4 dentists and confirmed next-day appointments by phone and text"
+basis = "records"
+
+[[bullet]]
+id = "summit.insurance"
+role = "summit"
+text = "Verified patient insurance and entered claims in Dentrix"
+basis = "records"
+
+[[skill]]
+id = "skill.office"
+label = "Office software"
+items = ["Microsoft Excel", "Microsoft Word", "Outlook", "SharePoint", "QuickBooks Online"]
+
+[[skill]]
+id = "skill.admin"
+label = "Administration"
+items = ["Accounts receivable", "Scheduling", "Vendor management", "Dentrix"]
+
+[[credential]]
+id = "cred.mos"
+name = "Microsoft Office Specialist: Excel Associate"
+issuer = "Microsoft"
+date = "2022"
+
+[[education]]
+id = "edu.cc"
+school = "Franklin Valley Community College"
+credential = "Associate of Applied Science"
+field = "Administrative Office Technology"
+location = "Columbus, OH"
+date = "2016"
