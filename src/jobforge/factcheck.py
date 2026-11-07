@@ -76,9 +76,15 @@ def vocabulary(inv: Inventory, profile: Profile) -> list[str]:
     return sorted((t for t in terms if t), key=len, reverse=True)
 
 
-def _profile_text(profile: Profile) -> str:
-    return " ".join([profile.name, profile.email, profile.phone, profile.location,
-                     *profile.links])
+def _strip_contact(text: str, profile: Profile) -> str:
+    """The text with the user's own contact details removed. "Reach me at
+    555-0100" states no fact, but the profile is not a source of facts
+    either: its digits must not let a letter claim "100 drivers" (issue #1)."""
+    items = [profile.phone, profile.email, *profile.links,
+             *(display_url(u) for u in profile.links)]
+    for item in sorted((i for i in items if i), key=len, reverse=True):
+        text = re.sub(re.escape(item), " ", text, flags=re.IGNORECASE)
+    return text
 
 
 def check_figures(text: str, pool: str, where: str, rep: Report, extra_pool: str = "") -> None:
@@ -182,7 +188,7 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
     if job:
         posting = " ".join(str(job.get(k, "")) for k in
                            ("company", "title", "location", "description"))
-    pool = "\n".join([_pool_text(cites, inv), _profile_text(profile), posting])
+    pool = "\n".join([_pool_text(cites, inv), posting])
 
     check_voice(text, profile, where, rep)
     check_atom_ids(text, inv, where, rep)
@@ -201,19 +207,20 @@ def check_letter(plan: ResolvedPlan, inv: Inventory, profile: Profile, vocab: li
     for i, sentence in enumerate(split_sentences(text), 1):
         sw = f"{where} sentence {i}"
         named = [e for e in employers if term_in(e, sentence)]
+        figures = _strip_contact(sentence, profile)
         if len(named) == 1:
-            # Only that employer's facts (and the profile) may appear here.
+            # Only that employer's facts may appear here.
             bound = [a for a in cites if inv.employer_of(a) == named[0]]
             bound += employers[named[0]]
-            scoped = _pool_text(bound, inv) + "\n" + _profile_text(profile)
-            check_figures(sentence, scoped, f"{sw} (names {named[0]!r})", rep)
+            scoped = _pool_text(bound, inv)
+            check_figures(figures, scoped, f"{sw} (names {named[0]!r})", rep)
             check_terms(sentence, scoped, vocab, profile, f"{sw} (names {named[0]!r})", rep)
         else:
             if len(named) > 1:
                 rep.warnings.append(f"{sw}: names {len(named)} employers "
                                     f"({', '.join(named)}); check each figure is "
                                     f"credited to the right one.")
-            check_figures(sentence, pool, sw, rep)
+            check_figures(figures, pool, sw, rep)
             check_terms(sentence, pool, vocab, profile, sw, rep)
 
     # Projects: cited, or named by title, with a live URL -> full URL in text.
