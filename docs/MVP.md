@@ -275,21 +275,21 @@ Mapped onto the SOW, the MVP is roughly phases 0.1 to 0.4 plus the
    commit, since passing this gate makes the repo public (D-44). If it
    finds anything, the public repo gets a squashed fresh history.
 
-### Build status (2026-11-06)
+### Build status (2026-11-07)
 
 | Gate item | State |
 |---|---|
-| 1. Acceptance script, John Smith + trades, entry level, career changer | **Automated and passing** (`tests/test_personas.py`), from `prepare` to read-back. The agent half (setup interview, plan writing) is still a manual run. |
-| 2. Critical paths at 100% | Overall 99% line and branch coverage, every module 97% or higher. A separate critical-only number is not computed yet (tests are marked `critical`). |
+| 1. Acceptance script, John Smith + trades, entry level, career changer | **Automated and passing** for every persona (`tests/test_personas.py`), from `prepare` to read-back. The agent half ran by hand on a clean Linux VM (#3): a fictional resume through setup, `confirm`, and one application, with a planted instruction in the posting that the agent refused (#28). |
+| 2. Critical paths at 100% | **Passing.** CI runs `tools/critical_coverage.py` after the suite and fails under 100% line and branch coverage on the critical files listed in `pyproject.toml` (D-51). The whole suite is held at 95%. |
 | 3. Planted-violation suite | **Passing** (`tests/test_factcheck.py`, plus one planted violation, one never-claim, and one employer swap per persona). |
-| 4. `.docx` reads back clean | **Passing.** `apply` itself reads every document back and refuses to finish if text is lost or a hidden character appears. |
-| 5. T-PII, T-STD, T-XPLAT | T-STD passing. T-PII written; skips until a maintainer supplies the denylist. T-XPLAT waits on CI, which needs the GitHub remote. |
-| 6. A real non-maintainer, README only | Not started. |
-| 7. VM checklist once per OS | Draft in `docs/VM_CHECKLIST.md`; not run. |
+| 4. `.docx` reads back clean | **Passing.** `apply` itself reads every document back and refuses to finish if text is lost or a hidden character appears. Word, LibreOffice, and Google Docs open both documents with no repair prompt, one page each (#3, #28). |
+| 5. T-PII, T-STD, T-XPLAT | T-STD **passing**. T-PII **passing**: CI runs it with the maintainers' denylist secret. T-XPLAT: the suite runs on Linux in CI and on Windows on a maintainer's machine; `windows-latest` joins the CI matrix at the flip (#20). |
+| 6. A real non-maintainer, README only | Moved to the Public Release milestone (#55). |
+| 7. VM checklist once per OS | **Done.** Linux: clean Ubuntu VM, `0.1.0rc1` from TestPyPI (#3). Windows: a fresh runner, from a clone and from PyPI, every unattended step passing on `0.1.0rc3` (#56, the `clean-windows` workflow). |
+| 8. T-PII over the whole history | Planned for the flip: the history is rewritten with `git filter-repo --replace-text`, keeping every commit's author, date, and message (#20). |
 
-Also still needed before the public flip: the `LICENSE` file (official
-PolyForm Noncommercial 1.0.0 text), and the D-17/D-18 employer names out of
-DECISIONS.md and SOW.md.
+The `LICENSE` file (PolyForm Noncommercial 1.0.0, #23) is in, and the
+employer names are out of the tree (#43).
 
 ---
 
