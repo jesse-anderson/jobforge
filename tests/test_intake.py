@@ -1,14 +1,15 @@
 """D-30 item 2: job intake from a URL (saved HTML, fetch stubbed) and from
 pasted text, including the private repo's failures F23 and F27."""
 import json
+import re
 import urllib.error
 
 import pytest
 
 from jobforge import extract
 from jobforge.errors import JobforgeError
-from jobforge.extract import (FetchBlocked, from_text, from_url, html_to_text,
-                              looks_like_domain, strip_title_suffix)
+from jobforge.extract import (FetchBlocked, company_from_title, from_text, from_url,
+                              html_to_text, looks_like_domain, strip_title_suffix)
 from jobforge.ledger import read_events
 from jobforge.prepare import folder_name, prepare, slug
 
@@ -47,14 +48,22 @@ def test_page_text_fallback_strips_suffix_and_requires_company():
     assert any("No structured posting data" in w for w in warnings)
 
 
-def test_domain_company_is_refused_and_placeholders_stripped():
-    # F27: Breezy page, company from og:site_name is a hostname.
-    with pytest.raises(JobforgeError, match="web address, not a company name"):
-        from_url("https://bitdeer.breezy.hr/p/1", fetch=fake_fetch("breezy_placeholders.html"))
-    job, _ = from_url("https://bitdeer.breezy.hr/p/1", company="Bitdeer",
-                      fetch=fake_fetch("breezy_placeholders.html"))
+def test_hostname_site_name_loses_to_the_company_in_the_title():
+    # F23/F27: Breezy page whose og:site_name is a hostname. The title names
+    # the company, so that is used instead, and placeholders are stripped.
+    job, _ = from_url("https://bitdeer.breezy.hr/p/1", fetch=fake_fetch("breezy_placeholders.html"))
+    assert job.company == "Bitdeer Technologies Group"
     assert job.title == "GPU Compute Engineer"
     assert "%" not in job.description
+
+
+def test_domain_company_is_refused():
+    # F23: with nothing better on the page, a hostname is never the company.
+    html = ('<html><head><title>GPU Compute Engineer | Careers</title>'
+            '<meta property="og:site_name" content="bitdeer.breezy.hr"></head>'
+            f'<body><p>{LONG}</p></body></html>')
+    with pytest.raises(JobforgeError, match="web address, not a company name"):
+        from_url("https://bitdeer.breezy.hr/p/1", fetch=lambda u: html)
 
 
 def test_blocked_board_says_to_paste():
@@ -96,6 +105,7 @@ def test_url_must_be_http():
     ("Data Analyst at Bitdeer Technologies Group", "Data Analyst"),
     ("Software Engineer - Infrastructure", "Software Engineer - Infrastructure"),
     ("Driver  ::  Indeed", "Driver"),
+    ("Job Application for Data Analyst, Operations at Lakemont Analytics", "Data Analyst, Operations"),
 ])
 def test_strip_title_suffix(raw, clean):
     assert strip_title_suffix(raw) == clean
@@ -179,3 +189,94 @@ def test_slug_is_bounded_and_never_empty():
 def test_folder_name_format():
     job, _ = from_text(LONG, company="A&B", title="C/D")
     assert folder_name(job, TODAY) == "a_b__c_d__2026-11-20"
+
+
+# Issue #4: one posting from each common board, saved with the real page's
+# structure (2026-11) and fictional text. Each either gives correct fields or
+# stops and asks for what it could not read. Never a domain or an entity code
+# as the company (F23), never a %PLACEHOLDER% in the description (F27).
+BOARDS = [
+    # fixture, url, company, title, location, source, a phrase from the posting
+    ("greenhouse_job_boards.html", "https://job-boards.greenhouse.io/ridgeline/jobs/1234567001",
+     "Ridgeline Robotics", "Field Service Technician", "", "page-text", "autonomous floor scrubbers"),
+    ("greenhouse_boards_legacy.html", "https://boards.greenhouse.io/lakemont/jobs/2345678001",
+     "Lakemont Analytics", "Data Analyst, Operations", "", "page-text", "14 hospital scheduling systems"),
+    ("lever_posting.html", "https://jobs.lever.co/harborpoint/00000000-0000-4000-8000-000000000002",
+     "Harbor Point Logistics", "Warehouse Operations Lead", "Memphis, Tennessee", "json-ld",
+     "400,000 sq ft cross-dock"),
+    ("ashby_posting.html", "https://jobs.ashbyhq.com/northbeam/00000000-0000-4000-8000-000000000001",
+     "Northbeam Energy", "Controls Engineer", "Denver, CO, USA", "json-ld", "Modbus and DNP3"),
+    ("smartrecruiters_posting.html", "https://jobs.smartrecruiters.com/CascadeFoods/744000000000001",
+     "Cascade Foods", "Plant Maintenance Supervisor", "Boise, ID, United States", "page-text",
+     "crew of 12 maintenance technicians"),
+    ("breezy_posting.html", "https://copperline.breezy.hr/p/0123456789ab-line-cook",
+     "Copperline Kitchen Group", "Line Cook", "", "page-text", "4 restaurants in western North Carolina"),
+]
+
+
+@pytest.mark.parametrize("fixture,url,company,title,location,source,phrase", BOARDS,
+                         ids=[b[0].split(".")[0] for b in BOARDS])
+def test_board_posting_fields(fixture, url, company, title, location, source, phrase):
+    job, warnings = from_url(url, fetch=fake_fetch(fixture))
+    assert (job.company, job.title, job.location, job.source) == (company, title, location, source)
+    assert phrase in job.description
+    assert not looks_like_domain(job.company)
+    assert not re.search(r"%[A-Z][A-Z0-9_]{2,}%", job.description)
+    assert bool(warnings) is (source == "page-text")
+
+
+def test_workday_entity_code_is_not_taken_as_the_company():
+    """Workday's JSON-LD names an internal legal entity ("2100 NVIDIA USA"),
+    which would go out as "Dear 4100 Fernwood Industries USA Hiring Team"."""
+    url = ("https://fernwood.wd5.myworkdayjobs.com/en-US/External/job/US-OH-Dayton/"
+           "Senior-Process-Engineer---Molding_JR0000001")
+    with pytest.raises(JobforgeError, match="entity code") as exc:
+        from_url(url, fetch=fake_fetch("workday_posting.html"))
+    assert "Pass --company" in exc.value.render()
+    job, warnings = from_url(url, company="Fernwood Industries",
+                             fetch=fake_fetch("workday_posting.html"))
+    assert job.company == "Fernwood Industries"
+    assert job.title == "Senior Process Engineer – Molding"
+    assert job.location == "US, OH, Dayton, United States of America"
+    assert job.source == "json-ld" and warnings == []
+    assert "30 presses" in job.description
+
+
+def test_a_company_you_name_that_starts_with_digits_is_kept():
+    job, _ = from_url("https://x.example.com/1", company="99 Cents Only Stores",
+                      fetch=fake_fetch("workday_posting.html"))
+    assert job.company == "99 Cents Only Stores"
+
+
+def test_google_careers_posting_asks_for_the_company():
+    url = "https://www.google.com/about/careers/applications/jobs/results/123-technical-support-engineer"
+    with pytest.raises(JobforgeError, match="Pass --company"):
+        from_url(url, fetch=fake_fetch("google_careers_job.html"))
+    job, warnings = from_url(url, company="Google", fetch=fake_fetch("google_careers_job.html"))
+    assert job.title == "Technical Support Engineer, Cloud Storage"
+    assert job.source == "page-text"
+    assert "storage performance" in job.description
+    assert any("No structured posting data" in w for w in warnings)
+
+
+@pytest.mark.parametrize("raw,company", [
+    ("Job Application for Field Service Technician at Ridgeline Robotics", "Ridgeline Robotics"),
+    ("Line Cook at Copperline Kitchen Group", "Copperline Kitchen Group"),
+    ("Welder - Jobs at Acme", "Acme"),
+    ("Field Applications Engineer — Google Careers", ""),
+    ("Software Engineer - Infrastructure", ""),
+    ("Process Engineer | Acme Careers", ""),
+])
+def test_company_from_title(raw, company):
+    assert company_from_title(raw) == company
+
+
+def test_json_ld_without_a_job_posting_falls_back_to_page_text():
+    """Many career sites publish only Organization or BreadcrumbList JSON-LD."""
+    html = ('<html><head><title>Welder at Acme Fabrication</title>'
+            '<script type="application/ld+json">{"@type": "Organization", "name": "Acme"}</script>'
+            '<script type="application/ld+json">{"@type": "BreadcrumbList"}</script>'
+            f'</head><body><p>{LONG}</p></body></html>')
+    job, warnings = from_url("https://acme.example.com/jobs/1", fetch=lambda u: html)
+    assert (job.company, job.title, job.source) == ("Acme Fabrication", "Welder", "page-text")
+    assert warnings
