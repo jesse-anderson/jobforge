@@ -12,18 +12,18 @@ import unicodedata
 from dataclasses import dataclass
 
 _NAMED = {
-    "​": "zero-width space",
-    "‌": "zero-width non-joiner",
-    "‍": "zero-width joiner",
-    "⁠": "word joiner",
-    "﻿": "zero-width no-break space (BOM)",
-    "­": "soft hyphen",
-    " ": "non-breaking space",
-    " ": "narrow non-breaking space",
-    " ": "figure space",
-    "᠎": "Mongolian vowel separator",
+    "\u200b": "zero-width space",
+    "\u200c": "zero-width non-joiner",
+    "\u200d": "zero-width joiner",
+    "\u2060": "word joiner",
+    "\ufeff": "zero-width no-break space (BOM)",
+    "\u00ad": "soft hyphen",
+    "\u00a0": "non-breaking space",
+    "\u202f": "narrow non-breaking space",
+    "\u2007": "figure space",
+    "\u180e": "Mongolian vowel separator",
 }
-_BIDI = set("‪‫‬‭‮⁦⁧⁨⁩‎‏")
+_BIDI = set("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069\u200e\u200f")
 _LIGATURES = {chr(c) for c in range(0xFB00, 0xFB07)}
 
 
@@ -113,7 +113,7 @@ def clean(text: str) -> str:
         name = _name(ch)
         if name is None:
             out.append(ch)
-        elif ch in (" ", " ", " "):
+        elif ch in ("\u00a0", "\u202f", "\u2007"):
             out.append(" ")
         elif ch in _LIGATURES:
             out.append(unicodedata.normalize("NFKC", ch))

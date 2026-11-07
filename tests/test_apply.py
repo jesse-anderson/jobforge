@@ -84,7 +84,7 @@ def test_postings_own_en_dash_does_not_block(ws, job_folder):
 
 def test_hidden_character_in_an_atom_blocks_apply(ws, job_folder):
     add_atoms(ws, '[[bullet]]\nid = "northwind.zw"\nrole = "northwind"\n'
-                  'text = "Ran cycle​counts weekly"\nbasis = "records"\n')
+                  'text = "Ran cycle\u200bcounts weekly"\nbasis = "records"\n')
     edit_plan(job_folder, lambda p: p["experience"][0]["bullets"].append("northwind.zw"))
     with pytest.raises(JobforgeError) as exc:
         apply(ws, job_folder, today=TODAY)
@@ -172,7 +172,7 @@ def test_readback_failure_blocks_and_cleans_up(ws, job_folder, monkeypatch):
 
 
 def test_verify_readback_reports_missing_url_and_hidden():
-    rep = verify_readback("Line one here", ["Line one here", "Line two"],
+    rep = verify_readback("Line one\u00a0here", ["Line one here", "Line two"],
                           ["https://example.com/a"], "doc")
     assert any("non-breaking space" in e for e in rep.errors)
     assert any("Line two" in e for e in rep.errors)

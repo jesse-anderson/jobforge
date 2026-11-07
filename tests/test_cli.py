@@ -401,7 +401,7 @@ def test_prepare_reads_a_utf8_posting_without_a_warning(run, ws, tmp_path):
 @pytest.mark.parametrize("encoding", ["utf-16", "utf-16-le", "utf-16-be"])
 def test_prepare_reads_a_utf16_posting(run, ws, tmp_path, encoding):
     posting = tmp_path / "posting.txt"
-    bom = "﻿" if encoding != "utf-16" else ""  # "utf-16" writes its own
+    bom = "\ufeff" if encoding != "utf-16" else ""  # "utf-16" writes its own
     posting.write_bytes((bom + POSTING_1252).encode(encoding))
     code, err, desc = prepare_from(run, ws, posting)
     assert code == 0 and "warning" not in err, err
