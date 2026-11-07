@@ -97,6 +97,26 @@ def test_figure_from_another_atom_is_not_borrowed(ws, john_plan):
     expect(check(ws, john_plan), "the figure 99.6% is not in the facts")
 
 
+def test_month_in_role_dates_is_not_a_figure(ws, john_plan):
+    # Issue #1: Northwind starts "2020-04"; the 04 must not allow "4".
+    john_plan["experience"][0]["bullets"][1] = {
+        "atom": "northwind.team", "text": "Lead a team of 4 supervisors and 14 associates"}
+    expect(check(ws, john_plan), "the figure 4 is not in the facts")
+
+
+def test_month_in_cited_role_dates_is_not_a_figure_in_the_summary(ws, john_plan):
+    # Issue #1: Lakeside runs "2016-06" to "2020-03"; neither 6 nor 3 is a fact.
+    john_plan["summary"] = {"atom": "summary.main", "cites": ["lakeside"],
+                            "text": "Warehouse supervisor with 9 years who has run 6 sites."}
+    expect(check(ws, john_plan), "the figure 6 is not in the facts")
+
+
+def test_year_from_role_dates_passes(ws, john_plan):
+    john_plan["experience"][0]["bullets"][1] = {
+        "atom": "northwind.team", "text": "Lead 14 associates across two shifts since 2020"}
+    assert check(ws, john_plan).ok
+
+
 def test_never_claim_tool_in_a_bullet(ws, john_plan):
     john_plan["experience"][0]["bullets"][0] = {
         "atom": "northwind.accuracy", "text": "Raised pick accuracy from 97.2% to 99.6% with SAP scanning"}
