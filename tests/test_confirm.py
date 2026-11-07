@@ -185,3 +185,51 @@ def test_input_ending_mid_review_keeps_earlier_answers(ws):
     assert out.skipped == ["skill.plc", "acme.uptime"]
     assert any("Input ended" in s for s in said)
     assert load_inventory(ws).get("acme") is not None
+
+
+def test_review_shows_dates_and_details_the_user_is_confirming():
+    """Issue #2 run: a credential's date and a degree's field and date were
+    confirmed without ever being shown."""
+    from pathlib import Path
+
+    from jobforge.atoms import Atom
+    from jobforge.confirm import describe
+    cred = Atom("credential", "cred.osha30", {
+        "id": "cred.osha30", "name": "OSHA 30-Hour General Industry",
+        "issuer": "OSHA Training Institute", "date": "2019", "expires": "2029"}, Path("p"))
+    text = describe(cred, None)
+    for shown in ("OSHA 30-Hour General Industry", "Issuer: OSHA Training Institute",
+                  "Date: 2019", "Expires: 2029"):
+        assert shown in text, text
+    edu = Atom("education", "edu.cc", {
+        "id": "edu.cc", "school": "Prairie Ridge Community College",
+        "credential": "Associate of Applied Science",
+        "field": "Industrial Maintenance Technology", "date": "2011",
+        "location": "Decatur, IL", "details": "Dean's list"}, Path("p"))
+    text = describe(edu, None)
+    for shown in ("Field: Industrial Maintenance Technology", "Date: 2011",
+                  "Location: Decatur, IL", "Details: Dean's list"):
+        assert shown in text, text
+
+
+@pytest.mark.parametrize("kind", ["role", "bullet", "project", "skill", "credential",
+                                  "education", "summary"])
+def test_review_shows_every_schema_field(kind):
+    """No field the schema allows is hidden from the person confirming it."""
+    from pathlib import Path
+
+    from jobforge.atoms import SCHEMA, Atom
+    from jobforge.confirm import describe
+    required, optional = SCHEMA[kind]
+    fields = {}
+    for key in sorted(required | optional):
+        if key in ("phrasing", "role", "project", "context"):
+            continue  # shown as "Also worded" / the owner line
+        fields[key] = ["v-" + key] if key in ("facts", "tags", "items") else "v-" + key
+    fields["id"] = "x.y"
+    text = describe(Atom(kind, "x.y", fields, Path("p")), None)
+    for key, value in fields.items():
+        if key == "id":
+            continue
+        shown = value[0] if isinstance(value, list) else value
+        assert shown in text, (key, text)

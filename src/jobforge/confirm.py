@@ -38,6 +38,16 @@ class Outcome:
     refused: list[str]
 
 
+_FIELD_LABELS = (
+    ("text", "Text"), ("title", "Title"), ("name", "Name"), ("school", "School"),
+    ("credential", "Credential"), ("field", "Field"), ("label", "Label"),
+    ("items", "Items"), ("issuer", "Issuer"), ("date", "Date"), ("expires", "Expires"),
+    ("location", "Location"), ("details", "Details"), ("url", "URL"),
+    ("writeup_url", "Writeup URL"), ("url_status", "URL status"),
+    ("facts", "Also states"), ("reword_of", "Rewords"), ("tags", "Tags"),
+)
+
+
 def describe(atom: Atom, owner: Atom | None) -> str:
     lines = [f"{atom.kind.upper()}  {atom.id}"]
     if atom.kind == "role":
@@ -49,13 +59,21 @@ def describe(atom: Atom, owner: Atom | None) -> str:
     elif atom.kind in ("bullet", "project"):
         ctx = atom.get("context") or atom.get("project") or atom.get("role")
         lines.append(f"  Belongs to: {ctx}")
-    for key in ("text", "title", "name", "school", "credential", "label"):
-        if atom.get(key) and not (atom.kind == "role" and key == "title"):
-            lines.append(f"  {key.capitalize()}: {atom.get(key)}")
-    if atom.get("items"):
-        lines.append(f"  Items: {', '.join(atom.get('items'))}")
-    if atom.get("url"):
-        lines.append(f"  URL: {atom.get('url')}")
+    # Every field the user is asked to keep is shown. A date or field of study
+    # confirmed unseen is still a fact the check will trust (issue #2 run).
+    shown = {"id", "employer", "start", "end", "role", "project", "context",
+             "phrasing", "basis", "defense"} | ({"title"} if atom.kind == "role" else set())
+    for key, label in _FIELD_LABELS:
+        value = atom.get(key)
+        if key in shown or value in (None, "", []):
+            continue
+        shown.add(key)
+        if isinstance(value, list):
+            value = ", ".join(str(v) for v in value)
+        lines.append(f"  {label}: {value}")
+    for key, value in atom.fields.items():  # anything a later schema adds
+        if key not in shown and value not in (None, "", []):
+            lines.append(f"  {key.capitalize()}: {value}")
     if atom.get("basis"):
         lines.append(f"  How you know: {atom.get('basis')}")
     if atom.get("defense"):
