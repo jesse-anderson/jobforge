@@ -69,6 +69,7 @@ what changed and why. Do not silently edit old answers.
 | D-47 | MVP accepted | MVP.md accepted; it is the public launch (0.x preview). Chatbot/Claude Skill path welcome but not gating. Ghost after 30 days. `check` added. Report is plain HTML/CSS/JS, no build step. Job Apps = whole workstream. (2026-11-06) |
 | D-48 | Commits | Only Jesse or Mike commit. AI may propose a commit message, with no AI attribution lines. (2026-11-06) |
 | D-49 | Copyright | Jesse and Mike hold the copyright jointly; a license change needs both. Contributors keep their copyright and license contributions under PolyForm NC by submitting them, with a DCO sign-off. (2026-11-06) |
+| D-50 | Rounding | Claiming less is fine: dropping decimals passes. Rounding that changes a figure is refused; the user confirms a rounded form once as a phrasing on the atom, and the agent offers it. (2026-11-06) |
 
 ---
 
@@ -915,3 +916,23 @@ under the project license.**
   (D-19).
 - The DCO's phrase "the open source license indicated in the file" is read
   as this project's license.
+
+### Rounding (stated 2026-11-06)
+> I think claiming less is ok, better to be loose or hell even round down
+> when it comes to saving money or be conservative overall.
+
+**D-50. Claim less, never more; rounding is the user's call, made once.**
+- A figure may be written with less precision than its atom, as long as the
+  value is the same: "76%" for a confirmed "76.0%". It may never be written
+  with more ("76.00%", "$1.20M" for "$1.2M"). The fact check enforces both
+  (#11, #26).
+- Rounding that changes the number ("$36k" for "$36,753") stays refused by
+  the check. Whether rounding down is conservative depends on what the
+  number measures: down is safe for money saved or units shipped, and an
+  overclaim for downtime, cost, or a defect rate. Code cannot tell which, and
+  guessing is what the check exists to prevent.
+- Instead, the user confirms the rounded form once, as a phrasing on the
+  atom. It then passes everywhere, and the rounding was the user's choice.
+  During setup the agent offers a plain rounded form for long or exact
+  figures ("Want this recorded as $36k too?"), rounding in the conservative
+  direction for what the figure measures.
