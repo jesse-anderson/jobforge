@@ -21,8 +21,8 @@ it; tell the user it is there.
 ## What you may write
 
 - New facts go in `profile/pending/*.toml`, never in `profile/atoms/`. The
-  user runs `jobforge confirm` to keep or drop each one. Only confirmed facts
-  can be used.
+  user runs `jobforge confirm` to keep, edit, or drop each one. Edit opens
+  the fact in their text editor. Only confirmed facts can be used.
 - For each job, you write `jobs/<folder>/plan.json`.
 - You may fill in `profile/profile.toml` with the user's name and contact
   details during setup.
