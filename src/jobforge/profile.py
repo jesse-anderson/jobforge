@@ -100,7 +100,7 @@ def load_profile(ws: Workspace) -> Profile:
         raise JobforgeError(f"{rel} is missing. Restore it from a backup, or "
                             f"start a new workspace with `jobforge init <folder>`.")
     try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        data = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     except tomllib.TOMLDecodeError as exc:
         raise JobforgeError(f"{rel} is not valid TOML: {exc}") from exc
     return profile_from_dict(data, rel)
