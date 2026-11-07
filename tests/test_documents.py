@@ -51,16 +51,16 @@ def test_no_tables_frames_or_headers(tmp_path):
 
 
 @pytest.mark.parametrize("ch,name", [
-    ("​", "zero-width space"), ("‌", "zero-width non-joiner"),
-    ("‍", "zero-width joiner"), ("﻿", "zero-width no-break space"),
-    ("­", "soft hyphen"), (" ", "non-breaking space"),
-    (" ", "narrow non-breaking space"), ("⁠", "word joiner"),
-    ("‮", "text direction control"), ("ﬁ", "ligature glyph"),
+    ("\u200b", "zero-width space"), ("\u200c", "zero-width non-joiner"),
+    ("\u200d", "zero-width joiner"), ("\ufeff", "zero-width no-break space"),
+    ("\u00ad", "soft hyphen"), ("\u00a0", "non-breaking space"),
+    ("\u202f", "narrow non-breaking space"), ("\u2060", "word joiner"),
+    ("\u202e", "text direction control"), ("\ufb01", "ligature glyph"),
     ("\x07", "control character"),
     # #49: any other invisible formatting character (Unicode Cf), e.g. the
     # invisible separator and the Arabic letter mark.
     ("\u2063", "invisible formatting character"), ("\u061c", "invisible formatting character"),
-    ("", "private-use character"),
+    ("\ue000", "private-use character"),
     ("\ud800", "lone surrogate"),  # F8 (#28): cannot be written to a file
 ])
 def test_hidden_characters_are_found(ch, name):
@@ -92,7 +92,7 @@ def test_ordinary_text_is_clean():
 
 
 def test_clean_fixes_posting_text():
-    assert clean("a b​cﬁne­") == "a bcfine"
+    assert clean("a\u00a0b\u200bc\ufb01ne\u00ad") == "a bcfine"
 
 
 def test_italic_run_is_written_and_reads_back(tmp_path):

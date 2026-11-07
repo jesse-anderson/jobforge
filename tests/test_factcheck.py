@@ -873,8 +873,8 @@ def test_bullet_whose_project_is_missing_counts_only_its_own_text(ws):
 
 # Issue #85 (audit A13): a hidden character fails `check`, not only `apply`'s
 # read-back, so the agent's check loop catches it a round earlier.
-HIDDEN = [("​", "zero-width space"), ("‮", "text direction control"),
-          ("­", "soft hyphen")]
+HIDDEN = [("\u200b", "zero-width space"), ("\u202e", "text direction control"),
+          ("\u00ad", "soft hyphen")]
 
 
 def plant(plan, where, ch):
@@ -907,12 +907,12 @@ def test_hidden_character_fails_check(ws, john_plan, ch, name, where, label):
 
 def test_hidden_character_in_the_letter_body_fails_check(ws, john_plan):
     john_plan["cover_letter"]["body"] = john_plan["cover_letter"]["body"].replace(
-        "associates", "asso​ciates", 1)
+        "associates", "asso\u200bciates", 1)
     expect(check(ws, john_plan), "cover_letter body: hidden character: zero-width space")
 
 
 def test_hidden_character_cannot_slip_a_never_claim_term_past_check(ws, john_plan):
     # "S<U+200B>AP" was invisible to never-claim; now the character itself fails.
     john_plan["experience"][0]["bullets"][2] = {
-        "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using S​AP"}
+        "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using S\u200bAP"}
     expect(check(ws, john_plan), "hidden character: zero-width space")

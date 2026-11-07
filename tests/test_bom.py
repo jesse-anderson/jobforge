@@ -77,7 +77,7 @@ def test_posting_file_with_bom(ws, tmp_path, monkeypatch):
     assert main(["prepare", "--from-text", str(posting), "--company", "Prairie Freight Co.",
                  "--title", "Operations Supervisor"]) == 0
     folder = next((ws.root / "jobs").iterdir())
-    assert not read_job(folder)["description"].startswith("﻿")
+    assert not read_job(folder)["description"].startswith("\ufeff")
 
 
 def test_files_jobforge_writes_have_no_bom(ws, job_folder):

@@ -200,11 +200,11 @@ def test_from_text_errors(kwargs, needle):
 
 
 def test_hidden_characters_in_postings_are_cleaned():
-    title = "Operations Supervisor​"
-    job, _ = from_text(LONG + "­ﬁnal", company="Prairie Freight", title=title)
+    title = "Operations\u00a0Supervisor\u200b"
+    job, _ = from_text(LONG + "\u00ad\ufb01nal", company="Prairie\u00a0Freight", title=title)
     assert job.title == "Operations Supervisor"
     assert job.company == "Prairie Freight"
-    assert "­" not in job.description and "final" in job.description
+    assert "\u00ad" not in job.description and "final" in job.description
 
 
 def test_html_to_text_drops_scripts_and_keeps_blocks():
