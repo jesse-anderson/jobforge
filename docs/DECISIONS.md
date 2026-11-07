@@ -724,8 +724,9 @@ after 1.0.
 > [Employer A] I specifically carved out this tool.
 > [Employer B] No, it is not.
 
-**D-17, D-18.** Cleared. The tool is carved out of employer A's agreement, and
-no code comes from employer B's work, time, or equipment.
+**D-17, D-18.** Cleared. The tool is carved out of employer A's agreement,
+and no code comes from employer B's work, time, or equipment. Employer names
+are kept out of this repo.
 
 ---
 

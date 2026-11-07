@@ -30,16 +30,18 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install
         run: python -m pip install -e ".[dev]"
-      - name: PII denylist (maintainer secret; T-PII skips without it)
-        if: ${{ env.PII_DENYLIST != '' }}
-        shell: bash
-        env:
-          PII_DENYLIST: ${{ secrets.PII_DENYLIST }}
-        run: printf '%s\n' "$PII_DENYLIST" > "$RUNNER_TEMP/pii_denylist.txt"
+      # T-PII reads the denylist from the PII_DENYLIST secret (one term per
+      # line) and skips with a warning when it is unset. Only this step sees
+      # the secret; a step's own env cannot gate its `if:`, so the check is in
+      # the script.
       - name: Test with coverage
         shell: bash
         env:
-          JOBFORGE_PII_DENYLIST: ${{ runner.temp }}/pii_denylist.txt
+          PII_DENYLIST: ${{ secrets.PII_DENYLIST }}
         run: |
-          python -m coverage run -m pytest -q
+          if [ -n "$PII_DENYLIST" ]; then
+            printf '%s\n' "$PII_DENYLIST" > "$RUNNER_TEMP/pii_denylist.txt"
+            export JOBFORGE_PII_DENYLIST="$RUNNER_TEMP/pii_denylist.txt"
+          fi
+          python -m coverage run -m pytest -q -rs
           python -m coverage report --fail-under=95

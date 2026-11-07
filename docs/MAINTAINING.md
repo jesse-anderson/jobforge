@@ -9,7 +9,7 @@ Maintainer-only; users never need this file.
 |---|---|
 | A task, bug, or feature | GitHub issue on `jobforge` |
 | A decision | New dated entry in `docs/DECISIONS.md` (never edit an old answer) |
-| Anything naming a real person's search, pay, employer, or contacts | `the maintainers' private notes`, linked from the issue as "details in ops" |
+| Anything naming a real person's search, pay, employer, or contacts | `the maintainers' private notes`, filed under the issue number; the issue never points there |
 | Scraper or dashboard work | An issue on `jobs`, not here (COMPONENTS.md) |
 
 Issues and commit history in this repo **become public at launch**. Write
