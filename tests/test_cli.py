@@ -209,6 +209,56 @@ def test_python_dash_m_entry_point(tmp_path):
     assert proc.returncode == 0 and __version__ in proc.stdout
 
 
+# Issue #52: on Windows, output to a pipe (how every agent runs jobforge) is
+# encoded with the locale code page, so a non-Latin name crashed the print
+# after the folder was already written. PYTHONIOENCODING=cp1252 reproduces
+# that on Linux; the unset case is what proves the fix on Windows.
+@pytest.mark.parametrize("forced", ["cp1252", None])
+@pytest.mark.parametrize("company", ["Łódź Foods", "株式会社テスト"])
+def test_piped_output_prints_non_latin_names(tmp_path, forced, company):
+    import os
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("PYTHONIOENCODING", "PYTHONUTF8", ENV_VAR)}
+    env["PYTHONPATH"] = str(REPO / "src")
+    if forced:
+        env["PYTHONIOENCODING"] = forced
+
+    def jobforge(*args, cwd):
+        return subprocess.run([sys.executable, "-m", "jobforge", *args], capture_output=True,
+                              env=env, cwd=cwd)
+
+    assert jobforge("init", str(tmp_path / "ws"), cwd=tmp_path).returncode == 0
+    ws = tmp_path / "ws"
+    done = jobforge("prepare", "--from-text", str(JOHN / "posting.txt"), "--company", company,
+                    "--title", "Cook", cwd=ws)
+    assert done.returncode == 0, done.stderr.decode("utf-8", "replace")
+    assert company in done.stdout.decode("utf-8")
+    listed = jobforge("jobs", cwd=ws)
+    assert listed.returncode == 0 and company in listed.stdout.decode("utf-8")
+
+
+def test_utf8_output_falls_back_to_replacing():
+    # A stream that cannot switch encoding still never raises on print.
+    from jobforge.cli import _utf8_output
+
+    class Stubborn:
+        calls = []
+
+        def reconfigure(self, **kw):
+            self.calls.append(kw)
+            if "encoding" in kw:
+                raise ValueError("can't change encoding now")
+    stream = Stubborn()
+    _utf8_output(stream)
+    assert stream.calls == [{"encoding": "utf-8"}, {"errors": "replace"}]
+
+
+def test_utf8_output_leaves_plain_streams_alone():
+    import io
+    from jobforge.cli import _utf8_output
+    _utf8_output(io.StringIO())  # no reconfigure method: nothing to do
+
+
 # --- import (issue #8) -------------------------------------------------------
 
 SAMPLE_CSV = REPO / "fixtures" / "import" / "sample_tracker.csv"
