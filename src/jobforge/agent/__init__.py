@@ -70,7 +70,9 @@ def values_for(ws) -> dict[str, object]:
         "cover_letter_max_words": profile.cover_letter_max_words,
         "page_limit": profile.page_limit,
         "ghost_after_days": profile.ghost_after_days,
-        "dash_rule": ", with no em or en dashes" if profile.ban_dashes else "",
+        "dash_rule": (", and no dashes of any kind in anything you write (em, en, "
+                      "figure, minus, or other): use a plain hyphen (-) only where a "
+                      "word needs one" if profile.ban_dashes else ""),
     }
 
 

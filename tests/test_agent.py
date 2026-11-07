@@ -34,6 +34,32 @@ def test_every_flag_in_the_instructions_exists():
         assert flags <= known, (cmd, flags - known)
 
 
+DASH_RULE = "no dashes of any kind"
+
+
+def test_generated_instructions_state_the_full_dash_rule(ws):
+    """#114: the check refuses every dash but the ASCII hyphen (#98), so the
+    agent is told that, not only "no em or en dashes"."""
+    for name in AGENT_FILES:
+        flat = " ".join((ws.root / name).read_text(encoding="utf-8").split())
+        assert DASH_RULE in flat and "plain hyphen (-)" in flat, name
+        assert "em or en dashes" not in flat, name
+
+
+def test_no_dash_rule_when_the_profile_allows_dashes(ws):
+    text = ws.profile_path.read_text(encoding="utf-8").replace("ban_dashes = true", "ban_dashes = false")
+    ws.profile_path.write_text(text, encoding="utf-8")
+    init_workspace(ws.root, refresh=True)
+    for name in AGENT_FILES:
+        assert DASH_RULE not in (ws.root / name).read_text(encoding="utf-8"), name
+
+
+def test_profile_template_states_the_full_dash_rule(tmp_path):
+    profile = init_workspace(tmp_path).profile_path.read_text(encoding="utf-8")
+    line = next(ln for ln in profile.splitlines() if ln.startswith("ban_dashes"))
+    assert DASH_RULE in line and "plain hyphen (-)" in line
+
+
 def test_limits_come_from_the_profile(ws):
     # F19: the instructions and the validator state the same number.
     text = (ws.root / "CLAUDE.md").read_text(encoding="utf-8")
