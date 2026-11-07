@@ -152,3 +152,10 @@ def test_cli_ctrl_c_exits_130(ws, monkeypatch, capsys):
         raise KeyboardInterrupt
     monkeypatch.setattr("jobforge.confirm.run_confirm", boom)
     assert main(["confirm"]) == 130
+
+
+def test_inventory_markdown_lists_a_roles_aliases(ws):
+    # Issue #9: the agent reads the inventory, so it sees every name in use.
+    add_atoms(ws, '[[role]]\nid = "kt"\nemployer = "Kestrel Testing Laboratories"\n'
+                  'aliases = ["KT", "Kestrel Labs"]\ntitle = "Engineer"\nstart = "2020"\n')
+    assert "Also called: KT, Kestrel Labs" in render_markdown(load_inventory(ws))
