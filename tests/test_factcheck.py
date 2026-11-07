@@ -634,3 +634,50 @@ def test_bullet_whose_project_is_missing_counts_only_its_own_text(ws):
     plan = ResolvedPlan(letter=Letter("I saved 12 hours.", "", "", [bullet]))
     check_letter(plan, inv, load_profile(ws), [], rep, None)
     assert rep.errors == []
+
+
+# Issue #85 (audit A13): a hidden character fails `check`, not only `apply`'s
+# read-back, so the agent's check loop catches it a round earlier.
+HIDDEN = [("​", "zero-width space"), ("‮", "text direction control"),
+          ("­", "soft hyphen")]
+
+
+def plant(plan, where, ch):
+    if where == "bullet":
+        plan["experience"][0]["bullets"][2] = {
+            "atom": "northwind.overtime",
+            "text": f"Cut weekly over{ch}time 25% by rebuilding the shift schedule"}
+    elif where == "summary":
+        plan["summary"] = {"atom": "summary.main",
+                           "text": f"Warehouse super{ch}visor with 9 years in distribution."}
+    else:  # a part of the letter: hook, body, or close
+        part = where.split(".")[1]
+        plan["cover_letter"][part] = plan["cover_letter"][part].replace(
+            "second", f"sec{ch}ond", 1)
+
+
+@pytest.mark.parametrize("ch,name", HIDDEN)
+@pytest.mark.parametrize("where,label", [
+    ("bullet", "experience[0].bullets[2]"), ("summary", "summary"),
+    ("cover_letter.hook", "cover_letter hook"), ("cover_letter.close", "cover_letter close"),
+])
+def test_hidden_character_fails_check(ws, john_plan, ch, name, where, label):
+    plant(john_plan, where, ch)
+    rep = check(ws, john_plan)
+    hits = [e for e in rep.errors if "hidden character" in e]
+    assert len(hits) == 1, rep.errors
+    assert hits[0].startswith(label) and name in hits[0]
+    assert "Remove it from the atom or plan text it came from" in hits[0]
+
+
+def test_hidden_character_in_the_letter_body_fails_check(ws, john_plan):
+    john_plan["cover_letter"]["body"] = john_plan["cover_letter"]["body"].replace(
+        "associates", "asso​ciates", 1)
+    expect(check(ws, john_plan), "cover_letter body: hidden character: zero-width space")
+
+
+def test_hidden_character_cannot_slip_a_never_claim_term_past_check(ws, john_plan):
+    # "S<U+200B>AP" was invisible to never-claim; now the character itself fails.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime 25% using S​AP"}
+    expect(check(ws, john_plan), "hidden character: zero-width space")
