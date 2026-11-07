@@ -50,6 +50,13 @@ def _parser() -> argparse.ArgumentParser:
     s.add_argument("--date", help="YYYY-MM-DD (default: today)")
     s.add_argument("--note", default="")
 
+    s = sub.add_parser("import", help="bring in past applications from a tracker CSV "
+                                      "(shows a preview unless --write)")
+    s.add_argument("file", help="a .csv file whose first row names the columns, e.g. "
+                                "company,title,applied,status,status_date,notes")
+    s.add_argument("--write", action="store_true",
+                   help="create the job folders (default: preview only, writes nothing)")
+
     for name in ("jobs", "search"):
         s = sub.add_parser(name, help="list your jobs" + (" (same as jobs)" if name == "search" else ""))
         s.add_argument("text", nargs="?", help="only jobs whose company, title, or posting mention this")
@@ -157,6 +164,24 @@ def _run(args) -> int:
         print(f"{folder.name}: {ev.stage} on {ev.date.isoformat()}")
         return 0
 
+    if cmd == "import":
+        from .importer import format_preview, plan_import, write_import
+        text = _read_csv(args.file)
+        plan = plan_import(ws, text)
+        print(format_preview(plan))
+        if not args.write:
+            if plan.count("error"):
+                print("Nothing written. Fix the rows marked ERROR, then run again "
+                      "with --write.")
+                return 1
+            print("Nothing written (preview). Check the rows above, then run again "
+                  "with --write.")
+            return 0
+        written = write_import(ws, plan)
+        print(f"Imported {len(written)} job(s) into jobs/. Record what happens next "
+              f"with `jobforge applied --mark <job> --status <stage>`.")
+        return 0
+
     if cmd in ("jobs", "search"):
         from .jobs import format_table, list_jobs
         from .profile import Profile, load_profile
@@ -170,6 +195,29 @@ def _run(args) -> int:
         return 0
 
     raise AssertionError(f"unhandled command {cmd}")  # pragma: no cover
+
+
+def _read_csv(path: str) -> str:
+    """A spreadsheet export as text. UTF-8 first (with or without Excel's
+    BOM); older Windows Excel saves "CSV" as Windows-1252, so try that next
+    and say so. Never replace undecodable bytes with U+FFFD: a mangled
+    company name would land in job.json silently."""
+    p = Path(path)
+    if not p.is_file():
+        raise JobforgeError(f"{path} does not exist.")
+    data = p.read_bytes()
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        pass
+    try:
+        text = data.decode("cp1252")
+    except UnicodeDecodeError:
+        raise JobforgeError(f"{path} is not UTF-8 or Windows-1252 text. In your "
+                            f"spreadsheet, save it as \"CSV UTF-8\" and try again.") from None
+    print(f"warning: {path} is not UTF-8; read it as Windows-1252. Check accented "
+          f"names in the preview.", file=sys.stderr)
+    return text
 
 
 def _read_text(path: str) -> str:
