@@ -10,5 +10,6 @@ def _decision(number: int) -> str:
 
 def test_d36_says_what_is_enforced():
     d36 = _decision(36)
-    assert "will not keep a new bullet without a `defense` note" in d36
-    assert "names them in one warning" in d36
+    # #127: a defense is asked for where it matters, not required.
+    assert "will not keep a new bullet without" not in d36
+    assert "states a figure" in d36 and "is not required" in d36

@@ -107,17 +107,14 @@ def test_example_plan_in_the_instructions_resolves(tmp_path):
     assert errors == []
 
 
-def test_instructions_ask_for_a_defense_on_every_bullet():
-    """#83 item 5: confirm refuses a new bullet with no defense note, so the
-    agent asks for one every time."""
+def test_instructions_ask_for_a_defense_only_where_it_matters():
+    """#127: a defense for a figure or a big claim, written from what the
+    user already said where possible; never a question per bullet."""
     text = " ".join(source_text().split())
-    assert "For every bullet, ask how they know" in text
-    assert "will not keep a new bullet without one" in text
-
-
-def test_instructions_say_confirm_can_edit():
-    """#83 item 4: confirm has an inline edit, so the agent may say so."""
-    assert "to keep, edit, or drop each one" in " ".join(source_text().split())
+    assert "For a bullet with a figure or a big claim, ask how they know" in text
+    assert "A plain duty needs no defense" in text
+    assert "will not keep a new bullet without" not in text
+    assert "For every bullet, ask how they know" not in text
 
 
 def test_instructions_send_the_user_to_their_own_terminal_for_confirm():

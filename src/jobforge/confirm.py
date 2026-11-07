@@ -253,15 +253,9 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
         """What stops this fact being kept, and whether it is a missing role."""
         problems: list[str] = []
         check_references({**live, atom.id: atom}, ws.rel, problems, only={atom.id})
-        missing_role = bool(problems)
-        if atom.kind == "bullet" and not (atom.get("defense") or "").strip():
-            # D-36: how the user knows it, in their words. Prep sheets are
-            # built from it (D-38), so a new bullet is not kept without it.
-            problems.append(
-                f"no defense note. Add how you know it to {ws.rel(atom.source)}, "
-                f"e.g. defense = \"Monthly report from the warehouse system\", "
-                f"then run confirm again (D-36).")
-        return problems, missing_role
+        # A missing defense note never blocks: it is asked for where it
+        # matters, and `check` names figures without one (#127).
+        return problems, bool(problems)
 
     for atom in order:
         problems, missing_role = blockers(atom)
