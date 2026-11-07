@@ -33,6 +33,7 @@ PHRASING_USES = ("resume", "cover", "email", "any")
 PROJECT_CONTEXTS = ("personal", "school", "volunteer")
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
 DATE_RE = re.compile(r"^\d{4}(-(0[1-9]|1[0-2]))?$")
+DATE_FIELDS = ("start", "end", "date")
 
 # kind -> (required fields, optional fields)
 SCHEMA: dict[str, tuple[set[str], set[str]]] = {
@@ -71,14 +72,22 @@ class Atom:
 
     def texts(self) -> list[str]:
         """Every piece of text that states this atom's facts: the main text,
-        each phrasing, the explicit `facts` list, and descriptive fields."""
+        each phrasing, the explicit `facts` list, and descriptive fields.
+
+        A date field contributes its year only. "2020-04" read as text would
+        make "4" a fact, and a bullet under that role could claim "a team of
+        4" (issue #1)."""
         out: list[str] = []
         for key in ("text", "title", "employer", "name", "issuer", "school",
                     "credential", "field", "details", "label", "location",
-                    "start", "end", "date", "url", "writeup_url"):
+                    "url", "writeup_url"):
             v = self.fields.get(key)
             if isinstance(v, str) and v:
                 out.append(v)
+        for key in DATE_FIELDS:
+            v = self.fields.get(key)
+            if isinstance(v, str) and DATE_RE.match(v):
+                out.append(v[:4])
         out.extend(str(i) for i in self.fields.get("items") or [])
         out.extend(str(f) for f in self.fields.get("facts") or [])
         out.extend(p.get("text", "") for p in self.phrasings)
