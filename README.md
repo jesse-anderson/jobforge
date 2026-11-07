@@ -70,6 +70,30 @@ Record later news the same way (`screen`, `interview`, `offer`, `rejected`,
 ...). `jobforge jobs` lists everything; a job with no reply after 30 days shows
 as **ghosted**.
 
+## Bring in past applications
+
+Already applied to jobs before Jobforge? Put them in a CSV (your agent can
+make one from your tracker) and import them, so `jobforge jobs` lists them and
+`prepare` warns you before applying to the same posting twice.
+
+```
+company,title,location,url,applied,status,status_date,notes
+Prairie Freight Co.,Operations Supervisor,"Springfield, IL",https://example.com/jobs/1,2026-09-02,rejected,2026-09-20,
+Cedar Mill Foods,Shift Supervisor,"Decatur, IL",,2026-09-10,applied,,
+```
+
+`company`, `title`, and `applied` are required. Write dates as YYYY-MM-DD. A
+status after `applied` (`screen`, `interview`, `rejected`, ...) needs the date
+it happened in `status_date`; if you do not know it, import the row as
+`applied` and record the rest later with `jobforge applied`.
+
+1. `jobforge import past.csv` shows what each row will become and writes
+   nothing. Check it.
+2. `jobforge import past.csv --write` creates the job folders. Running it again
+   skips rows already imported.
+
+Imported jobs hold only what happened: no posting text, plan, or documents.
+
 ## Commands
 
 | Command | Does |
@@ -82,6 +106,7 @@ as **ghosted**.
 | `jobforge apply <job>` | Check, then write the resume and cover letter |
 | `jobforge applied --mark <job> --status <stage>` | Record what happened |
 | `jobforge jobs` | List your jobs and their status (`search` works too) |
+| `jobforge import <file.csv>` | Preview past applications from a CSV; `--write` imports them |
 
 `<job>` is the job folder's name or any unique piece of it.
 

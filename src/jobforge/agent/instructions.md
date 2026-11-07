@@ -21,6 +21,8 @@ breaks it, so inventing something only wastes a round trip.
 - For each job, you write `jobs/<folder>/plan.json`.
 - You may fill in `profile/profile.toml` with the user's name and contact
   details during setup.
+- You may write a tracker CSV in `intake/` for `jobforge import` (see
+  "Bringing in past applications").
 
 Never edit a `.docx` or `cover_letter.md` yourself. If a document is wrong,
 fix the plan or ask the user to fix a fact, then run `jobforge apply` again.
@@ -37,6 +39,7 @@ fix the plan or ask the user to fix a fact, then run `jobforge apply` again.
 | `jobforge apply <job>` | Check, then write the resume and cover letter. |
 | `jobforge applied --mark <job> --status <stage>` | Record what happened to an application. |
 | `jobforge jobs` | List the user's jobs and their status. |
+| `jobforge import <file.csv>` | Preview past applications from a tracker CSV; add `--write` to import them. |
 
 `<job>` is the job folder's name or any unique piece of it.
 
@@ -193,3 +196,20 @@ declined, rejected, withdrawn. Record each as it happens, with `--date
 YYYY-MM-DD` if it was not today and `--note "..."` for context. A job with no
 reply {{ghost_after_days}} days after applying shows as ghosted automatically;
 never record that yourself.
+
+## Bringing in past applications
+
+If the user arrives mid-search with a tracker (a spreadsheet, a Markdown
+table, notes), offer to bring their past applications in, so `jobforge jobs`
+shows them and `prepare` warns before a repeat application.
+
+1. Write `intake/past_applications.csv` with the columns `company`, `title`,
+   `location`, `url`, `applied`, `status`, `status_date`, `notes`. Dates are
+   YYYY-MM-DD. `status` is one of the stages above (or `ghosted`).
+2. Only what happened: leave out leads they never applied to. Never invent
+   or round a date. If a later status ("rejected") has no known date, set the
+   status to `applied` and say so; the user can record the rest with
+   `jobforge applied`. Keep recruiter names and pay out of `notes`.
+3. Run `jobforge import intake/past_applications.csv` and show the user the
+   preview. Fix what they correct, and preview again.
+4. Only after they agree: `jobforge import intake/past_applications.csv --write`.
