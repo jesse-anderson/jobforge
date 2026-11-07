@@ -228,11 +228,11 @@ def _run(args) -> int:
     raise AssertionError(f"unhandled command {cmd}")  # pragma: no cover
 
 
-def _read_csv(path: str) -> str:
-    """A spreadsheet export as text. UTF-8 first (with or without Excel's
-    BOM); older Windows Excel saves "CSV" as Windows-1252, so try that next
-    and say so. Never replace undecodable bytes with U+FFFD: a mangled
-    company name would land in job.json silently."""
+def _decode_file(path: str, fix: str, check: str) -> str:
+    """A file the user saved, as text. UTF-8 first (with or without a BOM);
+    older Windows programs (Excel's "CSV", Notepad) save Windows-1252, so try
+    that next and say so. Never replace undecodable bytes with U+FFFD: a
+    mangled name would land in job.json, or in a letter, silently (#87)."""
     p = Path(path)
     if not p.is_file():
         raise JobforgeError(f"{path} does not exist.")
@@ -244,15 +244,19 @@ def _read_csv(path: str) -> str:
     try:
         text = data.decode("cp1252")
     except UnicodeDecodeError:
-        raise JobforgeError(f"{path} is not UTF-8 or Windows-1252 text. In your "
-                            f"spreadsheet, save it as \"CSV UTF-8\" and try again.") from None
-    print(f"warning: {path} is not UTF-8; read it as Windows-1252. Check accented "
-          f"names in the preview.", file=sys.stderr)
+        raise JobforgeError(f"{path} is not UTF-8 or Windows-1252 text. {fix}") from None
+    print(f"warning: {path} is not UTF-8; read it as Windows-1252. {check}", file=sys.stderr)
     return text
 
 
+def _read_csv(path: str) -> str:
+    """A spreadsheet export as text."""
+    return _decode_file(path, "In your spreadsheet, save it as \"CSV UTF-8\" and try "
+                              "again.", "Check accented names in the preview.")
+
+
 def _read_text(path: str) -> str:
-    p = Path(path)
-    if not p.exists():
-        raise JobforgeError(f"{path} does not exist.")
-    return p.read_text(encoding="utf-8", errors="replace")
+    """A posting saved as a text file."""
+    return _decode_file(path, "Save it as UTF-8 text and try again, or paste the "
+                              "posting with `--from-text -`.",
+                        "Check accented letters and quotes in the job's job.json.")

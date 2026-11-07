@@ -343,6 +343,47 @@ def test_import_refuses_undecodable_bytes(run, tmp_path):
     assert code == 1 and "CSV UTF-8" in err
 
 
+# Issue #87 (audit A19): a posting file saved as Windows-1252 (older Notepad)
+# was read with U+FFFD in place of every accent, curly quote, and dash.
+POSTING_1252 = ("Café Rouge is hiring a “shift lead” – nights. " * 12)
+
+
+def prepare_from(run, ws, path):
+    code, out, err = run("prepare", "--from-text", str(path), "--company", "Café Rouge",
+                         "--title", "Shift Lead")
+    folder = next(ws.jobs_dir.iterdir(), None)
+    desc = json.loads((folder / "job.json").read_text(encoding="utf-8"))["description"] \
+        if folder else ""
+    return code, err, desc
+
+
+def test_prepare_reads_a_windows_1252_posting(run, ws, tmp_path):
+    posting = tmp_path / "posting.txt"
+    posting.write_bytes(POSTING_1252.encode("cp1252"))
+    code, err, desc = prepare_from(run, ws, posting)
+    assert code == 0, err
+    assert "�" not in desc
+    assert "Café Rouge" in desc and "“shift lead”" in desc and "–" in desc
+    assert "not UTF-8; read it as Windows-1252" in err
+
+
+def test_prepare_reads_a_utf8_posting_without_a_warning(run, ws, tmp_path):
+    posting = tmp_path / "posting.txt"
+    posting.write_bytes(POSTING_1252.encode("utf-8"))
+    code, err, desc = prepare_from(run, ws, posting)
+    assert code == 0 and "warning" not in err
+    assert "Café Rouge" in desc and "�" not in desc
+
+
+def test_prepare_refuses_a_posting_that_is_not_text(run, ws, tmp_path):
+    posting = tmp_path / "posting.txt"
+    posting.write_bytes(b"\x81\x8d\x8f" * 100)
+    code, err, _ = prepare_from(run, ws, posting)
+    assert code == 1 and "is not UTF-8 or Windows-1252 text" in err
+    assert "--from-text -" in err  # pasting is the way out
+    assert not any(ws.jobs_dir.iterdir())
+
+
 def test_import_missing_file(run):
     code, _, err = run("import", "nope.csv")
     assert code == 1 and "does not exist" in err
