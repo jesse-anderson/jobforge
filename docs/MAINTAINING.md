@@ -86,8 +86,11 @@ it, never a branch push or a PR (#54, #69).
    venv to run `jobforge --version` and `jobforge init`. Then the `windows`
    job installs that same wheel on a fresh Windows runner and runs the
    clean-machine checklist (`tools/clean_windows.ps1`); its transcript is
-   the `clean-windows-release` artifact. Nothing uploads if any of that
-   fails.
+   the `clean-windows-release` artifact. The `build` job also packs that
+   wheel into the offline bundle (`tools/offline_bundle.py`, #163), and the
+   `offline` job installs it with the network off on Linux and Windows
+   (`tools/offline_smoke.sh`, `tools/offline_smoke.ps1`). Nothing uploads
+   if any of that fails.
 4. The tag decides where it goes:
 
    | Tag | Goes to |
@@ -101,6 +104,10 @@ it, never a branch push or a PR (#54, #69).
    `jobforge --version`. For a TestPyPI-only build, add
    `--index-url https://test.pypi.org/simple/` (pip) or the full pipx
    command in `docs/VM_CHECKLIST.md` step 3.
+6. Once PyPI has it, the `github-release` job makes a GitHub Release for
+   the tag with `jobforge-offline-X.Y.Z.zip` and its `SHA256SUMS` (a
+   pre-release for an `a`, `b`, or `rc` tag). A TestPyPI-only build gets
+   none. Check the Release page lists both files.
 
 A version can never be reused on PyPI or TestPyPI, even after it is
 deleted, so a mistake costs a version number: bump it and tag again. Yank a

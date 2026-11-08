@@ -10,7 +10,13 @@
 #
 # Nothing uploads until the built wheel passes the clean-machine checklist on
 # a fresh Windows runner (tools/clean_windows.ps1, #56): the exact file about
-# to be published, installed and used the way the README says.
+# to be published, installed and used the way the README says. The offline
+# bundle made from that wheel (#163) must also install with the network off
+# on Linux and Windows.
+#
+# After PyPI has the release, the bundle and its SHA256SUMS go to a GitHub
+# Release for the tag (marked a pre-release for a, b, or rc tags). A
+# TestPyPI-only build gets no GitHub Release.
 #
 # The `testpypi` and `pypi` environments deploy from `v*` tags only; a
 # required reviewer is added at the public flip (a private repo on the Free
@@ -74,10 +80,43 @@ jobs:
           /tmp/smoke/bin/pip install dist/*.whl
           /tmp/smoke/bin/jobforge --version
           /tmp/smoke/bin/jobforge init /tmp/smoke-ws
+      # Into bundle/, never dist/: the PyPI upload sends everything in dist/.
+      - name: Build the offline bundle from that wheel
+        run: python tools/offline_bundle.py dist --out bundle
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: dist
           path: dist/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: offline
+          path: bundle/
+
+  # The offline bundle installs with the network off (#163), on both systems.
+  offline:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: offline
+          path: bundle/
+      - name: Install from the bundle with the network off (Linux)
+        if: runner.os == 'Linux'
+        run: sh tools/offline_smoke.sh bundle/jobforge-offline-*.zip
+      - name: Install from the bundle with no package index (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\offline_smoke.ps1 -Zip (Get-ChildItem bundle\*.zip)[0].FullName
 
   # The clean-machine checklist on the wheel about to be uploaded (#56). Both
   # uploads wait for it; a failure stops the release with nothing published.
@@ -105,7 +144,7 @@ jobs:
           path: clean-windows-out/
 
   testpypi:
-    needs: [build, windows]
+    needs: [build, windows, offline]
     if: needs.build.outputs.target == 'testpypi' || needs.build.outputs.target == 'both'
     runs-on: ubuntu-latest
     environment:
@@ -123,13 +162,13 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   pypi:
-    needs: [build, windows, testpypi]
+    needs: [build, windows, offline, testpypi]
     # A pre-release reaches PyPI only after its TestPyPI upload succeeded; a
     # final version skips TestPyPI, so the skipped job must not block it.
-    # Either way the Windows checklist must have passed.
+    # Either way the Windows checklist and the offline install must have passed.
     if: >-
       !cancelled() && needs.build.result == 'success' &&
-      needs.windows.result == 'success' &&
+      needs.windows.result == 'success' && needs.offline.result == 'success' &&
       (needs.build.outputs.target == 'pypi' ||
        (needs.build.outputs.target == 'both' && needs.testpypi.result == 'success'))
     runs-on: ubuntu-latest
@@ -144,3 +183,27 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
+
+  # The offline bundle and its SHA256SUMS on a GitHub Release for the tag
+  # (#163), once PyPI has the same wheel. A pre-release tag makes a
+  # pre-release. Uses the workflow's own token, scoped to this job.
+  github-release:
+    needs: [build, pypi]
+    if: ${{ !cancelled() && needs.pypi.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: offline
+          path: bundle/
+      - name: Publish the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRE: ${{ needs.build.outputs.target == 'both' && '--prerelease' || '' }}
+        run: |
+          gh release create "$TAG" bundle/jobforge-offline-*.zip bundle/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --title "Jobforge ${TAG#v}" $PRE \
+            --notes "Install from PyPI: pip install jobforge==${TAG#v} (pipx on Linux). Offline: download the zip, check it against SHA256SUMS, unzip, and run install.sh or install.ps1. Python 3.11+ must already be installed."
