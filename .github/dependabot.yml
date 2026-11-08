@@ -1,0 +1,14 @@
+# Keeps the pinned GitHub Actions current (every `uses:` is a commit ID, so
+# a moved tag can never change what runs; tests/test_workflows.py). Dependabot
+# opens a PR per update, with the new commit and version comment; a maintainer
+# reviews and merges it like any other PR (D-48: people merge, the bot only
+# proposes). The Python package has no runtime dependencies to watch.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
