@@ -26,7 +26,8 @@ NAMES = [
 ]
 PATTERN = re.compile(r"(?<![\w-])(?:" + "|".join(re.escape(n) for n in NAMES) + r")(?![\w-])",
                      re.IGNORECASE)
-# "a private repo on the Free plan" means any private GitHub repo.
+# release.yml's note about the Free plan means any GitHub repo that is
+# private, not one of ours.
 ALLOWED = {(".github/workflows/release.yml", "private" + " repo")}
 
 

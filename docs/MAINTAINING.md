@@ -59,8 +59,8 @@ Every change ships with tests, written in the same change. No exceptions for
   and poppler-utils on Linux), look at the new images, and commit them with
   the change (#104).
 - Before every push, run the suite with coverage and paste the pytest
-  summary and coverage TOTAL into the PR. CI is Ubuntu only while the repo
-  is private, so that local run is the only Windows check.
+  summary and coverage TOTAL into the PR. CI runs the same on Linux and
+  Windows.
 
 ## Branches and merging
 

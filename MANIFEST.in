@@ -1,0 +1,4 @@
+# The sdist is for building and installing Jobforge. Its tests need the
+# fixtures, docs, tools, and workflows that only a clone has, so they stay
+# out; run the tests from a clone.
+prune tests
