@@ -204,3 +204,103 @@ def test_every_unit_spelling_is_read():
 def test_token_step(text, step):
     from decimal import Decimal
     assert number_tokens(text)[0].step == Decimal(step)
+
+
+# --- #84: figures written in words ------------------------------------------
+# Cardinals are the same figure as their digits; fractions and multiples are
+# kinds of their own until their equivalences are decided ("a third" is not
+# 33%, "doubled" is not 2x), the safe direction.
+
+@pytest.mark.critical
+@pytest.mark.parametrize("text,expected", [
+    ("Cut weekly overtime thirty-five percent", [Token("percent", "35")]),
+    ("Cut weekly overtime thirty five per cent", [Token("percent", "35")]),
+    ("Lead a team of forty associates", [Token("number", "40")]),
+    ("Lead a team of Forty associates", [Token("number", "40")]),
+    ("a team of twelve", [Token("number", "12")]),
+    ("one hundred and twenty orders", [Token("number", "120")]),
+    ("twenty-five hundred orders", [Token("number", "2500")]),
+    ("a hundred stores", [Token("number", "100")]),
+    ("a dozen drivers", [Token("number", "12")]),
+    ("two million rows", [Token("number", "2000000")]),
+    ("saved forty thousand dollars", [Token("money", "40000")]),
+    ("saved twelve thousand euros", [Token("money", "12000", "€")]),
+    ("three times faster", [Token("times", "3")]),
+    ("one percent", [Token("percent", "1")]),
+    ("zero recordable injuries", [Token("number", "0")]),
+    ("a twelve-person crew", [Token("number", "12")]),
+    # Fractions.
+    ("Cut weekly overtime by a third", [Token("fraction", "1/3")]),
+    ("cut costs by one-third", [Token("fraction", "1/3")]),
+    ("a quarter of the fleet", [Token("fraction", "1/4")]),
+    ("two-thirds of the stores", [Token("fraction", "2/3")]),
+    ("three quarters of orders", [Token("fraction", "3/4")]),
+    ("cut returns in half", [Token("fraction", "1/2")]),
+    ("cut returns by half", [Token("fraction", "1/2")]),
+    ("half of the routes", [Token("fraction", "1/2")]),
+    # Multiples.
+    ("Tripled schedule coverage", [Token("multiple", "3")]),
+    ("doubled throughput", [Token("multiple", "2")]),
+    ("doubling throughput", [Token("multiple", "2")]),
+    ("halved returns", [Token("multiple", "0.5")]),
+    ("a tenfold increase", [Token("multiple", "10")]),
+    # Digits and words in one line, in the order written.
+    ("from 12 sites to forty", [Token("number", "12"), Token("number", "40")]),
+])
+def test_number_words_are_figures(text, expected):
+    assert number_tokens(text) == expected
+
+
+@pytest.mark.critical
+@pytest.mark.parametrize("text", [
+    "one of the busiest docks",                 # "one" alone is a pronoun as often as a figure
+    "the one tool everyone used",
+    "worked with a third party vendor",          # an ordinal, not a fraction
+    "worked with third-party vendors",
+    "covered third shift",
+    "closed every deal in a quarter",            # a time period
+    "in the first half of 2023",                 # names 2023, which digits already check
+    "doubled as the safety lead",
+    "a double shift",                            # an adjective, not a multiple
+    "rolled out two-factor sign-in",             # names of things
+    "earned a Six Sigma Green Belt",
+    "wired three-phase service",
+    "built a zero-trust network",
+    "on behalf of the team",
+    "twice-daily rotation checks",
+    "someone, anyone, everyone, often, tension, eighteenth",  # number words inside words
+])
+def test_words_that_are_not_figures(text):
+    assert [t for t in number_tokens(text) if t.kind != "number" or t.value != "2023"] == []
+
+
+@pytest.mark.critical
+def test_words_match_their_digits():
+    assert number_tokens("forty") == number_tokens("40")
+    assert number_tokens("thirty-five percent") == number_tokens("35%")
+    assert number_tokens("forty thousand dollars") == number_tokens("$40,000")
+
+
+@pytest.mark.critical
+def test_fractions_and_multiples_do_not_match_digits():
+    assert number_tokens("by a third") != number_tokens("33%")
+    assert number_tokens("by half") != number_tokens("50%")
+    assert number_tokens("doubled") != number_tokens("2x")
+
+
+@pytest.mark.critical
+def test_number_word_with_a_look_alike_letter_is_still_a_figure():
+    # Cyrillic "о" in "fоrty" (issue #1's trick, applied to words).
+    assert number_tokens("a team of fоrty") == [Token("number", "40")]
+
+
+@pytest.mark.critical
+def test_number_words_keep_how_they_were_written_and_their_precision():
+    tok, = number_tokens("saved twelve thousand dollars")
+    assert tok.shown == "twelve thousand dollars"
+    assert tok.step == 1000  # no more precise than "$12k"
+    tok, = number_tokens("Tripled coverage")
+    assert str(tok) == "Tripled" and tok.shown == "Tripled"
+    tok, = number_tokens("by a third")
+    assert str(tok) == "a third"
+    assert number_tokens("zero")[0].step == 1

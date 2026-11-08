@@ -17,8 +17,8 @@ Linux. Expect rough edges, and please report them.
 - **Free and local.** Nothing runs on a server. Your AI coding agent (Claude
   Code first; Codex, Gemini CLI and others also work) does the writing, and
   Jobforge does everything else.
-- **No invented facts.** Every number written in digits, and every employer,
-  tool, and credential Jobforge knows, is checked against facts you
+- **No invented facts.** Every number, in digits or in words, and every
+  employer, tool, and credential Jobforge knows, is checked against facts you
   confirmed. If your agent invents one, Jobforge refuses to write the
   document. It does not catch everything yet, so read what it writes; see
   the [known limits](https://github.com/jesse-anderson/jobforge/blob/main/docs/MVP.md#known-limits-of-the-fact-check).

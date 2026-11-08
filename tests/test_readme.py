@@ -84,7 +84,7 @@ def test_readme_claims_no_more_than_the_fact_check_does():
     # docs/MVP.md, and must point at its known limits.
     claim = " ".join(README.split("**No invented facts.**", 1)[1].split("\n- ", 1)[0].split())
     assert "Every number, employer, tool, and credential in your documents" not in claim
-    assert "written in digits" in claim and "Jobforge knows" in claim
+    assert "in digits or in words" in claim and "Jobforge knows" in claim  # #84
     anchor = "MVP.md#known-limits-of-the-fact-check"
     assert anchor in claim
     mvp = (REPO / "docs" / "MVP.md").read_text(encoding="utf-8")

@@ -15,14 +15,23 @@ def _section(text: str, heading: str) -> str:
 def test_mvp_lists_the_known_limits_of_the_fact_check():
     mvp = (REPO / "docs" / "MVP.md").read_text(encoding="utf-8")
     limits = _section(mvp, "### Known limits of the fact check")
-    for limit, issue in [("written in words", "#84"), ("Titles in lowercase or one word", "#89"),
+    for limit, issue in [("Number words in names", "#84"), ("Titles in lowercase or one word", "#89"),
                          ("Unknown names", ""), ("alias", "#22"), ("synonym", ""),
                          ("Pronouns", "#90"), ("posting's figures", "#83"),
                          ("hedges", "#91")]:
         assert limit in limits, limit
         assert issue in limits, issue
-    # Fixed since the audit, so no longer a limit: hyphen and spacing variants.
+    # Fixed since the audit, so no longer a limit: hyphen and spacing variants,
+    # and figures written in words (#84).
     assert "#92" not in limits and "do match" in limits
+    assert "are not read as figures" not in limits
+
+
+def test_mvp_says_figures_in_words_are_checked():
+    enforced = _section((REPO / "docs" / "MVP.md").read_text(encoding="utf-8"),
+                        "### What the fact check enforces in the MVP")
+    assert "A figure written in words is a figure (#84)" in enforced
+    assert '"a third" is not "33%"' in enforced
 
 
 def test_mvp_says_the_letter_quotes_the_posting_only_about_the_employer():

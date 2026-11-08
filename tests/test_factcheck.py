@@ -76,6 +76,51 @@ def test_equivalent_spelling_of_a_figure_passes(ws, john_plan):
     assert check(ws, john_plan).ok
 
 
+# #84: a figure written in words is still a figure. The audit's probes.
+@pytest.mark.parametrize("bullet,text,figure", [
+    (2, "Cut weekly overtime thirty-five percent", "35%"),
+    (1, "Lead a team of forty associates across two shifts", "40"),
+    (2, "Tripled schedule coverage by rebuilding the shift schedule", "Tripled"),
+    (2, "Cut weekly overtime by a third", "a third"),
+])
+def test_figure_in_words_not_in_the_facts(ws, john_plan, bullet, text, figure):
+    atom = ["northwind.accuracy", "northwind.team", "northwind.overtime"][bullet]
+    john_plan["experience"][0]["bullets"][bullet] = {"atom": atom, "text": text}
+    expect(check(ws, john_plan), f"the figure {figure} is not in the facts")
+
+
+def test_figure_in_words_matching_the_atom_passes(ws, john_plan):
+    # The atom says "14 associates across two shifts" and "25%".
+    john_plan["experience"][0]["bullets"][1] = {
+        "atom": "northwind.team", "text": "Lead fourteen associates across 2 shifts"}
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime twenty-five percent"}
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
+def test_fraction_the_atom_states_passes_and_is_not_its_percent(ws, john_plan):
+    add_atoms(ws, '[[bullet]]\nid = "northwind.third"\nrole = "northwind"\n'
+                  'text = "Cut dock wait by a third"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.third", "text": "Cut dock wait time by a third"})
+    assert check(ws, john_plan).ok
+    john_plan["experience"][0]["bullets"][-1]["text"] = "Cut dock wait 33%"
+    expect(check(ws, john_plan), "the figure 33% is not in the facts")
+
+
+def test_hedged_figure_in_words_still_checks_the_figure(ws, john_plan):
+    # The hedge rule reads digits (#91); the figure itself is still checked.
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime nearly forty percent"}
+    expect(check(ws, john_plan), "the figure 40% is not in the facts")
+
+
+def test_letter_figure_in_words_not_in_the_facts(ws, john_plan):
+    letter_body(john_plan, "At Northwind Distribution I lead fifty associates across "
+                           "receiving, picking, and shipping.")
+    expect(check(ws, john_plan), "the figure 50 is not in the facts")
+
+
 def test_rewording_with_same_facts_passes(ws, john_plan):
     john_plan["experience"][1]["bullets"][0] = {
         "atom": "lakeside.shrink", "text": "Introduced twice-daily rotation checks, cutting produce shrink 18%"}
