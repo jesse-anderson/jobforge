@@ -4,6 +4,7 @@ it with the network off before anything is published."""
 import hashlib
 import importlib.util
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -317,6 +318,9 @@ def test_smoke_scripts_cut_the_network_and_try_a_changed_wheel():
     sh = (REPO / "tools" / "offline_smoke.sh").read_text(encoding="utf-8")
     assert "unshare --net" in sh and "the network is still reachable" in sh
     assert sh.index("printf 'x' >>") < sh.index("unshare --net")
+    # sh does not expand a pattern after ">>": that wrote a new file named
+    # "*.whl" and left the wheel alone, so the tamper check tested nothing.
+    assert not re.search(r">>\s*\S*\*", sh)
     ps = (REPO / "tools" / "offline_smoke.ps1").read_text(encoding="utf-8")
     assert "PIP_INDEX_URL" in ps and ps.index('Add-Content $wheel "x"') < ps.index("PIP_INDEX_URL")
     for text in (sh, ps):

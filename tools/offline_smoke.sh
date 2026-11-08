@@ -14,7 +14,8 @@ dir=$(ls -d "$work"/good/jobforge-offline-*)
 
 # A changed wheel must stop install.sh before anything is installed.
 cp -r "$dir" "$work/bad"
-printf 'x' >> "$work"/bad/wheels/*.whl
+# A loop: sh does not expand a wildcard in a redirection target.
+for whl in "$work"/bad/wheels/*.whl; do printf 'x' >> "$whl"; done
 if sh "$work/bad/install.sh"; then
     echo "error: install.sh installed a wheel that does not match SHA256SUMS" >&2
     exit 1
