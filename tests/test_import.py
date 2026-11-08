@@ -407,3 +407,12 @@ def test_readme_says_a_rerun_finishes_and_adds_new_statuses():
     readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
     assert "finishes an import that was stopped partway" in readme
     assert "adds a status a row has gained in your tracker since" in readme
+
+
+@pytest.mark.critical
+def test_a_stray_carriage_return_is_a_clean_error(ws):
+    # Found by tests/test_fuzz.py: a lone \r inside an unquoted cell (old Mac
+    # Excel, some pastes) raised a csv.Error traceback.
+    text = "company,title,applied\nAcme\rWorks,Clerk,2026-09-10\n"
+    with pytest.raises(JobforgeError, match=r"Line \d+ of the file cannot be read as CSV"):
+        import_csv(ws, text, today=TODAY)

@@ -114,3 +114,17 @@ def test_page_limit_two_is_allowed():
 ])
 def test_display_url(url, shown):
     assert display_url(url) == shown
+
+
+@pytest.mark.critical
+@pytest.mark.parametrize("data", [
+    "name = \"Zoë\"\n".encode("cp1252"),       # Notepad "ANSI"
+    "name = \"Zoë\"\n".encode("utf-16"),       # Notepad "Unicode"
+])
+def test_profile_that_is_not_utf8_is_a_clean_error(tmp_path, data):
+    # Found by tests/test_fuzz.py: every command crashed with a
+    # UnicodeDecodeError traceback.
+    ws = init_workspace(tmp_path / "ws")
+    ws.profile_path.write_bytes(data)
+    with pytest.raises(JobforgeError, match="is not UTF-8 text"):
+        load_profile(ws)

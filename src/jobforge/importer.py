@@ -126,12 +126,30 @@ def _events(cell: dict[str, str], today: _dt.date) -> list[Event]:
     return [Event(applied, "applied", ""), Event(later, status, note)]
 
 
+def _csv_rows(reader):
+    """The reader's rows, with a malformed line reported as a JobforgeError
+    naming it instead of a csv.Error traceback: a stray carriage return
+    inside an unquoted cell, as old Mac Excel and some pastes leave (found by
+    tests/test_fuzz.py)."""
+    while True:
+        try:
+            yield next(reader)
+        except StopIteration:
+            return
+        except csv.Error as exc:
+            raise JobforgeError(
+                f"Line {reader.line_num} of the file cannot be read as CSV ({exc}). "
+                f"Save it again as \"CSV UTF-8\" from your spreadsheet, or put that "
+                f"cell in double quotes.") from None
+
+
 def plan_import(ws: Workspace, text: str, *,
                 today: _dt.date | None = None) -> ImportPlan:
     """Read a tracker CSV and decide what each row becomes. Writes nothing."""
     today = today or _dt.date.today()
     reader = csv.reader(io.StringIO(text.lstrip("\ufeff")))
-    header = next(reader, None)
+    rows = _csv_rows(reader)
+    header = next(rows, None)
     if not header:
         raise JobforgeError("The file is empty or has no header row. The first "
                             "row should name the columns, e.g. company,title,"
@@ -172,7 +190,7 @@ def plan_import(ws: Workspace, text: str, *,
         by_key[(slug(job.get("company", "")), slug(job.get("title", "")),
                 slug(job.get("location", "")))] = f"jobs/{folder.name}"
 
-    for raw in reader:
+    for raw in rows:
         if not any(c.strip() for c in raw):
             continue
         cell = {name: (raw[i].strip() if i < len(raw) else "")
