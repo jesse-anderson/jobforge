@@ -71,7 +71,7 @@ def test_release_check_cli_exit_codes(capsys):
 
 def test_a_pre_release_reaches_pypi_only_after_testpypi():
     pypi = WORKFLOW.split("\n  pypi:\n", 1)[1].split("steps:", 1)[0]
-    assert "needs: [build, windows, testpypi]" in pypi
+    assert "needs: [build, windows, offline, testpypi]" in pypi
     assert "needs.testpypi.result == 'success'" in pypi
     assert "needs.build.outputs.target == 'pypi'" in pypi  # finals skip TestPyPI
     testpypi = WORKFLOW.split("\n  testpypi:\n", 1)[1].split("steps:", 1)[0]
@@ -86,7 +86,7 @@ def test_nothing_uploads_until_the_wheel_passes_on_clean_windows():
     assert "name: dist" in windows  # the artifact the uploads publish
     assert r"tools\clean_windows.ps1 -Install wheel" in windows
     testpypi = WORKFLOW.split("\n  testpypi:\n", 1)[1].split("steps:", 1)[0]
-    assert "needs: [build, windows]" in testpypi
+    assert "needs: [build, windows, offline]" in testpypi  # and the offline install (#163)
     assert "!cancelled()" not in testpypi  # so a failed or skipped gate skips it
     pypi = WORKFLOW.split("\n  pypi:\n", 1)[1].split("steps:", 1)[0]
     assert "needs.windows.result == 'success'" in pypi

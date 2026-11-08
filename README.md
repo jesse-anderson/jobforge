@@ -68,6 +68,14 @@ pip install jobforge            # or: git clone, then `pip install .`
 jobforge init ~/jobsearch
 ```
 
+No internet where you install? Each release on
+[GitHub Releases](https://github.com/jesse-anderson/jobforge/releases) has
+an offline bundle, `jobforge-offline-X.Y.Z.zip`, with a `SHA256SUMS` to
+check it against. Unzip it and run `sh install.sh` (Linux) or
+`powershell -ExecutionPolicy Bypass -File install.ps1` (Windows); both check
+the wheel before installing. By hand, from the unzipped folder:
+`python -m pip install --no-index --find-links ./wheels jobforge`.
+
 That makes a folder with everything Jobforge needs:
 
 ```

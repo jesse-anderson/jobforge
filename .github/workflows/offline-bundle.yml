@@ -1,0 +1,44 @@
+# The offline install bundle (#163), built and installed with the network
+# off on Linux and Windows, the same way release.yml checks it before a
+# release. Runs by hand, and on a PR that changes the bundle or its checks.
+# Never on every push: Windows minutes bill at 2x while the repo is private.
+# Never commits (D-48).
+name: offline-bundle
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - tools/offline_bundle.py
+      - tools/offline/**
+      - tools/offline_smoke.sh
+      - tools/offline_smoke.ps1
+      - .github/workflows/offline-bundle.yml
+      - .github/workflows/release.yml
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Build the wheel and the bundle, as release.yml does
+        shell: bash
+        run: |
+          python -m pip install build
+          python -m build --wheel --outdir dist
+          python tools/offline_bundle.py dist --out bundle
+      - name: Install from the bundle with the network off (Linux)
+        if: runner.os == 'Linux'
+        run: sh tools/offline_smoke.sh bundle/jobforge-offline-*.zip
+      - name: Install from the bundle with no package index (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\offline_smoke.ps1 -Zip (Get-ChildItem bundle\*.zip)[0].FullName
