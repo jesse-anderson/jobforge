@@ -91,12 +91,14 @@ def badges():
 
 def test_badges_sit_under_the_title_and_each_links_somewhere():
     found = badges()
-    assert len(found) == 6
+    assert len(found) == 7
     for line in found:
         assert line.startswith("[![") and line.endswith(")"), line
 
 
 @pytest.mark.parametrize("needle", [
+    "](https://pypi.org/project/jobforge/)",     # PyPI version (#156)
+    "img.shields.io/pypi/v/jobforge",            # reads PyPI live, never edited by hand
     "actions/workflows/tests.yml/badge.svg",     # tests
     "img.shields.io/badge/coverage-",            # coverage, checked by CI
     "python-3.11%2B", "](https://github.com/jesse-anderson/jobforge/blob/main/LICENSE)", "Windows%20%7C%20Linux", "dependencies-none",

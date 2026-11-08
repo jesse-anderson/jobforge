@@ -1,5 +1,6 @@
 # Jobforge
 
+[![pypi](https://img.shields.io/pypi/v/jobforge)](https://pypi.org/project/jobforge/)
 [![tests](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml/badge.svg)](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml)
 [![coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)](https://github.com/jesse-anderson/jobforge/actions/workflows/tests.yml)
 [![python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
