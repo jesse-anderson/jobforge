@@ -430,8 +430,10 @@ def test_edit_then_keep_saves_the_edited_fact(ws):
     assert load_inventory(ws).get("northwind.dock").get("text") == "Cut dock wait time 30%"
     shown = "\n".join(said)
     assert shown.count("Text: Cut dock wait time") == 2 and "30%" in shown  # shown again
-    assert not edit.calls[0].exists()  # the scratch copy is cleaned up
-    assert not ws.contains(edit.calls[0]) or edit.calls[0].parent != ws.pending_dir
+    # #137: edited inside the workspace, never the system temp folder, and
+    # under a name the draft loader does not read; removed afterwards.
+    assert edit.calls[0] == ws.pending_dir / "northwind.dock.editing"
+    assert not edit.calls[0].exists()
 
 
 def test_edit_then_skip_keeps_the_edit_in_pending(ws):
@@ -549,3 +551,73 @@ def test_the_prompt_offers_edit(ws):
     run_confirm(ws, ask=ask, say=said.append)
     assert prompts == ["  Keep this fact? [k/e/d/s/q] "]
     assert "[e]dit" in said[0]
+
+
+# --- #137: editors that return before the user is done ----------------------
+
+def early_editor(change):
+    """An editor that hands off to a running window and exits at once (Windows
+    11 Notepad, `code` without --wait): the user's save lands later, while
+    confirm waits for Enter."""
+    seen = {}
+
+    def edit(path):
+        seen["path"] = path
+        return False  # returned before the user was done
+    edit.save = lambda: seen["path"].write_text(
+        change(seen["path"].read_text(encoding="utf-8")), encoding="utf-8")
+    return edit
+
+
+def test_an_early_returning_editor_waits_for_enter(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    edit = early_editor(lambda t: t.replace("40%", "30%"))
+    prompts = []
+
+    def ask(prompt):
+        prompts.append(prompt)
+        if "press Enter" in prompt:
+            edit.save()  # the user saves, then comes back
+            return ""
+        return {1: "e"}.get(len(prompts), "k")
+    out = run_confirm(ws, ask=ask, say=quiet, edit=edit)
+    assert any("Save and close the file in your editor, then press Enter" in p for p in prompts)
+    assert out.kept == ["northwind.dock"]
+    assert load_inventory(ws).get("northwind.dock").get("text") == "Cut dock wait time 30%"
+
+
+def test_ctrl_c_while_waiting_for_the_editor_leaves_the_fact(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    edit = early_editor(lambda t: t)
+    answers = iter(["e", KeyboardInterrupt, "s"])
+
+    def ask(prompt):
+        a = next(answers)
+        if a is KeyboardInterrupt:
+            raise KeyboardInterrupt
+        return a
+    said = []
+    out = run_confirm(ws, ask=ask, say=said.append, edit=edit)
+    assert out.skipped == ["northwind.dock"]
+    assert "left as it was" in "\n".join(said)
+    assert not (ws.pending_dir / "northwind.dock.editing").exists()
+
+
+def test_a_leftover_edit_file_is_not_read_as_a_draft(ws):
+    add_atoms(ws, NEW_BULLET, "d.toml", pending=True)
+    (ws.pending_dir / "northwind.dock.editing").write_text(NEW_BULLET, encoding="utf-8")
+    out = run_confirm(ws, ask=script("k"), say=quiet)
+    assert out.kept == ["northwind.dock"]  # one fact, not a duplicate id
+
+
+@pytest.mark.parametrize("command,waits", [
+    (["nano"], True), (["/usr/bin/vim"], True), (["nvim"], True), (["vi"], True),
+    (["micro"], True), (["C:\\Tools\\nano.exe"], True),
+    (["notepad"], False), (["code"], False), (["code", "--wait"], False),
+    (["gedit"], False),
+])
+def test_only_terminal_editors_skip_the_enter_prompt(monkeypatch, tmp_path, command, waits):
+    from jobforge import confirm
+    monkeypatch.setattr(confirm, "find_editor", lambda: command)
+    monkeypatch.setattr(confirm.subprocess, "run", lambda *a, **k: None)
+    assert confirm.open_in_editor(tmp_path / "x.editing") is waits

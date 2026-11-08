@@ -12,11 +12,11 @@ kept (D-40).
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -140,9 +140,23 @@ def find_editor() -> list[str] | None:
     return None
 
 
-def open_in_editor(path: Path) -> None:
-    """Open `path` in the user's editor and wait for it to close. Raises
-    JobforgeError when no editor can be started."""
+# Editors that run in the terminal and hold it until they close. Anything
+# else may hand the file to a window already open and return at once
+# (Windows 11 Notepad, `code` without --wait), so confirm asks the user to
+# press Enter when done (#137).
+TERMINAL_EDITORS = {"nano", "pico", "vi", "vim", "nvim", "view", "micro", "ed", "joe",
+                    "ne", "mg", "jed", "hx", "helix", "kak"}
+
+
+def _waits(command: list[str]) -> bool:
+    name = re.split(r"[\\/]", command[0])[-1].lower()
+    return name.removesuffix(".exe") in TERMINAL_EDITORS
+
+
+def open_in_editor(path: Path) -> bool:
+    """Open `path` in the user's editor. Returns True when the editor held
+    the terminal until it closed, False when it may have returned before the
+    user was done. Raises JobforgeError when no editor can be started."""
     command = find_editor()
     if command is None:
         raise JobforgeError("No text editor found. Set EDITOR to the one you use "
@@ -150,27 +164,35 @@ def open_in_editor(path: Path) -> None:
                             "edit its file in profile/pending/.")
     try:
         subprocess.run([*command, str(path)], check=False)
+        return _waits(command)
     except OSError as exc:
         raise JobforgeError(f"Could not start {command[0]}: {exc.strerror or exc}. Set "
                             f"EDITOR to the editor you use, or skip this fact and edit "
                             f"its file in profile/pending/.") from None
 
 
-def _edit(atom: Atom, draft: str, edit: Callable[[Path], None],
-          say: Callable[[str], None]) -> tuple[Atom | None, str]:
+def _edit(ws: Workspace, atom: Atom, draft: str, edit: Callable[[Path], bool | None],
+          ask: Callable[[str], str], say: Callable[[str], None]) -> tuple[Atom | None, str]:
     """One round in the editor (#83 item 4). Returns the edited atom, or None
     with the problems said, plus the text to reopen next time, so a broken
-    edit is never thrown away."""
-    fd, name = tempfile.mkstemp(prefix=f"jobforge-{atom.id}-", suffix=".toml")
-    path = Path(name)
+    edit is never thrown away. The file sits in profile/pending/ under a name
+    the draft loader never reads, not in the system temp folder: the fact can
+    hold personal details (#137)."""
+    path = ws.pending_dir / f"{atom.id}.editing"
+    ws.check_inside(path)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
-            fh.write(draft)
+        path.write_text(draft, encoding="utf-8", newline="\n")
         try:
-            edit(path)
+            waited = edit(path)
         except JobforgeError as exc:
             say(f"  {exc.message}")
             return None, draft
+        if waited is False:
+            try:
+                ask("  Save and close the file in your editor, then press Enter. ")
+            except (EOFError, KeyboardInterrupt):
+                say("\n  Edit not read; the fact is left as it was.")
+                return None, draft
         text = path.read_text(encoding="utf-8-sig")
         problems: list[str] = []
         found = parse_file(path, "your edit", problems)
@@ -193,7 +215,7 @@ def _edit(atom: Atom, draft: str, edit: Callable[[Path], None],
 
 def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
                 say: Callable[[str], None] | None = None,
-                edit: Callable[[Path], None] | None = None) -> Outcome:
+                edit: Callable[[Path], bool | None] | None = None) -> Outcome:
     interactive = ask is not None or (sys.stdin is not None and sys.stdin.isatty())
     ask = ask or input
     say = say or print
@@ -281,7 +303,7 @@ def run_confirm(ws: Workspace, ask: Callable[[str], str] | None = None,
                     "profile/pending/.")
                 answer = "q"
             if answer == "e":
-                edited, draft = _edit(atom, draft, edit, say)
+                edited, draft = _edit(ws, atom, draft, edit, ask, say)
                 if edited is not None and blockers(edited)[0]:
                     say("  That edit can't be kept:\n"
                         + "\n".join(f"    {p}" for p in blockers(edited)[0])
