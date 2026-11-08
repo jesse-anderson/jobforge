@@ -221,7 +221,8 @@ def unit_figures(text: str) -> list[UnitFigure]:
 # hedges, so they are allowed.
 HEDGE_RE = re.compile(
     r"(?:~\s?|\b(?:about|approximately|approx\.?|roughly|nearly|almost|around|circa"
-    r"|an estimated|estimated|some)\s+)\$?\d[\d,]*(?:\.\d+)?%?",
+    r"|an estimated|estimated|some|close to|just under|just over|upwards of)\s+)"
+    r"\$?\d[\d,]*(?:\.\d+)?%?",
     re.IGNORECASE,
 )
 

@@ -18,7 +18,7 @@ def test_mvp_lists_the_known_limits_of_the_fact_check():
     for limit, issue in [("written in words", "#84"), ("Titles in lowercase or one word", "#89"),
                          ("Unknown names", ""), ("alias", "#22"), ("synonym", ""),
                          ("Pronouns", "#90"), ("posting's figures", "#83"),
-                         ("hedges", "#91")]:
+                         ("bounds", "#125")]:
         assert limit in limits, limit
         assert issue in limits, issue
     # Fixed since the audit, so no longer a limit: hyphen and spacing variants.
