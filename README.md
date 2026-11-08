@@ -12,7 +12,7 @@ Turn your real work history into a resume and cover letter tailored to one
 job posting, on your own computer, for free, without the tool ever stating a
 fact you did not give it.
 
-**Status: 0.1.0, the first release.** It works end to end on Windows and
+**Status: 0.1.1, an early release.** It works end to end on Windows and
 Linux. Expect rough edges, and please report them.
 
 - **Free and local.** Nothing runs on a server. Your AI coding agent (Claude

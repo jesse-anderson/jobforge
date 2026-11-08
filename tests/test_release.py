@@ -102,3 +102,10 @@ def test_maintaining_says_how_to_release():
         assert needle in steps, needle
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     assert "not on PyPI yet" not in readme  # a candidate is there (#54)
+
+
+def test_readme_status_names_the_package_version():
+    # PyPI shows the README of each release, so its status line must name
+    # the version being released, not the one before it.
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    assert f"**Status: {_tool().package_version()}," in readme
