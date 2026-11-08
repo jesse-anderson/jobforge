@@ -48,3 +48,18 @@ def test_mvp_says_titles_are_checked():
     enforced = _section((REPO / "docs" / "MVP.md").read_text(encoding="utf-8"),
                         "### What the fact check enforces in the MVP")
     assert "title_aliases" in enforced and "#89" in enforced
+
+
+def test_build_status_covers_every_gate_item():
+    """The gate list and its status table stay in step: every numbered gate
+    item has a row, and the table is not the first draft's."""
+    mvp = (REPO / "docs" / "MVP.md").read_text(encoding="utf-8")
+    gate = mvp.split("## 5. MVP gate", 1)[1].split("\n---", 1)[0]
+    items = [line.split(".", 1)[0] for line in gate.splitlines()
+             if line[:1].isdigit() and ". " in line[:4]]
+    table = gate.split("### Build status", 1)[1]
+    rows = [line.split("|")[1].strip().split(".", 1)[0] for line in table.splitlines()
+            if line.startswith("| ") and line[2:3].isdigit()]
+    assert items and rows == items, (items, rows)
+    assert "### Build status (2026-11-06)" not in mvp
+    assert "not computed yet" not in table and "not run." not in table
