@@ -2,7 +2,7 @@
 
 This is the Jobforge source repo. It goes public at launch, so nothing
 about a real person's job search goes here (see `docs/COMPONENTS.md`,
-"Repos"). Read `docs/DECISIONS.md` before proposing scope changes.
+"Repo"). Read `docs/DECISIONS.md` before proposing scope changes.
 
 The `CLAUDE.md` that `jobforge init` writes into a user's workspace is
 generated from `src/jobforge/agent/` and is a different file from this one.
@@ -10,7 +10,7 @@ generated from `src/jobforge/agent/` and is a different file from this one.
 ## Tests
 
 Every change ships with tests, written in the same change. No exceptions for
-"small" fixes: most of the private repo's bugs were small.
+"small" fixes: most of the bugs in the code Jobforge came from were small.
 
 - Run: `python -m pytest` (works without installing; pytest finds `src/`).
 - Coverage: `python -m coverage run -m pytest && python -m coverage report`.

@@ -222,10 +222,10 @@ jobsearch/
 
 Ledger events live in each job folder, so the folder is the whole record of
 one application and `jobs` is a scan of the folders (fast enough at MVP
-scale; the index from D-29 comes with 1.0). This differs from the private
-repo, which keeps one central ledger file and has to merge human
-fields back in on every rebuild. With the events in the folder there is
-nothing to merge and nothing to lose.
+scale; the index from D-29 comes with 1.0). This differs from the earlier
+tool, which kept one central log and had to merge human fields back in on
+every rebuild. With the events in the folder there is nothing to merge and
+nothing to lose.
 
 The commands, all of them:
 
@@ -302,4 +302,4 @@ employer names are out of the tree (#43).
 | M-3 | Ledger stages and the ghosted threshold. | As listed in section 3; `ghost_after_days = 30`. |
 | M-4 | Add `jobforge check`. | **Yes.** |
 | M-5 | Report technology. | **Plain HTML, CSS, and JavaScript, no build step**, as a starting position. Fewer dependencies is the rule; details stay open between the maintainers. |
-| M-6 | What "Job Apps" means. | **The whole workstream**: Jobforge plus the behind-the-scenes repos. |
+| M-6 | What "Job Apps" means. | **The whole workstream**: Jobforge and the work around it. |

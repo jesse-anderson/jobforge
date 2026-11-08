@@ -19,15 +19,15 @@ states a fact the person did not give it. It has three layers: a
 deterministic **engine** (a Python package) that does every step that can be
 done by code, an **agent layer** (instruction files for the user's own AI
 coding agent) that does only the steps that need language, and a **report**
-(a static web page) that shows the user their search over time. The scraper
-and dashboard are a separate, private project and are not part of Jobforge.
+(a static web page) that shows the user their search over time. Job-board
+scraping and a hosted dashboard are not part of Jobforge (D-04, D-45).
 
 ---
 
 ## Map
 
 ```
-                        PUBLIC (source-available at launch)
+                        Source-available at launch
  +-----------------------------------------------------------------------+
  |  Jobforge  (repo: jesse-anderson/jobforge)                            |
  |                                                                       |
@@ -42,14 +42,6 @@ and dashboard are a separate, private project and are not part of Jobforge.
  |                                 v                                     |
  |                       Report (static HTML)   [deferred, post-MVP]     |
  +-----------------------------------------------------------------------+
-
-                        PRIVATE (never public)
- +--------------------------------+   +----------------------------------+
- |  jobs  (the earlier tool)   |   |  the maintainers' private notes                    |
- |  scraper, dashboard,           |   |  maintainer notes, reviews,      |
- |  Cloudflare, each maintainer's |   |  blog drafts, anything that      |
- |  real applications             |   |  names a real person's search    |
- +--------------------------------+   +----------------------------------+
 ```
 
 ---
@@ -63,7 +55,7 @@ The project and the product, as a whole. When someone outside says
 you mean (engine, agent layer, report) whenever it matters.
 
 - Repo: `jesse-anderson/jobforge`. Private during development, made public
-  at launch (see "Repos" below).
+  at launch (see "Repo" below).
 - PyPI name: `jobforge` (D-03; free as of 2026-10-17, reserve with 0.1).
 - License: PolyForm Noncommercial 1.0.0 (D-39). Call it
   **source-available**, never "open source", since the noncommercial clause
@@ -82,8 +74,8 @@ cannot hallucinate.
   --from-text`), the profile and atom files, plan validation, the fact check,
   rendering `.docx` (and PDF when opted in), the ledger, job listing, and the
   ATS form text.
-- Ported by hand from `the earlier tool/`, file by file, with a PII check on each
-  file (D-08, SOW section 3).
+- Ported by hand, file by file, from the code it grew out of, with a PII
+  check on each file (D-08, SOW section 3).
 
 > **Naming note.** Jesse's first draft called the engine "Jobforge". Use
 > "engine" for the package and "Jobforge" for the project, so "Jobforge does
@@ -168,38 +160,19 @@ Constraints any implementation must meet:
 3. **No CDN at runtime.** It must open offline. Any chart library is vendored
    into the package, and its license must be compatible.
 4. **Date-only strings are local dates.** `new Date("2026-09-07")` is UTC
-   midnight and renders as Sep 6 in US time zones. The private dashboard hit
-   exactly this (FINDINGS F16).
+   midnight and renders as Sep 6 in US time zones. Parse them as local dates.
 5. **One source of truth.** The report reads the ledger and nothing else. No
-   browser localStorage state that can disagree with it (the private
-   dashboard's two notions of "applied" are the cautionary tale).
+   browser localStorage state that can disagree with it: two notions of
+   "applied", one in the page and one in the data, is the failure to avoid.
 
-> **Do not confuse the report with the dashboard.** "The UI" has meant the
-> private Cloudflare dashboard in `the earlier tool's dashboard/` until now. That dashboard
-> lists scraped jobs, is TypeScript plus Vite, and is deployed behind
-> Cloudflare Access. The report is new, per user, local, and has no scraped
-> data in it. Say "report" or "dashboard", never just "the UI".
+### Scraping
 
-### Scraper
-
-The nightly job-board scraper in the private `jobs` repo (`scraping/`,
-`scripts/`, 140+ company adapters), plus the SQLite corpus it fills.
-
-- **Not part of Jobforge, and never will be in this form** (D-04, D-45).
-  Reasons: legal exposure from shipping scrapers for boards we do not own, and
-  the risk of enabling mass agentic traffic against job boards (ten agents
-  per user times ten thousand users is someone's cloud bill, and a damages
-  claim).
-- Its own sprint or project later. Bugs found in it (most of Mike's FINDINGS)
-  are fixed in `jobs`, not here.
-- Jobforge's replacement for it is ground truth only: a posting URL or pasted
-  text the user (or their agent, D-28) supplies.
-
-### Dashboard
-
-The private web page in `the earlier tool's dashboard/` that lists scraped jobs, deployed to
-Cloudflare Pages behind Cloudflare Access by the pipeline machine. Part of
-the scraper project, not of Jobforge. See the warning under "Report".
+Job-board scraping is **not part of Jobforge, and never will be in this
+form** (D-04, D-45). Reasons: legal exposure from shipping scrapers for
+boards we do not own, and the risk of enabling mass agentic traffic against
+job boards (ten agents per user times ten thousand users is someone's cloud
+bill, and a damages claim). Jobforge's replacement for it is ground truth
+only: a posting URL or pasted text the user (or their agent, D-28) supplies.
 
 ### Job board (ours, future)
 
@@ -210,8 +183,8 @@ its own decisions about cost.
 
 ### Job Apps
 
-The tracker label for this whole workstream: Jobforge plus the
-behind-the-scenes repos that support it. Tasks tagged "Job Apps" belong to
+The tracker label for this whole workstream: Jobforge and the work around
+it. Tasks tagged "Job Apps" belong to
 it; tasks tagged "Global" cut across projects. (Confirmed, D-47.)
 
 ---
@@ -242,22 +215,16 @@ Terms the engine and agent layer share. Most come from DECISIONS.md.
 
 ---
 
-## Repos
+## Repo
 
-Three repos. The rule for where something goes:
+One repo, `jesse-anderson/jobforge`: engine, agent layer, report, fictional
+personas, tests, and user and maintainer docs. Everything in it is public,
+including issue and commit history. The rule for what goes in:
 
 - **Would a stranger installing Jobforge need it, or benefit from reading
-  it?** It goes in `jobforge`.
-- **Is it about building Jobforge, but names a real person's job search,
-  money, or contacts, or is not ready to be public?** It goes in
-  `the maintainers' private notes`.
-- **Is it someone's actual job search, or the scraper?** It goes in `jobs`.
-
-| Repo | Visibility | Holds | Never holds |
-|---|---|---|---|
-| `jesse-anderson/jobforge` | Private now; **public at launch** | Engine, agent layer, report, fictional personas, tests, user and maintainer docs, DECISIONS and SOW | Any real person's data. Anything here will be public, including issue and commit history. |
-| `the maintainers' private notes` | Private, permanently | Reviews of the private repos (e.g. the FINDINGS review), sprint notes that mention real searches, blog drafts before publishing, launch logistics | Code. If code is needed, it belongs in `jobforge`. |
-| `the earlier tool` | Private, permanently | Scraper, dashboard, Cloudflare pipeline, both maintainers' real applications | Nothing from it is ever copied into `jobforge` without a PII check (D-08). Its history must never be made public. |
+  it?** It goes here.
+- **Does it name a real person's job search, money, or contacts, or is it not
+  ready to be public?** It stays out, kept privately by the maintainers.
 
 **Why one product repo and not three (engine, agent, report).** The agent
 layer and the report both have to ship inside the PyPI package, because
@@ -271,9 +238,8 @@ test suite that proves the instructions and the engine agree.
 same repo is flipped public at launch. Before the flip: run T-PII over the
 whole history (not just the tip), and if anything turns up, publish a
 squashed fresh history instead. Issues and PRs become public too, so personal
-context goes in `the maintainers' private notes`, filed under the issue number. The Jobforge
-issue carries only what a user could follow and never points to a private
-repo.
+context is kept privately, filed under the issue number. The issue carries
+only what a user could follow and never points to private notes.
 
 ### Planned layout of `jobforge`
 
@@ -300,17 +266,8 @@ jobforge/
 Only `docs/` and `README.md` exist as of 2026-11-06. The rest is built in
 SOW phase 0.1.
 
-### Local folders
+### Test workspaces
 
-On each maintainer's machine, the repos are siblings:
-
-```
-GitHub/
-  jobforge/        product
-  the maintainers' private notes/    private notes
-  jobs/            scraper, dashboard, real applications
-```
-
-Do not nest one repo inside another, and do not run Jobforge with a
-workspace inside any of these repos. A test workspace goes somewhere outside
-them, so no real application ever lands in a tracked folder by accident.
+Do not run Jobforge with a workspace inside this repo or any other. A test
+workspace goes somewhere outside them, so no real application ever lands in
+a tracked folder by accident.

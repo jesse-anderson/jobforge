@@ -2,7 +2,7 @@
 
 Maintainers only (D-24). Run before every PyPI release, on a clean Windows VM
 and a clean Linux VM. The point is a machine with none of what a development
-machine collects (packages, PATH entries, old workspaces, the private repo
+machine collects (packages, PATH entries, old workspaces, other projects
 next door), so bugs those leftovers hide show up here first. Users never
 need a VM.
 

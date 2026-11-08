@@ -8,11 +8,9 @@ what changed and why. Do not silently edit old answers.
 
 - **Session:** 2026-10-17
 - **Decided by:** Jesse Anderson (maintainer). Co-maintainer: Mike Wilson.
-- **Source project:** the private `jobs` repo (`tailor/` package). Only the
-  resume-tailoring side is being opened. The scraper, dashboard, and
-  Cloudflare pipeline stay private.
-- **Folder name:** `the old working folder` is a placeholder until the project name is
-  chosen (see D-03).
+- **Source project:** an earlier tool's resume-tailoring package. Only the
+  resume-tailoring side is being opened; its scraper and dashboard are not.
+- **Folder name:** a placeholder until the project name is chosen (see D-03).
 
 ---
 
@@ -39,7 +37,7 @@ what changed and why. Do not silently edit old answers.
 | D-17 | Employer IP (employer A) | Tool is carved out in the employment agreement. Cleared. |
 | D-18 | Employer IP (employer B) | No code, time, or equipment from that employer. Cleared. |
 | D-19 | Contributions | Open to PRs, but not accepted until AI-based regression tooling exists. |
-| D-20 | Private repo relationship | Out of scope. Personal nice to have. |
+| D-20 | Earlier tool relationship | Out of scope. Personal nice to have. |
 | D-21 | Timeline | No firm date. Sooner is better. |
 | D-22 | Phasing / versioning | By deliverable. X.x versions; qualifying tests gate any major (X) bump. |
 | D-23 | Output formats | `.docx` always. PDF opt-in at setup (Tectonic). README lists optional extras separately. |
@@ -63,7 +61,7 @@ what changed and why. Do not silently edit old answers.
 | D-41 | SOW questions | TOML atoms, Python 3.11+, page limit a profile setting, `jobs` command with `search` alias, John Smith separate, variants in subfolders. Phase ownership (Q-7) assigned just before the first 48-72 hour sprint. |
 | D-42 | Project URLs | A project with a URL always shows it, as visible text. Projects with no URL are fine. Links rechecked when last check is over 7 days old; a dead link blocks the render. |
 | D-43 | Full CV | Nice to have: render every atom except declared rewords. Schema supports it from 0.2; the command comes after 1.0. |
-| D-44 | Repos | One product monorepo (`jobforge`: engine, agent layer, report), private until launch then public. A permanently private `the maintainers' private notes`. `jobs` unchanged. (2026-11-06) |
+| D-44 | Repos | One product monorepo (`jobforge`: engine, agent layer, report), private until launch then public. Maintainer notes that name real people stay out of it. (2026-11-06) |
 | D-45 | Scraper | Reaffirms D-04 with reasons: legal exposure and enabling agentic traffic against job boards. Its own sprint later. A job board we run is a separate, welcome idea. (2026-11-06) |
 | D-46 | Report (UI) | Deferred past the MVP. A static page generated locally, showing applied count, velocity, callback rate, and an outcome Sankey. The ledger records what it needs from day one. (2026-11-06) |
 | D-47 | MVP accepted | MVP.md accepted; it is the public launch (0.x preview). Chatbot/Claude Skill path welcome but not gating. Ghost after 30 days. `check` added. Report is plain HTML/CSS/JS, no build step. Job Apps = whole workstream. (2026-11-06) |
@@ -193,18 +191,17 @@ job list to the qualifying suite.
 ### Q8. New repo or scrub this one?
 > New repo / folder, for the love of god. Yes, per-user settings are desired.
 
-**D-08.** New repo with no shared history with `jobs`. Code is copied
+**D-08.** New repo with no shared history with the earlier tool. Code is copied
 forward on purpose, file by file, and checked for PII on the way in.
 Everything currently hardcoded to Jesse moves into per-user settings:
 `HEADER_BLOCK`, `EDUCATION_BLOCK`, `DOCX_CONTACT`, `DOCX_EDUCATION`,
 `ats.py` `CONTACT` / `EDUCATION` / `ROLE_EXTRAS`, and the `RESUME_STEM` /
 `COVER_STEM` filenames (which become `<First>_<Last>_Resume` built from the
-profile). Doing this also removes the "edit three times" invariant from the
-private repo.
+profile). Doing this also removes the earlier tool's "edit three times"
+invariant.
 
-Nothing from `the earlier tool's data/applications/`, the private contact details,
-the writing samples, or `docs/` (which holds third-party documents) enters this
-repo.
+Nothing from the earlier tool's real applications, private resume source,
+voice corpus, or third-party documents enters this repo.
 
 ### Q9 / Q10. Hardcoded identity and a sample persona
 > For testing purposes we will have archetypal roles. Blue collar: trades,
@@ -324,7 +321,7 @@ whether resume templates are swappable. Not answered this session.
 produces `.docx`, the format to submit. During setup the user is asked
 whether they also want PDF; if yes, setup walks them through installing
 Tectonic. If PDF was not set up, `apply` says so plainly instead of silently
-skipping it, which is what the private repo does today. The README lists
+skipping it, which is what the earlier tool did. The README lists
 optional extras (PDF, voice corpus, etc.) in their own section, kept apart
 from the required steps.
 
@@ -674,7 +671,7 @@ drawn from the defense notes and atoms. Sources, in order:
 **D-42. A project's live URL always goes with it.** If a project atom has
 a URL (a live demo, a repo, a published page), every deliverable that
 mentions the project shows it: resume, CV, and cover letter (the cover
-letter check already exists in the private repo). The visible text is the
+letter check already existed in the earlier tool). The visible text is the
 URL itself, not a label like "Demo", because a hyperlink's target is lost
 when an ATS extracts text, and a label alone tells the reader nothing.
 Enforced by reading the rendered `.docx` back to text and requiring the
@@ -758,13 +755,13 @@ in principle but closed until a regression harness exists that can:
 
 CONTRIBUTING.md can be written now, saying exactly this.
 
-### Q22. Relationship to the private repo?
+### Q22. Relationship to the earlier tool?
 > That is outside the scope. That is a personal nice to have. For now, we
 > just want to have our base covered, in which we have this functionality
 > for John Smith.
 
-**D-20.** Out of scope. The private `jobs` repo is not migrated onto this
-one as part of the SOW.
+**D-20.** Out of scope. The earlier tool is not migrated onto this one as
+part of the SOW.
 
 ---
 
@@ -789,8 +786,8 @@ major version's qualifying suite is written down before work on it starts.
 
 ## Open items
 
-1. ~~Project name (D-03).~~ Resolved: Jobforge. Rename the folder from
-   `the old working folder` to `jobforge`, and reserve the PyPI name.
+1. ~~Project name (D-03).~~ Resolved: Jobforge. Rename the folder to
+   `jobforge`, and reserve the PyPI name.
 2. ~~Tenth archetype persona (D-09).~~ Resolved: thirteen personas.
 3. ~~New meaning for `search` without a scraped corpus (D-06).~~ Resolved:
    D-27 through D-29. The name (`search` vs `jobs`) is still open.
@@ -819,22 +816,17 @@ whatever is the most tidy"). Supporting documents: `docs/COMPONENTS.md`
 > open-source public repo and all behind-the-scenes repos for operational
 > clarity. First active development in private, then open source.
 
-**D-44. One product repo, one private ops repo, and `jobs` as it is.**
+**D-44. One product repo.**
 - `jesse-anderson/jobforge` holds the engine, the agent layer, and the
   report. Private during development; the same repo goes public at launch
   after T-PII runs over its whole history (a squashed fresh history if that
   finds anything).
-- `the maintainers' private notes` is permanently private: reviews of the
-  private repos, sprint notes that mention real searches, blog drafts.
-- `the earlier tool` keeps the scraper, dashboard, and both maintainers'
-  real applications. Its history is never made public.
+- Maintainer notes that name a real person's search, and anything not ready
+  to be public, are kept privately by the maintainers, never in this repo.
 - Not split into engine / agent / UI repos, because the agent files and the
   report both have to ship inside the PyPI package (`init` writes the agent
   files; the engine generates the report), and separate repos would let the
   agent instructions drift from the `plan.json` schema they describe.
-- The folder was copied from `the old working folder` to `jobforge` on 2026-11-06 (the
-  rename itself was blocked by a lock on the old folder; delete
-  `the old working folder` once nothing has it open).
 
 ### Scraper
 > Scraper is deferred to another sprint / project. Jobforge / Job apps will
@@ -848,7 +840,7 @@ whatever is the most tidy"). Supporting documents: `docs/COMPONENTS.md`
 shipping scrapers for boards we do not own is a legal exposure, and a
 public, agent-driven scraper multiplies traffic against those boards by the
 number of users, which is someone else's cloud bill and a damages claim.
-Scraper work is its own sprint in `jobs`. A job board that we run is a
+Scraper work, if any, is its own project. A job board that we run is a
 separate idea Jesse is open to; it is not scheduled and would need its own
 answer to D-25 (no hosted service).
 
@@ -891,8 +883,8 @@ Answers to the open questions in `docs/MVP.md`, which is now accepted.
 - **M-5:** the report is plain HTML, CSS, and JavaScript with no build step,
   as a starting position. Fewer dependencies is the rule; the details stay
   open between the maintainers.
-- **M-6:** "Job Apps" is the name of the whole workstream: Jobforge plus the
-  behind-the-scenes repos.
+- **M-6:** "Job Apps" is the name of the whole workstream: Jobforge and the
+  work around it.
 
 ### Commits (stated 2026-11-06)
 > Whenever a commit needs to be done it is done by mike or jesse, never by
@@ -962,7 +954,7 @@ every push, by `python tools/critical_coverage.py`. The files are listed in
    nothing.
 6. Ledger: `ledger.py`, `importer.py`. Events are appended, never rewritten,
    and the status is computed from them. D-30's "rebuilds without losing
-   applied_at, comp, notes" described the private repo's ledger.
+   applied_at, comp, notes" described the earlier tool's ledger.
 7. Facts going live: `confirm.py`, the only way a drafted fact becomes one
    the check trusts.
 

@@ -1,8 +1,7 @@
 # Tests only (D-15). Never scrapes, never runs on a schedule, never touches
 # the network from a test. Runs on pushes to main and on pull requests, and
-# cancels superseded runs. Ubuntu only while the repo is private, since
-# Windows minutes bill at 2x; add windows-latest back to the matrix at launch
-# (the public flip), when Actions minutes are free.
+# cancels superseded runs. Linux and Windows, both supported platforms (the
+# repo is public from launch, so Actions minutes are free).
 name: tests
 
 on:
@@ -19,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
         python: ["3.11", "3.13"]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
@@ -51,7 +50,7 @@ jobs:
       # One Python only, so a rounding difference between versions cannot
       # make the two jobs disagree.
       - name: Check the README coverage badge
-        if: matrix.python == '3.13'
+        if: matrix.python == '3.13' && matrix.os == 'ubuntu-latest'
         run: |
           python -m coverage json -o coverage.json
           python tools/coverage_badge.py coverage.json README.md

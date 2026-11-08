@@ -9,8 +9,8 @@ Maintainer-only; users never need this file.
 |---|---|
 | A task, bug, or feature | GitHub issue on `jobforge` |
 | A decision | New dated entry in `docs/DECISIONS.md` (never edit an old answer) |
-| Anything naming a real person's search, pay, employer, or contacts | `the maintainers' private notes`, filed under the issue number; the issue never points there |
-| Scraper or dashboard work | An issue on `jobs`, not here (COMPONENTS.md) |
+| Anything naming a real person's search, pay, employer, or contacts | The maintainers' private notes, filed under the issue number; the issue never points there |
+| Scraper or dashboard work | Not part of Jobforge (D-20, COMPONENTS.md) |
 
 Issues and commit history in this repo **become public at launch**. Write
 them as if a stranger will read them, because one will.
@@ -42,7 +42,7 @@ so every agent session reads it.
 ## Tests
 
 Every change ships with tests, written in the same change. No exceptions for
-"small" fixes: most of the private repo's bugs were small.
+"small" fixes: most of the bugs in the code Jobforge came from were small.
 
 - Run: `python -m pytest` (works without installing; pytest finds `src/`).
 - Coverage: `python -m coverage run -m pytest && python -m coverage report`.
@@ -59,8 +59,8 @@ Every change ships with tests, written in the same change. No exceptions for
   and poppler-utils on Linux), look at the new images, and commit them with
   the change (#104).
 - Before every push, run the suite with coverage and paste the pytest
-  summary and coverage TOTAL into the PR. CI is Ubuntu only while the repo
-  is private, so that local run is the only Windows check.
+  summary and coverage TOTAL into the PR. CI runs the same on Linux and
+  Windows.
 
 ## Branches and merging
 
@@ -110,9 +110,9 @@ exists, a plain `pip install jobforge` installs the newest pre-release.
 The `pypi` and `testpypi` environments (Settings > Environments) deploy
 from `v*` tags only.
 
-## Moving code from `jobs`
+## Porting code from another project
 
-Every file copied from the private `jobs` repo is ported by hand, one file per
+Every file copied in from another project is ported by hand, one file per
 commit, and checked against the PII denylist before it is committed (D-08,
-T-PII). Never merge, cherry-pick, or subtree anything from `jobs`: its
-history carries both maintainers' real applications.
+T-PII). Never merge, cherry-pick, or subtree another repo's history into
+this one: it can carry real applications.
