@@ -123,6 +123,9 @@ def load_profile(ws: Workspace) -> Profile:
         data = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     except tomllib.TOMLDecodeError as exc:
         raise JobforgeError(f"{rel} is not valid TOML: {exc}") from exc
+    except UnicodeDecodeError:  # e.g. saved as "ANSI" or "Unicode" in Notepad (fuzz)
+        raise JobforgeError(f"{rel} is not UTF-8 text. Open it in your editor and save "
+                            f"it as UTF-8, then run the command again.") from None
     return profile_from_dict(data, rel)
 
 
