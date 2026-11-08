@@ -7,11 +7,16 @@ https://github.com/jesse-anderson/jobforge
 Each script checks the wheel against `SHA256SUMS` first and stops if it does
 not match.
 
-On Linux (uses pipx when it is installed, as the main README recommends):
+On Linux:
 
 ```
 sh install.sh
 ```
+
+It installs into its own environment in `~/.local/share/jobforge/venv` and
+links `jobforge` into `~/.local/bin`, as pipx would, without going online.
+On Ubuntu or Debian it needs Python's venv module (`python3-venv`). To
+remove it: `rm -r ~/.local/share/jobforge ~/.local/bin/jobforge`.
 
 On Windows:
 

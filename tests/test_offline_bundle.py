@@ -162,50 +162,62 @@ HASHER = shutil.which("sha256sum") or shutil.which("shasum")
 needs_sh = pytest.mark.skipif(not (SH and HASHER), reason="needs sh and sha256sum")
 
 
-def _run_sh(folder: Path, tmp_path: Path, stub: str) -> tuple[int, str]:
-    """Run install.sh with only the system tools it needs on PATH, plus a
-    stand-in `stub` (pipx or python3) that records how it was called."""
-    bin_dir = tmp_path / "fakebin"
-    bin_dir.mkdir(exist_ok=True)
+def _run_sh(folder: Path, tmp_path: Path, fail_venv: bool = False):
+    """Run install.sh with a fresh HOME and a stand-in Python (PYTHON) that
+    records each call. Asked for `-m venv`, it makes the environment's
+    bin/python (itself, so pip calls are recorded too) and bin/jobforge."""
     log = tmp_path / "calls.txt"
-    script = bin_dir / stub
-    script.write_text(f'#!/bin/sh\necho "$@" >> "{log.as_posix()}"\n', newline="\n")
-    script.chmod(0o755)
-    system = {str(Path(shutil.which(t)).parent) for t in ("sh", "dirname")
-              if shutil.which(t)} | {str(Path(HASHER).parent)}
-    # install.sh prefers pipx, so the pip path is testable only without one.
-    if stub == "python3" and any(Path(d, "pipx").exists() for d in system):
-        pytest.skip("a real pipx sits beside the system tools")
-    env = {**os.environ, "PATH": os.pathsep.join([str(bin_dir), *sorted(system)])}
+    fake = tmp_path / "fakepython"
+    fake.write_text(
+        "#!/bin/sh\n"
+        f'echo "$@" >> "{log.as_posix()}"\n'
+        'if [ "$1 $2" = "-m venv" ]; then\n'
+        f'    {"exit 1" if fail_venv else ":"}\n'
+        '    mkdir -p "$4/bin" && cp "$0" "$4/bin/python" && cp "$0" "$4/bin/jobforge"\n'
+        "fi\n", newline="\n")
+    fake.chmod(0o755)
+    home = tmp_path / "home"
+    env = {**os.environ, "HOME": str(home), "PYTHON": fake.as_posix()}
+    env.pop("XDG_DATA_HOME", None)
     proc = subprocess.run([SH, str(folder / "install.sh")], env=env, capture_output=True,
                           text=True)
-    return proc.returncode, log.read_text() if log.exists() else ""
+    calls = log.read_text().splitlines() if log.exists() else []
+    return proc, calls, home
 
 
 @needs_sh
-def test_install_sh_checks_then_installs_with_pipx_offline(tmp_path, built):
+def test_install_sh_checks_then_installs_into_its_own_environment_offline(tmp_path, built):
     folder = _unzip(built[2], tmp_path / "x")
-    code, calls = _run_sh(folder, tmp_path, "pipx")
-    assert code == 0
-    assert calls.startswith("install --force --pip-args=--no-index --find-links ")
-    assert calls.strip().endswith(WHEEL)
-
-
-@needs_sh
-def test_install_sh_falls_back_to_pip_offline(tmp_path, built):
-    folder = _unzip(built[2], tmp_path / "x")
-    code, calls = _run_sh(folder, tmp_path, "python3")
-    assert code == 0
-    assert calls.startswith("-m pip install --upgrade --no-index --find-links ")
-    assert calls.strip().endswith(" jobforge")
+    proc, calls, home = _run_sh(folder, tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert f"wheels/{WHEEL}: OK" in proc.stdout
+    # Never pipx: its first run downloads pip, which fails offline (#163).
+    assert len(calls) == 2
+    assert calls[0].startswith("-m venv --clear ")
+    assert calls[0].endswith("/.local/share/jobforge/venv")
+    assert calls[1].startswith("-m pip install --no-index --find-links ")
+    assert calls[1].endswith(f"{TOP}wheels jobforge")
+    assert (home / ".local" / "bin" / "jobforge").exists()
+    assert "rm -r " in proc.stdout  # says how to remove it
 
 
 @needs_sh
 def test_install_sh_refuses_a_changed_wheel(tmp_path, built):
     folder = _unzip(built[2], tmp_path / "x")
     _tamper(folder)
-    code, calls = _run_sh(folder, tmp_path, "pipx")
-    assert code != 0 and calls == ""  # nothing installed
+    proc, calls, home = _run_sh(folder, tmp_path)
+    assert proc.returncode != 0 and calls == []  # nothing installed
+    assert "does not match SHA256SUMS" in proc.stderr
+    assert not (home / ".local").exists()
+
+
+@needs_sh
+def test_install_sh_names_the_missing_venv_package(tmp_path, built):
+    # Ubuntu and Debian ship Python's venv module as python3-venv.
+    folder = _unzip(built[2], tmp_path / "x")
+    proc, calls, _ = _run_sh(folder, tmp_path, fail_venv=True)
+    assert proc.returncode == 1 and len(calls) == 1  # no pip call
+    assert "sudo apt install python3-venv" in proc.stderr
 
 
 POWERSHELL = shutil.which("powershell")
@@ -248,7 +260,8 @@ def test_install_ps1_refuses_a_damaged_bundle(tmp_path, built, damage):
 
 def test_scripts_check_the_checksums_before_installing():
     sh = (SCRIPTS / "install.sh").read_text(encoding="utf-8")
-    assert sh.index("-c SHA256SUMS") < sh.index("pipx install") < sh.index("python3 -m pip")
+    assert sh.index("-c SHA256SUMS") < sh.index("-m venv") < sh.index("-m pip install")
+    assert "pipx" not in sh.split("set -eu", 1)[1]  # pipx goes online on first use
     ps = (SCRIPTS / "install.ps1").read_text(encoding="utf-8")
     assert ps.index("Get-FileHash") < ps.index("-m pip install")
     for text in (sh, ps):
