@@ -8,7 +8,7 @@ from conftest import REPO
 
 FILES = ["CONTRIBUTING.md", "SECURITY.md", ".github/pull_request_template.md",
          ".github/ISSUE_TEMPLATE/bug.md", ".github/ISSUE_TEMPLATE/fact_check_bypass.md",
-         ".github/ISSUE_TEMPLATE/config.yml"]
+         ".github/ISSUE_TEMPLATE/config.yml", ".github/CODEOWNERS"]
 
 
 def _read(path: str) -> str:
@@ -102,3 +102,11 @@ def test_ci_hands_the_pii_denylist_secret_to_the_test_step():
     assert "if: ${{ env.PII_DENYLIST" not in wf
     assert "PII_DENYLIST: ${{ secrets.PII_DENYLIST }}" in wf
     assert 'export JOBFORGE_PII_DENYLIST="$RUNNER_TEMP/pii_denylist.txt"' in wf
+
+
+def test_codeowners_makes_the_maintainer_review_every_change():
+    # With "Require review from Code Owners" on main, this line is what makes
+    # a PR wait for Jesse's review.
+    rules = [line.split() for line in _read(".github/CODEOWNERS").splitlines()
+             if line.strip() and not line.startswith("#")]
+    assert rules == [["*", "@jesse-anderson"]]
