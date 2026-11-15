@@ -70,7 +70,7 @@ def test_profile_template_states_the_full_dash_rule(tmp_path):
 
 
 def test_limits_come_from_the_profile(ws):
-    # F19: the instructions and the validator state the same number.
+    # The instructions and the validator state the same number.
     text = (ws.root / "CLAUDE.md").read_text(encoding="utf-8")
     p = load_profile(ws)
     assert f"at most {p.cover_letter_max_words} words" in text

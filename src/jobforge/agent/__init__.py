@@ -2,10 +2,10 @@
 
 One canonical source, `instructions.md`, renders to every agent file, so
 they cannot drift apart (D-11). Limits in the text come from the user's
-profile, so the instructions and the validator always state the same number
-(FINDINGS F19). `jobforge init` writes these into the workspace, since a user
-who installed from PyPI never sees the repo (SOW A-18), and `init --refresh`
-rewrites them after an upgrade or a profile change.
+profile, so the instructions and the validator always state the same number.
+`jobforge init` writes these into the workspace, since a user who installed
+from PyPI never sees the repo (SOW A-18), and `init --refresh` rewrites them
+after an upgrade or a profile change.
 """
 from __future__ import annotations
 

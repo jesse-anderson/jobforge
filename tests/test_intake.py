@@ -38,7 +38,7 @@ def test_json_ld_posting():
 
 
 def test_page_text_fallback_strips_suffix_and_requires_company():
-    # F23: no JSON-LD, title carries " - Google Careers", company unknown.
+    # No JSON-LD, title carries " - Google Careers", company unknown.
     with pytest.raises(JobforgeError, match="Pass --company"):
         from_url("https://careers.google.com/jobs/123", fetch=fake_fetch("no_jsonld_google_style.html"))
     job, warnings = from_url("https://careers.google.com/jobs/123", company="Google",
@@ -50,7 +50,7 @@ def test_page_text_fallback_strips_suffix_and_requires_company():
 
 
 def test_hostname_site_name_loses_to_the_company_in_the_title():
-    # F23/F27: Breezy page whose og:site_name is a hostname. The title names
+    # Breezy page whose og:site_name is a hostname. The title names
     # the company, so that is used instead, and placeholders are stripped.
     job, _ = from_url("https://ironbark.breezy.hr/p/1", fetch=fake_fetch("breezy_placeholders.html"))
     assert job.company == "Ironbark Compute Group"
@@ -59,7 +59,7 @@ def test_hostname_site_name_loses_to_the_company_in_the_title():
 
 
 def test_domain_company_is_refused():
-    # F23: with nothing better on the page, a hostname is never the company.
+    # With nothing better on the page, a hostname is never the company.
     html = ('<html><head><title>GPU Compute Engineer | Careers</title>'
             '<meta property="og:site_name" content="ironbark.breezy.hr"></head>'
             f'<body><p>{LONG}</p></body></html>')
@@ -465,7 +465,7 @@ def test_folder_name_format():
 # Issue #4: one posting from each common board, saved with the real page's
 # structure (2026-11) and fictional text. Each either gives correct fields or
 # stops and asks for what it could not read. Never a domain or an entity code
-# as the company (F23), never a %PLACEHOLDER% in the description (F27).
+# as the company, never a %PLACEHOLDER% in the description.
 BOARDS = [
     # fixture, url, company, title, location, source, a phrase from the posting
     ("greenhouse_job_boards.html", "https://job-boards.greenhouse.io/ridgeline/jobs/1234567001",

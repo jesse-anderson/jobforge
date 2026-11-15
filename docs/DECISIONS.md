@@ -601,9 +601,8 @@ is an invented fact under D-32, even though every number in it is real.
 - A project names its context: a role, or `personal`, `school`, or
   `volunteer`. A personal project is never presented as work for an
   employer.
-- A bullet renders only under its own role. Today's private code only
-  *warns* when a bullet sits under the wrong role (`validate.py`, the
-  `startswith(rid + ".")` check); in Jobforge that is a hard failure.
+- A bullet renders only under its own role. A bullet under the wrong role
+  is a hard failure, not a warning.
 - In prose (cover letters, emails, prep sheets), a sentence that names an
   employer may only carry facts from atoms bound to that employer.
 - During setup, when an old resume is ambiguous about where something

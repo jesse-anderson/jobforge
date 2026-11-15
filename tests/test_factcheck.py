@@ -900,7 +900,7 @@ def test_plain_and_script_hyphens_are_not_dashes(ws, john_plan, word):
 
 
 def test_letter_word_limit_comes_from_profile(ws, john_plan):
-    # F19: one number, in the profile, read by both the check and the instructions.
+    # One number, in the profile, read by both the check and the instructions.
     letter_body(john_plan, " ".join(["word"] * 400))
     expect(check(ws, john_plan), "the limit is 300 (profile setting")
 
@@ -923,7 +923,7 @@ def test_letter_project_named_by_title_needs_url(ws, john_plan):
 
 
 def test_letter_url_host_only_is_not_enough(ws, john_plan):
-    # F22: matching a host or one path segment let letters through with no URL.
+    # Matching a host or one path segment let letters through with no URL.
     letter_body(john_plan, "My template is used by 40 small businesses (see example.com).",
                 keep_project=True)
     expect(check(ws, john_plan), "Include example.com/shift-scheduler")
