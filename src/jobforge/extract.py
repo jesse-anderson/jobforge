@@ -6,11 +6,10 @@ lists a whole board.
 Lessons from real job boards:
 - Many pages publish a schema.org JobPosting in JSON-LD; prefer it.
 - Without it, the page `<title>` carries a site suffix ("... | Acme Careers")
-  and the company is unknown. The private code then used the hostname, and
-  letters went out as "Dear google.com Hiring Team" (FINDINGS F23, F27). Here
-  the suffix is stripped and a missing or domain-like company is an error that
-  asks for --company.
-- Template placeholders like %HEADER_COMPANY_WEBSITE% are removed (F27).
+  and the company is unknown. Falling back to the hostname sends letters out
+  as "Dear google.com Hiring Team". Here the suffix is stripped and a missing
+  or domain-like company is an error that asks for --company.
+- Template placeholders like %HEADER_COMPANY_WEBSITE% are removed.
 
 Per board (issue #4, fixtures in `fixtures/html/`): Lever, Ashby, and Workday
 publish JSON-LD, but Workday names an internal legal entity ("2100 Acme USA"),

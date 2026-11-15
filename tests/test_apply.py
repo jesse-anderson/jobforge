@@ -73,7 +73,7 @@ def test_structural_errors_stop_before_the_fact_check(ws, job_folder):
 
 
 def test_postings_own_en_dash_does_not_block(ws, job_folder):
-    # F21: a dash in the posted title is the employer's, not the user's.
+    # A dash in the posted title is the employer's, not the user's.
     data = json.loads((job_folder / "job.json").read_text(encoding="utf-8"))
     data["title"] = "Operations Supervisor – Second Shift"
     (job_folder / "job.json").write_text(json.dumps(data), encoding="utf-8")

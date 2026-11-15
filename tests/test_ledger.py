@@ -205,7 +205,7 @@ def test_table_never_marks_what_fits():
 
 
 # #72: a broken job.json keeps the job in the list, marked, like a broken
-# ledger (F7), instead of the job silently disappearing.
+# ledger (#28, F7), instead of the job silently disappearing.
 @pytest.mark.parametrize("content,reason", [
     (b"{", "job.json is not valid JSON"),
     (b'{"company": "Caf\xe9"}', "job.json is not UTF-8 text"),   # Windows-1252

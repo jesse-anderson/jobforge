@@ -81,7 +81,7 @@ maintainer can do all of it on Windows or Linux from the README alone.
    scripted requests, `prepare` says to paste the text instead. If the
    company comes out looking like a domain (`google.com`) or the title still
    carries the site's suffix, `prepare` stops and asks for `--company` /
-   `--title` (FINDINGS F23, F27).
+   `--title`.
 7. The agent writes `plan.json` in that folder: which atoms, in what order,
    what wording, and the cover letter. It may ask the user questions to
    surface a missing fact; any new fact goes to pending and through
@@ -125,14 +125,12 @@ All of it is code. None of it depends on the agent behaving.
   the basis ("49.7%" from an estimate of "half") (D-37).
 - Nothing on the profile's never-claim list.
 - A project with a `url` shows the **full URL** as visible text wherever the
-  project is mentioned. Matching the host or a path segment is not enough
-  (FINDINGS F22).
+  project is mentioned. Matching the host or a path segment is not enough.
 - One number for the cover-letter word limit, in the profile, read by both
-  the validator and the generated agent instructions, so they cannot disagree
-  (FINDINGS F19).
+  the validator and the generated agent instructions, so they cannot disagree.
 - Text quoted from the posting (the job title in a "Re:" line) is exempt from
   the user-voice rules such as the dash ban, so a posting's own en dash does
-  not block the render (FINDINGS F21).
+  not block the render.
 - Resume page fill is estimated against the profile's page limit and
   **warns**; it does not block until PDF gives a real page count.
 

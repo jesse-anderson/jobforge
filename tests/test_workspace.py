@@ -137,7 +137,7 @@ def test_find_fails_loudly_outside_any_workspace(tmp_path):
 
 
 def test_find_never_falls_back_to_defaults(tmp_path):
-    # FINDINGS F7: a missing profile was silently replaced by defaults.
+    # A missing profile must never be silently replaced by defaults.
     (tmp_path / "profile").mkdir()
     with pytest.raises(WorkspaceError):
         find_workspace(tmp_path, env={})

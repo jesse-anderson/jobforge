@@ -195,7 +195,7 @@ Terms the engine and agent layer share. Most come from DECISIONS.md.
 
 | Term | Meaning |
 |---|---|
-| **Workspace** | The user's own folder, made by `jobforge init`. Holds the profile, atoms, intake, jobs, ledger, and generated agent files. Everything about one person lives here and nowhere else. A marker file identifies it; commands find it by walking up from the current directory and **fail loudly** if there is none, never falling back to defaults (FINDINGS F7 is what silent fallback costs). |
+| **Workspace** | The user's own folder, made by `jobforge init`. Holds the profile, atoms, intake, jobs, ledger, and generated agent files. Everything about one person lives here and nowhere else. A marker file identifies it; commands find it by walking up from the current directory and **fail loudly** if there is none, never falling back to defaults, which would quietly build documents from the wrong settings. |
 | **Profile** | Identity and settings: name, contact, file-name stem, voice rules, page limit, never-claim list (D-08). TOML. |
 | **Atom** | One fact about the user, in TOML: a role, bullet, project, skill, credential, or education entry. Carries structured facts, a basis per fact, a defense note, and optional phrasings (D-33, D-36). |
 | **Role** | An atom for one job held: employer, title, location, dates. Every job-related fact belongs to exactly one role (D-40). |

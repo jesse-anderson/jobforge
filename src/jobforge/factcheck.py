@@ -12,9 +12,9 @@ selected:
 - Nothing on the never-claim list; no known tool or credential the cited atoms
   do not mention.
 - A cited or named project with a live URL shows the full URL (D-42); a host
-  or one path segment is not enough (FINDINGS F22).
+  or one path segment is not enough.
 - Voice rules apply to text the user authors, never to text quoted from the
-  posting (FINDINGS F21).
+  posting.
 """
 from __future__ import annotations
 
