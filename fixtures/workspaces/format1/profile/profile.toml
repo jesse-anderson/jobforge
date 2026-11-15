@@ -1,0 +1,23 @@
+# John Smith: the baseline demo persona (D-10). Fictional. Deliberately plain,
+# so the walkthrough is not tied to one industry (D-41, Q-6).
+
+[person]
+name = "John Smith"
+email = "john.smith@example.com"
+phone = "555-0100"
+location = "Springfield, IL"
+links = ["https://example.com/johnsmith"]
+
+[settings]
+page_limit = 1
+cover_letter_max_words = 300
+ghost_after_days = 30
+
+[voice]
+add_banned_words = []
+allow_words = []
+add_banned_phrases = []
+ban_dashes = true
+
+[claims]
+never_claim = ["SAP", "Six Sigma Black Belt"]
