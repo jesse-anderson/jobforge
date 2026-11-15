@@ -106,10 +106,16 @@ maintainer can do all of it on Windows or Linux from the README alone.
 
 All of it is code. None of it depends on the agent behaving.
 
-- Every number, percentage, money figure, date, and duration written in
-  digits, and every employer, credential, and tool the inventory knows,
-  appears in a confirmed atom the plan cites (D-32). What this leaves out is
-  under "Known limits of the fact check" below.
+- Every number, percentage, money figure, date, and duration, and every
+  employer, credential, and tool the inventory knows, appears in a confirmed
+  atom the plan cites (D-32). What this leaves out is under "Known limits of
+  the fact check" below.
+- A figure written in words is a figure (#84): "forty" is 40, "thirty-five
+  percent" is 35%, and "half a dozen" is 6. A fraction ("a third",
+  "two-thirds"), a multiple ("doubled", "triples"), or a count with no exact
+  figure ("hundreds of", "a few thousand") must appear in the cited facts as
+  written: "a third" is not "33%", "doubled" is not "2x", and "hundreds" is
+  not "100". "Twice" is the same multiple as "doubled".
 - A job title written as one ("Operations Manager", "Senior Warehouse
   Supervisor") is the title of a role the line cites, or one of the
   `title_aliases` the user confirmed for that role (#89).
@@ -142,8 +148,6 @@ Found in the audit (#1), rechecked 2026-11-07. These pass `jobforge check`
 today, so the agent's instructions and the user's own read of each
 deliverable still matter.
 
-- **Figures written in words** ("thirty-five percent", "a team of forty",
-  "tripled") are not read as figures (#84).
 - **Titles in lowercase or one word.** "Worked as a manager", or a one-word
   title such as "Server" or "Cashier", is not read as a title, and the
   letter may use a title the posting states (#89).
@@ -163,7 +167,18 @@ deliverable still matter.
   that also claims something for the user without "I", "my", or "we"
   ("Your team of 20 would get a lead with 20 years on the floor") may still
   quote the posting (#83).
-- **Some hedges pass:** "close to 25%", "25%+" (#91).
+- **Some hedges pass:** "close to 25%", "25%+", and a hedge before a figure
+  in words ("nearly forty percent"); the figure itself is still checked (#91).
+- **Number words in names** ("Big Four", "Tier Two") read as figures, so a
+  line may use one only when the cited fact says it too. "Six Sigma",
+  "two-factor", "three-phase", and "zero-trust" are known names and pass
+  (#84).
+- **Fractions with nothing around them.** "a third" or "a quarter" counts
+  as a figure only after "by" or before "of" or "the", since it also names a
+  shift or a time of year, so "reduced overtime a third" passes (#84).
+- **Number words run together are added up:** "fifty-fifty" reads as 100 and
+  "twenty twenty-three" as 43. The line is refused, not passed, so this
+  costs a rewording, not a wrong fact (#84).
 
 ### What the ledger records
 

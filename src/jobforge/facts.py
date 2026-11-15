@@ -62,6 +62,8 @@ class Token:
             return f"{self.value}%"
         if self.kind == "times":
             return f"{self.value}x"
+        if self.kind in ("fraction", "multiple", "count"):
+            return self.shown or self.value  # "a third", "Tripled", "hundreds" (#84)
         return self.value
 
 
@@ -71,9 +73,16 @@ def _norm(d: Decimal) -> str:
 
 
 def number_tokens(text: str) -> list[Token]:
-    """Figures in `text`. NFKC first, so a fullwidth "１４％" is "14%" and
-    cannot slip past as something else (issue #1)."""
+    """Figures in `text`, in digits or in words (#84), in the order written.
+    NFKC first, so a fullwidth "１４％" is "14%" and cannot slip past as
+    something else (issue #1)."""
+    found = _digit_tokens(text) + _word_tokens(text)
+    return [tok for _, tok in sorted(found, key=lambda pair: pair[0])]
+
+
+def _digit_tokens(text: str) -> list[tuple[int, Token]]:
     out: list[Token] = []
+    starts: list[int] = []
     for m in NUMBER_RE.finditer(unicodedata.normalize("NFKC", text)):
         mult = Decimal(1)
         raw = m.group("int").replace(",", "") + (m.group("dec") or "")
@@ -104,6 +113,171 @@ def number_tokens(text: str) -> list[Token]:
         places = max(len(m.group("dec") or "") - 1, 0)
         out[-1] = replace(out[-1], step=Decimal(1).scaleb(-places) * mult,
                           shown=m.group(0).strip())
+        starts.append(m.start())
+    return list(zip(starts, out))
+
+
+# --- Figures in words (#84) ---------------------------------------------------
+# When a digit is refused, words are the first thing a model reaches for, so
+# "forty", "thirty-five percent", "a third", and "tripled" are figures too.
+# A cardinal is the same figure as its digits ("forty" is 40). A fraction or a
+# multiple is a kind of its own until equivalences are decided: "a third" is
+# not "33%" and "doubled" is not "2x", the safe direction.
+
+_SMALL = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen "
+    "fourteen fifteen sixteen seventeen eighteen nineteen".split())}
+_TENS = {w: 10 * i for i, w in enumerate(
+    "twenty thirty forty fifty sixty seventy eighty ninety".split(), start=2)}
+_SCALE = {"hundred": 100, "dozen": 12}
+_BIG = {"thousand": 1_000, "million": 1_000_000, "billion": 1_000_000_000}
+_UNITS = "|".join(sorted([*_SMALL, *_TENS], key=len, reverse=True))
+_WORD = "|".join(sorted([*_SMALL, *_TENS, *_SCALE, *_BIG], key=len, reverse=True))
+
+# A run of number words: "thirty-five", "one hundred and twenty", "a dozen",
+# "half a dozen", "one and a half million", "three point five million". It
+# starts with a number word, or "a" or "half a" before a scale ("a hundred"),
+# never with a bare scale: "12 thousand" is the digit reader's. "point" counts
+# only before a digit word, so "at one point" is not a figure.
+CARDINAL_RE = re.compile(
+    r"(?<![\w-])(?P<run>(?:(?:(?:half\s+)?a\s+(?=(?:hundred|thousand|million|billion|dozen)\b))"
+    rf"(?:{_WORD})|(?:{_UNITS}))\b(?:(?:\s+and\s+|[\s-]+)(?:{_WORD})\b"
+    rf"|\s+point\s+(?:{_UNITS})\b|\s+and\s+a\s+half\b)*)"
+    r"(?:\s?(?P<unit>%|per\s?cent\b|times\b))?"
+    r"(?:\s(?P<cur>dollars?\b|usd\b|euros?\b|eur\b|gbp\b))?",
+    re.IGNORECASE,
+)
+
+_DENOM = {"half": 2, "halves": 2, "third": 3, "thirds": 3, "quarter": 4, "quarters": 4,
+          "fourth": 4, "fourths": 4, "fifth": 5, "fifths": 5, "tenth": 10, "tenths": 10}
+# "two-thirds" and "one third" say they are fractions. "a third" and "half"
+# also name a shift, a party, or a part of the year, so they count only as an
+# amount: after "by", before "of" or "the", or "in half" ("in a quarter" is
+# a time). "by half a dozen" is 6, the cardinal reader's.
+_NOT_HALF_A = r"(?!\s+a\s+(?:dozen|hundred|thousand|million|billion)\b)"
+FRACTION_RE = re.compile(
+    r"(?<![\w-])(?:"
+    r"(?P<n>two|three|four|five|six|seven|eight|nine)[\s-]+"
+    r"(?P<d>halves|thirds|quarters|fourths|fifths|tenths)\b"
+    r"|one[\s-](?P<d1>half|third|quarter|fourth|fifth|tenth)\b(?![\s-]party)"
+    r"|\bby\s+(?:(?:a|one)\s+)?(?P<d2>half|third|quarter|fifth|tenth)\b(?![\s-]party)"
+    + _NOT_HALF_A +
+    r"|\bin\s+(?P<d4>half)\b" + _NOT_HALF_A +
+    r"|(?<!first\s)(?<!second\s)(?<!other\s)(?<!back\s)(?<!front\s)(?<!the\s)"
+    r"(?:(?:a|one)\s+)?(?P<d3>half|third|quarter|fifth|tenth)(?=\s+(?:of|the)\b)"
+    r")",
+    re.IGNORECASE,
+)
+_BY_OR_IN = re.compile(r"(?:by|in)\s+", re.IGNORECASE)
+
+_MULTIPLE = {"doubl": "2", "tripl": "3", "quadrupl": "4", "halv": "0.5",
+             "twice": "2", "thrice": "3"}
+# "doubled", "triples", "tripling", "twice the volume"; never "a double
+# shift", "doubles as the lead", or "twice-daily".
+MULTIPLE_RE = re.compile(
+    r"(?<![\w-])(?:(?P<verb>doubl|tripl|quadrupl|halv)(?:ed|ing|es)(?!\s+as\b)"
+    r"|(?P<verb2>twice|thrice)"
+    r"|(?P<fold>two|three|four|five|six|seven|eight|nine|ten|twenty|hundred)fold)(?![\w-])",
+    re.IGNORECASE,
+)
+
+# A count with no exact figure: "hundreds of", "a few thousand", "tens of
+# thousands". A kind of its own, matched as written: "hundreds" is not "100"
+# and not "a few hundred".
+COUNT_RE = re.compile(
+    r"(?<![\w-])(?:(?:tens|hundreds)\s+of\s+(?:thousands|millions|billions)"
+    r"|(?:a\s+few|a\s+couple(?:\s+of)?|several|many)\s+(?:dozen|hundred|thousand|million|billion)"
+    r"|(?:dozens|hundreds|thousands|millions|billions))(?![\w-])",
+    re.IGNORECASE,
+)
+
+# Any dash joins number words, as it does terms (#92): "thirty\u2011five".
+_DASHES = str.maketrans(dict.fromkeys("\u2010\u2011\u2012\u2013\u2014\u2015\u2212", "-"))
+
+# Names that start with a number word but state no figure.
+_NAMES = re.compile(r"\b(?:two[\s-]factor|six\s+sigma|three[\s-]phase|zero[\s-](?:trust|day))\b",
+                    re.IGNORECASE)
+
+
+def _cardinal(run: str) -> Decimal | None:
+    words = [w for w in re.split(r"[\s-]+", run.lower()) if w != "and"]
+    if words == ["one"]:
+        return None  # "one of the docks": a pronoun as often as a figure
+    halved = words[0] == "half"  # "half a dozen"
+    # `last` is the scale "and a half" is half of: "one and a half" is 1.5,
+    # "a dozen and a half" is 18, "a million and a half" is 1,500,000.
+    total, current, place, last = Decimal(0), Decimal(0), None, 1
+    for w in words[1:] if halved else words:
+        if w == "half":
+            current += Decimal("0.5") * last
+        elif w == "a":
+            continue  # "a hundred" is (current or 1) * 100 below
+        elif w == "point":
+            place = Decimal("0.1")
+        elif w in _SCALE:
+            current = (current or 1) * _SCALE[w]
+            place, last = None, _SCALE[w]
+        elif w in _BIG:
+            total += (current or 1) * _BIG[w]
+            current, place, last = Decimal(0), None, _BIG[w]
+        elif place is not None:
+            current += (_SMALL.get(w) or _TENS.get(w, 0)) * place
+            place /= 10
+        else:
+            current += _SMALL.get(w) or _TENS.get(w, 0)
+            last = 1
+    return (total + current) / (2 if halved else 1)
+
+
+def _blank(text: str, span: tuple[int, int]) -> str:
+    return text[:span[0]] + " " * (span[1] - span[0]) + text[span[1]:]
+
+
+def _word_tokens(text: str) -> list[tuple[int, Token]]:
+    # Folded, so a Cyrillic "о" in "fоrty" is still forty (issue #1). Each
+    # match is blanked once read, so "two-thirds" is not also the number 2.
+    text = _NAMES.sub(lambda m: " " * len(m.group(0)), fold(text).translate(_DASHES))
+    out: list[tuple[int, Token]] = []
+    for m in list(FRACTION_RE.finditer(text)):
+        numer = _SMALL.get((m.group("n") or "").lower(), 1)
+        denom = _DENOM[next(d for d in m.group("d", "d1", "d2", "d3", "d4") if d).lower()]
+        lead = _BY_OR_IN.match(m.group(0))
+        cut = lead.end() if lead else 0
+        out.append((m.start() + cut,
+                    Token("fraction", f"{numer}/{denom}", shown=m.group(0)[cut:])))
+        text = _blank(text, m.span())
+    for m in list(MULTIPLE_RE.finditer(text)):
+        verb = m.group("verb") or m.group("verb2")
+        value = _MULTIPLE[verb.lower()] if verb else _norm(_cardinal(m.group("fold")))
+        out.append((m.start(), Token("multiple", value, shown=m.group(0))))
+        text = _blank(text, m.span())
+    for m in list(COUNT_RE.finditer(text)):
+        shown = re.sub(r"\s+of$", "", re.sub(r"\s+", " ", m.group(0)), flags=re.IGNORECASE)
+        value = re.sub(r"\s+of$", "", shown.lower())
+        out.append((m.start(), Token("count", value, shown=shown)))
+        text = _blank(text, m.span())
+    for m in CARDINAL_RE.finditer(text):
+        unit = re.sub(r"\s", "", (m.group("unit") or "").lower())
+        value = _cardinal(m.group("run"))
+        if value is None:
+            if not unit:
+                continue
+            value = Decimal(1)  # "one percent" is a figure
+        cur = (m.group("cur") or "").lower()
+        if unit in ("%", "percent"):
+            tok = Token("percent", _norm(value))
+        elif unit == "times":
+            tok = Token("times", _norm(value))
+        elif cur:
+            tok = Token("money", _norm(value), _CURRENCY[cur])
+        else:
+            tok = Token("number", _norm(value))
+        # Words state a figure no finer than their last nonzero place:
+        # "twelve thousand" is "$12k", not "$12,000".
+        digits = str(int(value))
+        zeros = len(digits) - len(digits.rstrip("0")) if value else 0
+        out.append((m.start(), replace(tok, step=Decimal(10) ** zeros,
+                                       shown=m.group(0).strip())))
     return out
 
 

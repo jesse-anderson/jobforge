@@ -176,6 +176,16 @@ def test_only_bullets_with_a_figure_and_no_defense_warn(ws):
     assert "northwind.accuracy" not in found[0]  # John's figures have notes
 
 
+def test_figure_in_words_needs_a_defense_note_too(ws):
+    # #84: "doubled" and "forty" are what an interviewer asks about, as "2x" is.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.w"\nrole = "northwind"\n'
+                  'text = "Doubled dock throughput"\nbasis = "records"\n'
+                  '[[bullet]]\nid = "northwind.v"\nrole = "northwind"\n'
+                  'text = "Was one of the dock leads"\nbasis = "records"\n')
+    found = [w for w in load_inventory(ws).warnings if "defense" in w]
+    assert len(found) == 1 and "northwind.w" in found[0] and "northwind.v" not in found[0]
+
+
 def test_pending_atoms_are_not_loaded_by_default(ws):
     add_atoms(ws, '[[bullet]]\nid = "northwind.new"\nrole = "northwind"\ntext = "t"\nbasis = "records"\n',
               pending=True)
