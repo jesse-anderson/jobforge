@@ -51,6 +51,12 @@ confirmed.
 
 ## Set up (once)
 
+Your agent can do this part for you. Give it the
+[Jobforge skill](https://github.com/jesse-anderson/jobforge/blob/main/skills/jobforge/SKILL.md),
+which tells it how to install Jobforge, make your workspace, and find its
+instructions there. In Claude Code, copy the `skills/jobforge` folder into
+`~/.claude/skills/`; any other agent can read the file from that link.
+
 On Linux, install with pipx. Ubuntu, Debian, and others block `pip` for the
 system Python, and pipx is how they want apps like this one installed:
 
