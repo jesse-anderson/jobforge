@@ -9,7 +9,9 @@ Each field is one of:
 - **stable**: Jobforge needs it. Renaming it, removing it, or changing what
   it means is a format change.
 - **optional**: may be left out, and has a default. Renaming or removing it
-  is a format change too; leaving it out never is.
+  is a format change too, since Jobforge refuses unknown names and a
+  workspace that uses the old name would stop loading. Leaving it out never
+  is a change.
 - **internal**: Jobforge's own working state, free to change in any release.
 
 A format change bumps the number in the marker and ships with a migration in

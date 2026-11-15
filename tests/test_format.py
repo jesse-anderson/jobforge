@@ -164,7 +164,10 @@ def test_the_fixture_is_still_the_0_1_0_shape():
     # Regenerating the fixture with a newer Jobforge would hide a break.
     marker = tomllib.loads((FORMAT1 / MARKER).read_text(encoding="utf-8"))
     assert marker == {"created": marker["created"], "created_by": "0.1.0"}
-    assert not (FORMAT1 / "CLAUDE.md").exists()
+    # Only what Jobforge wrote: no notes about the fixture inside it, and no
+    # agent files, which `init --refresh` rewrites anyway.
+    assert sorted(p.name for p in FORMAT1.iterdir()) == [".jobforge", "intake", "jobs",
+                                                         "profile"]
 
 
 # --- docs/FORMAT.md lists every field the code reads -----------------------
@@ -232,3 +235,6 @@ def test_decisions_record_the_format_rule():
     decisions = (REPO / "docs" / "DECISIONS.md").read_text(encoding="utf-8")
     assert "| D-53 | Workspace format |" in decisions
     assert "**D-53." in decisions and "docs/FORMAT.md" in decisions
+    # Why optional fields are frozen too: the loaders refuse unknown names.
+    assert "refuses unknown names" in decisions
+    assert "refuses unknown names" in DOC

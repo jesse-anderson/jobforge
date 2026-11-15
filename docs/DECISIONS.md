@@ -1004,6 +1004,10 @@ Jesse's approval.*
   optional field bumps the format, ships with a migration in
   `init --refresh`, keeps old workspaces working, and is in the release
   notes. Internal files and fields are exempt.
+- **Why optional fields count too:** Jobforge refuses unknown names in the
+  profile and atoms, so a workspace that uses an optional field under its
+  old name would be refused by the Jobforge that renamed it. Leaving an
+  optional field out is never a change.
 - **Additions are not changes:** a new optional section or field with a
   default does not bump the format and needs no migration (option (b) in
   #142, chosen over reserving `[search]` for #7 now). An older Jobforge
