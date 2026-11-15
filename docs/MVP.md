@@ -110,10 +110,12 @@ All of it is code. None of it depends on the agent behaving.
   employer, credential, and tool the inventory knows, appears in a confirmed
   atom the plan cites (D-32). What this leaves out is under "Known limits of
   the fact check" below.
-- A figure written in words is a figure (#84): "forty" is 40 and "thirty-five
-  percent" is 35%. A fraction ("a third", "two-thirds") or a multiple
-  ("doubled", "tripled") must appear in the cited facts as written: "a third"
-  is not "33%" and "doubled" is not "2x".
+- A figure written in words is a figure (#84): "forty" is 40, "thirty-five
+  percent" is 35%, and "half a dozen" is 6. A fraction ("a third",
+  "two-thirds"), a multiple ("doubled", "triples"), or a count with no exact
+  figure ("hundreds of", "a few thousand") must appear in the cited facts as
+  written: "a third" is not "33%", "doubled" is not "2x", and "hundreds" is
+  not "100". "Twice" is the same multiple as "doubled".
 - A job title written as one ("Operations Manager", "Senior Warehouse
   Supervisor") is the title of a role the line cites, or one of the
   `title_aliases` the user confirmed for that role (#89).
@@ -171,6 +173,12 @@ deliverable still matter.
   line may use one only when the cited fact says it too. "Six Sigma",
   "two-factor", "three-phase", and "zero-trust" are known names and pass
   (#84).
+- **Fractions with nothing around them.** "a third" or "a quarter" counts
+  as a figure only after "by" or before "of" or "the", since it also names a
+  shift or a time of year, so "reduced overtime a third" passes (#84).
+- **Number words run together are added up:** "fifty-fifty" reads as 100 and
+  "twenty twenty-three" as 43. The line is refused, not passed, so this
+  costs a rewording, not a wrong fact (#84).
 
 ### What the ledger records
 

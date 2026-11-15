@@ -32,6 +32,16 @@ def test_mvp_says_figures_in_words_are_checked():
                         "### What the fact check enforces in the MVP")
     assert "A figure written in words is a figure (#84)" in enforced
     assert '"a third" is not "33%"' in enforced
+    assert '"hundreds" is not "100"' in enforced and '"half a dozen" is 6' in enforced
+
+
+def test_mvp_lists_the_number_word_limits_found_in_review():
+    # PR #158 review: what the word reader leaves out is listed, since the
+    # README says every number, in digits or in words, is checked.
+    limits = _section((REPO / "docs" / "MVP.md").read_text(encoding="utf-8"),
+                      "### Known limits of the fact check")
+    assert '"reduced overtime a third" passes' in limits
+    assert '"fifty-fifty" reads as 100' in limits
 
 
 def test_mvp_says_the_letter_quotes_the_posting_only_about_the_employer():

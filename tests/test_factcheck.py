@@ -115,6 +115,35 @@ def test_hedged_figure_in_words_still_checks_the_figure(ws, john_plan):
     expect(check(ws, john_plan), "the figure 40% is not in the facts")
 
 
+def test_half_a_dozen_does_not_pass_on_a_dozen(ws, john_plan):
+    # PR #158 review: "half a dozen" once read as 12, so a 12 let it pass.
+    add_atoms(ws, '[[bullet]]\nid = "northwind.dozen"\nrole = "northwind"\n'
+                  'text = "Trained 12 new drivers"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.dozen", "text": "Trained half a dozen new drivers"})
+    expect(check(ws, john_plan), "the figure 6 is not in the facts")
+
+
+def test_non_breaking_hyphen_in_a_figure_is_still_checked(ws, john_plan):
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": "Cut weekly overtime thirty\u2011five percent"}
+    expect(check(ws, john_plan), "the figure 35% is not in the facts")
+
+
+def test_vague_count_not_in_the_facts(ws, john_plan):
+    john_plan["experience"][0]["bullets"][1] = {
+        "atom": "northwind.team", "text": "Lead hundreds of associates across two shifts"}
+    expect(check(ws, john_plan), "the figure hundreds is not in the facts")
+
+
+def test_vague_count_the_atom_states_passes(ws, john_plan):
+    add_atoms(ws, '[[bullet]]\nid = "northwind.stores"\nrole = "northwind"\n'
+                  'text = "Shipped to hundreds of stores"\nbasis = "records"\n')
+    john_plan["experience"][0]["bullets"].append(
+        {"atom": "northwind.stores", "text": "Shipped orders to Hundreds of stores"})
+    assert check(ws, john_plan).ok, check(ws, john_plan).errors
+
+
 def test_letter_figure_in_words_not_in_the_facts(ws, john_plan):
     letter_body(john_plan, "At Northwind Distribution I lead fifty associates across "
                            "receiving, picking, and shipping.")

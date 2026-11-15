@@ -304,3 +304,84 @@ def test_number_words_keep_how_they_were_written_and_their_precision():
     tok, = number_tokens("by a third")
     assert str(tok) == "a third"
     assert number_tokens("zero")[0].step == 1
+
+
+# --- #84 review (PR #158): what probing the first pass found ------------------
+
+@pytest.mark.critical
+@pytest.mark.parametrize("text,expected", [
+    # Any dash joins number words, as it does terms (#92): U+2011 is the
+    # non-breaking hyphen, U+2013 the en dash.
+    ("Cut weekly overtime thirty‑five percent", [Token("percent", "35")]),
+    ("Cut weekly overtime thirty–five percent", [Token("percent", "35")]),
+    ("two‑thirds of the stores", [Token("fraction", "2/3")]),
+    # "half a dozen" is 6, never the 12 of "a dozen".
+    ("Lead half a dozen drivers", [Token("number", "6")]),
+    ("grew the crew by half a dozen", [Token("number", "6")]),
+    ("half a million rows", [Token("number", "500000")]),
+    ("one and a half million rows", [Token("number", "1500000")]),
+    ("a dozen and a half drivers", [Token("number", "18")]),
+    ("a million and a half rows", [Token("number", "1500000")]),
+    ("one and a half percent", [Token("percent", "1.5")]),
+    ("three point five million rows", [Token("number", "3500000")]),
+    ("two point five percent", [Token("percent", "2.5")]),
+    # Multiples in any tense, and "twice".
+    ("twice the volume", [Token("multiple", "2")]),
+    ("thrice the volume", [Token("multiple", "3")]),
+    ("triples throughput", [Token("multiple", "3")]),
+    ("doubles revenue", [Token("multiple", "2")]),
+    ("halves returns", [Token("multiple", "0.5")]),
+    # Fifths and tenths; "one third" without the hyphen; any spacing after "by".
+    ("cut returns by a fifth", [Token("fraction", "1/5")]),
+    ("a fifth of orders", [Token("fraction", "1/5")]),
+    ("a tenth of the fleet", [Token("fraction", "1/10")]),
+    ("cut overtime one third", [Token("fraction", "1/3")]),
+    ("cut overtime by  a third", [Token("fraction", "1/3")]),
+    ("cut overtime by\ta third", [Token("fraction", "1/3")]),
+    ("cut returns in  half", [Token("fraction", "1/2")]),
+    # Vague counts are a kind of their own, matched as written.
+    ("served a few hundred stores", [Token("count", "a few hundred")]),
+    ("served several thousand stores", [Token("count", "several thousand")]),
+    ("trained dozens of drivers", [Token("count", "dozens")]),
+    ("served Hundreds of stores", [Token("count", "hundreds")]),
+    ("saved thousands", [Token("count", "thousands")]),
+    ("tens of thousands of orders", [Token("count", "tens of thousands")]),
+    ("hundreds  of millions of rows", [Token("count", "hundreds of millions")]),
+])
+def test_number_words_found_in_review(text, expected):
+    assert number_tokens(text) == expected
+
+
+@pytest.mark.critical
+@pytest.mark.parametrize("text", [
+    "twice-daily rotation checks",
+    "doubles as the safety lead",
+    "at one point I ran the dock",
+    "worked with one third-party vendor",
+    "the fifth of the month",
+])
+def test_words_found_in_review_that_are_not_figures(text):
+    assert number_tokens(text) == []
+
+
+@pytest.mark.critical
+def test_half_a_dozen_is_not_a_dozen():
+    assert number_tokens("half a dozen") != number_tokens("12")
+    assert number_tokens("half a dozen") == number_tokens("6")
+
+
+@pytest.mark.critical
+def test_twice_is_doubled_and_counts_match_as_written():
+    assert number_tokens("twice the volume") == number_tokens("doubled the volume")
+    assert number_tokens("hundreds of") != number_tokens("a few hundred")
+    assert number_tokens("hundreds of") != number_tokens("100")
+
+
+@pytest.mark.critical
+def test_review_words_keep_how_they_were_written():
+    tok, = number_tokens("cut overtime by  a third")
+    assert str(tok) == "a third"
+    tok, = number_tokens("trained Dozens of drivers")
+    assert str(tok) == "Dozens"
+    tok, = number_tokens("three point five million rows")
+    assert tok.step == 100000  # "3.5M"
