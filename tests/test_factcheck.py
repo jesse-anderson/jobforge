@@ -63,6 +63,15 @@ def test_hedged_figure(ws, john_plan):
     expect(check(ws, john_plan), "hedged figure 'about 25%'")
 
 
+@pytest.mark.parametrize("hedge", ["close to 25%", "just under 25%", "just over 25%",
+                                   "upwards of 25%"])
+def test_more_hedged_figures(ws, john_plan, hedge):
+    # #91: D-37 refuses these like "about 25%".
+    john_plan["experience"][0]["bullets"][2] = {
+        "atom": "northwind.overtime", "text": f"Cut weekly overtime {hedge} with a new schedule"}
+    expect(check(ws, john_plan), f"hedged figure {hedge!r}")
+
+
 def test_false_precision(ws, john_plan):
     # The atom says 25% (an estimate). 24.8% is precision nobody gave.
     john_plan["experience"][0]["bullets"][2] = {

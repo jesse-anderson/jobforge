@@ -163,7 +163,8 @@ deliverable still matter.
   that also claims something for the user without "I", "my", or "we"
   ("Your team of 20 would get a lead with 20 years on the floor") may still
   quote the posting (#83).
-- **Some hedges pass:** "close to 25%", "25%+" (#91).
+- **Some bounds pass:** "up to 25%" and "25%+" read as bounds, like "over
+  25%". Whether they are hedges instead is #125.
 
 ### What the ledger records
 
