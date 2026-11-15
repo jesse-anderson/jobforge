@@ -1,0 +1,8 @@
+# A fact the agent drafted, waiting for `jobforge confirm`.
+
+[[bullet]]
+id = "northwind.dock"
+role = "northwind"
+text = "Cut average dock-to-stock time from 6 hours to 4"
+basis = "records"
+defense = "Weekly WMS receiving report, 2025"

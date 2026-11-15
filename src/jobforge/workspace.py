@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import os
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +19,12 @@ from .errors import JobforgeError, WorkspaceError
 
 MARKER = ".jobforge"
 ENV_VAR = "JOBFORGE_WORKSPACE"
+# The workspace format this Jobforge reads and writes: every file and field
+# in docs/FORMAT.md. A change to a stable field bumps it and ships with a
+# migration in `init --refresh` (D-53). Written into the marker as
+# `format = 1`; 0.1.0 and 0.1.1 wrote no line, and their workspaces are 1.
+FORMAT = 1
+UPGRADE = "`pipx upgrade jobforge` (Linux) or `pip install -U jobforge` (Windows)"
 
 STARTER_PROFILE = """\
 # Your Jobforge profile. Edit this by hand, or let your agent fill it in
@@ -110,9 +117,46 @@ class Workspace:
 LAYOUT = ("profile", "profile/atoms", "profile/pending", "intake", "jobs")
 
 
+def _read_marker(ws: Workspace) -> dict:
+    try:
+        return tomllib.loads(ws.marker.read_text(encoding="utf-8-sig"))
+    except tomllib.TOMLDecodeError as exc:
+        raise WorkspaceError(
+            f"{MARKER} in {ws.root} is not valid TOML: {exc}. It marks the folder as "
+            f"a Jobforge workspace; put back its lines, for example `format = {FORMAT}`."
+        ) from exc
+    except UnicodeDecodeError:
+        raise WorkspaceError(f"{MARKER} in {ws.root} is not UTF-8 text. Open it in a "
+                             f"text editor and save it as UTF-8.") from None
+
+
+def workspace_format(ws: Workspace) -> int:
+    """The workspace's format, from its marker; a marker with no `format`
+    line is format 1 (#142)."""
+    value = _read_marker(ws).get("format", 1)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise WorkspaceError(f"{MARKER} in {ws.root}: format should be a whole number "
+                             f"like {FORMAT}, got {value!r}.")
+    return value
+
+
+def check_format(ws: Workspace) -> Workspace:
+    """Refuse a workspace made by a newer Jobforge (D-53). An older format
+    would be migrated by `init --refresh`; format 1 is the first, so there is
+    none yet."""
+    found = workspace_format(ws)
+    if found > FORMAT:
+        raise WorkspaceError(
+            f"This workspace needs a newer Jobforge: it is format {found}, and "
+            f"Jobforge {__version__} reads format {FORMAT}. Update it with {UPGRADE}, "
+            f"then run the command again.")
+    return ws
+
+
 def refresh_workspace(root: Path) -> tuple[Workspace, list[str]]:
     """Rewrite the generated agent files in an existing workspace, keeping
-    the user's notes (#33). Returns the workspace and any backup notices."""
+    the user's notes (#33), and record the format in a marker that has none
+    (#142). Returns the workspace and any notices."""
     from .agent import write_agent_files
 
     ws = Workspace(Path(root).expanduser().resolve())
@@ -120,7 +164,14 @@ def refresh_workspace(root: Path) -> tuple[Workspace, list[str]]:
         raise WorkspaceError(
             f"{ws.root} is not a Jobforge workspace, so there is nothing to "
             f"refresh. Run `jobforge init {ws.root}` first.")
-    return ws, write_agent_files(ws)
+    check_format(ws)
+    notices = []
+    if "format" not in _read_marker(ws):
+        text = ws.marker.read_text(encoding="utf-8-sig")
+        sep = "" if not text or text.endswith("\n") else "\n"
+        ws.marker.write_text(f"{text}{sep}format = {FORMAT}\n", encoding="utf-8")
+        notices.append(f"recorded the workspace format in {MARKER} (format = {FORMAT})")
+    return ws, notices + write_agent_files(ws)
 
 
 def init_workspace(root: Path, *, refresh: bool = False) -> Workspace:
@@ -150,7 +201,8 @@ def init_workspace(root: Path, *, refresh: bool = False) -> Workspace:
     ws.marker.write_text(
         f'# Marks this folder as a Jobforge workspace. Do not delete.\n'
         f'created = {_dt.date.today().isoformat()}\n'
-        f'created_by = "{__version__}"\n',
+        f'created_by = "{__version__}"\n'
+        f'format = {FORMAT}\n',
         encoding="utf-8",
     )
     write_agent_files(ws)
@@ -169,12 +221,12 @@ def find_workspace(start: Path | None = None, *, explicit: Path | None = None,
             raise WorkspaceError(
                 f"{root} is not a Jobforge workspace (no {MARKER} file). "
                 f"Run `jobforge init {root}` to make one.")
-        return Workspace(root)
+        return check_format(Workspace(root))
 
     here = Path(start or Path.cwd()).resolve()
     for folder in (here, *here.parents):
         if (folder / MARKER).exists():
-            return Workspace(folder)
+            return check_format(Workspace(folder))
     raise WorkspaceError(
         f"No Jobforge workspace found at or above {here}.\n"
         f"Run `jobforge init <folder>` to make one, then run commands from "

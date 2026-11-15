@@ -70,6 +70,7 @@ what changed and why. Do not silently edit old answers.
 | D-50 | Rounding | Claiming less is fine: dropping decimals passes. Rounding that changes a figure is refused; the user confirms a rounded form once as a phrasing on the atom, and the agent offers it. (2026-11-06) |
 | D-51 | Critical paths | D-30's list, refreshed to match the engine: setup, intake, plan validation, rendering, safety, ledger and import, and confirm. The index item waits for the index. Enforced at 100% by `tools/critical_coverage.py`. (2026-11-07) |
 | D-52 | File names | File and folder names are plain ASCII: accents fold to plain letters ("Núñez" to "Nunez"); a name with nothing left asks for `file_stem`. A recruiter sees the resume's file name, and uploads, email, and zip tools mangle anything else. (2026-11-07) |
+| D-53 | Workspace format | Proposed. The workspace has one format number, `format = 1` in `.jobforge`, documented field by field in `docs/FORMAT.md`. A change to a stable field bumps it and ships with a migration in `init --refresh`; adding an optional field with a default does not. `plan.json` keeps its own version. (2026-11-14, #142) |
 
 ---
 
@@ -982,3 +983,38 @@ It returns to the list with it.
   profile asks the user to set `file_stem` under `[person]`, with an
   example. Text inside the documents is unchanged: the name prints as
   written.
+
+### Workspace format (proposed 2026-11-14, #142)
+
+**D-53. One format number for the workspace, and a migration for every
+change to a stable field.** *Proposed by Mike in #142, 2026-11-14; awaiting
+Jesse's approval.*
+- **What is frozen:** every file and field in `docs/FORMAT.md`, each marked
+  stable, optional, or internal. Tests hold the doc to the fields the code
+  reads, so a new field cannot go undocumented.
+- **The number:** `format = 1` in the `.jobforge` marker, which every
+  command already reads to find the workspace. Not in `profile.toml`, which
+  is the user's file to edit. A marker with no `format` line is format 1,
+  since 0.1.0 and 0.1.1 wrote none and their files are format 1.
+- **The check:** every command refuses a workspace with a higher format
+  than it reads, and says to update Jobforge. An older format is migrated by
+  `jobforge init --refresh`, and until then a command says to run it.
+  Format 1 is the first, so there is nothing to migrate yet.
+- **The rule:** renaming, removing, or changing the meaning of a stable or
+  optional field bumps the format, ships with a migration in
+  `init --refresh`, keeps old workspaces working, and is in the release
+  notes. Internal files and fields are exempt.
+- **Why optional fields count too:** Jobforge refuses unknown names in the
+  profile and atoms, so a workspace that uses an optional field under its
+  old name would be refused by the Jobforge that renamed it. Leaving an
+  optional field out is never a change.
+- **Additions are not changes:** a new optional section or field with a
+  default does not bump the format and needs no migration (option (b) in
+  #142, chosen over reserving `[search]` for #7 now). An older Jobforge
+  refuses the new name as unknown, and updating it is the fix.
+- **`plan.json` keeps its own `version`.** The agent writes a fresh plan for
+  every job, so the plan can change on its own schedule. `docs/FORMAT.md`
+  says which plan versions each workspace format reads.
+- **The proof:** `fixtures/workspaces/format1` is a workspace as 0.1.0 wrote
+  it, checked in. Every later Jobforge must run `inventory` through `apply`
+  on it.

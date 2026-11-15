@@ -1,0 +1,11 @@
+# Dated events for this application. Append with
+# `jobforge applied --mark <job> --status <stage>`.
+
+[[event]]
+date = 2026-11-20
+stage = "prepared"
+
+[[event]]
+date = 2026-11-20
+stage = "applied"
+note = "Applied on the company site"
